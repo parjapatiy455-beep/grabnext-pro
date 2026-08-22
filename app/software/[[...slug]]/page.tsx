@@ -974,19 +974,7 @@ export default function SoftwareFunnelPage({ params }: { params?: { slug?: strin
               </div>
             </div>
 
-            {/* Live Store Products secondary list */}
-            {products.length > 0 && (
-              <div className="border-t border-slate-300 pt-10">
-                <h4 className="text-center font-black text-slate-800 mb-6 text-sm sm:text-base uppercase tracking-wide">
-                  🎁 Plus, Get All These Active Products from Our Catalog Free!
-                </h4>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                  {products.map((p: any) => (
-                    <ProductCard key={p.id} name={p.name || p.title} img={p.imageUrl || p.image || ""} value={p.price ? `₹${p.price}` : undefined} bg="white" />
-                  ))}
-                </div>
-              </div>
-            )}
+
 
             <div className="flex justify-center mt-12">
               <button onClick={handleBuyClick} className="animate-[animatedgradient_3s_ease_infinite_alternate] hover:-translate-y-0.5 hover:shadow-[0px_8px_15px_rgba(255,200,0,0.4)] transition-all duration-200" style={{ ...BTN_STYLE, fontSize: "clamp(16px,2.5vw,28px)", padding: "14px 44px", width: "min(85%,520px)" }}>
