@@ -59,8 +59,7 @@ export default function HomePage() {
     return () => document.removeEventListener('visibilitychange', onVisible)
   }, [loadProducts])
 
-  const featured = products.slice(0, 8)
-  const topSellers = [...products].sort((a, b) => (b.salesCount || 0) - (a.salesCount || 0)).slice(0, 4)
+  const featured = products
 
   return (
     <div className="min-h-screen bg-slate-100 dark:bg-slate-950 flex flex-col text-slate-900 dark:text-slate-100 transition-colors">
@@ -139,12 +138,12 @@ export default function HomePage() {
           </div>
         )}
 
-        {/* Featured Products */}
+        {/* All Products */}
         <section className="bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-2xl p-5 shadow-sm transition-colors">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h2 className="text-lg font-bold text-slate-900 dark:text-white">Featured Products</h2>
-              <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Top picks for you</p>
+              <h2 className="text-lg font-bold text-slate-900 dark:text-white">All Products</h2>
+              <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Browse all our products</p>
             </div>
             <Button asChild variant="outline" size="sm" className="text-xs h-8">
               <Link href="/products">View All <ArrowRight className="ml-1 h-3 w-3" /></Link>
@@ -165,21 +164,6 @@ export default function HomePage() {
             </div>
           )}
         </section>
-
-        {/* Top Sellers */}
-        {!loading && topSellers.length > 0 && (
-          <section className="bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-2xl p-5 shadow-sm transition-colors">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-slate-900 dark:text-white">🔥 Top Sellers</h2>
-              <Button asChild variant="ghost" size="sm" className="text-primary text-xs h-8">
-                <Link href="/products?sort=popular">See All</Link>
-              </Button>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-              {topSellers.map((p) => <ProductCard key={p.id} product={p} />)}
-            </div>
-          </section>
-        )}
 
         {/* Category Cards */}
         {categories.length > 0 && (
