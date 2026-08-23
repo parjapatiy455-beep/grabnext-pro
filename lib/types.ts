@@ -63,7 +63,7 @@ export interface Product {
   title: string
   description: string
   price: number
-  originalPrice?: number
+  originalPrice?: number | null
   category: string
   tags: string[]
   imageUrl: string
