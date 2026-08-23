@@ -92,7 +92,14 @@ export default function MasterclassPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-amber-500 selection:text-slate-950">
+    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-amber-500 selection:text-slate-950 relative overflow-hidden">
+      {/* Subtle Fixed Ambient Background Glows */}
+      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+        <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[850px] h-[450px] bg-gradient-to-b from-amber-500/10 via-indigo-500/10 to-transparent blur-[140px] rounded-full" />
+        <div className="absolute top-1/3 -right-40 w-[500px] h-[350px] bg-cyan-500/10 blur-[150px] rounded-full" />
+        <div className="absolute top-2/3 -left-40 w-[500px] h-[350px] bg-emerald-500/10 blur-[150px] rounded-full" />
+        <div className="absolute bottom-10 right-10 w-[550px] h-[350px] bg-amber-500/10 blur-[150px] rounded-full" />
+      </div>
       
       {/* 1. Top Urgency Banner (Gold-Amber Theme) */}
       <div className="bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 text-slate-950 py-2.5 px-4 text-center font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md">

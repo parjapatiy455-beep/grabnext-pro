@@ -335,7 +335,13 @@ export default function CheckoutPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-amber-500 selection:text-slate-950 pb-12">
+    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-amber-500 selection:text-slate-950 pb-12 relative overflow-hidden">
+      {/* Subtle Ambient Background Glows */}
+      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+        <div className="absolute -top-32 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-gradient-to-b from-amber-500/10 via-indigo-500/10 to-transparent blur-[130px] rounded-full" />
+        <div className="absolute top-1/2 -right-32 w-[450px] h-[300px] bg-blue-500/10 blur-[140px] rounded-full" />
+        <div className="absolute bottom-10 -left-32 w-[450px] h-[300px] bg-emerald-500/10 blur-[140px] rounded-full" />
+      </div>
       
       {/* Top Header */}
       <header className="border-b border-slate-800 bg-slate-900/90 py-3.5 px-4 sticky top-0 z-30 backdrop-blur-md">
