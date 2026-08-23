@@ -8,7 +8,7 @@ export function Footer() {
         <footer className="bg-gray-900 text-gray-300 mt-16">
             {/* Main Footer */}
             <div className="container mx-auto px-4 py-12">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-8">
                     {/* Brand */}
                     <div className="col-span-2 md:col-span-1">
                         <div className="mb-4">
@@ -32,6 +32,22 @@ export function Footer() {
                             <li><Link href="/categories" className="hover:text-white transition-colors">Categories</Link></li>
                             <li><Link href="/products?sort=popular" className="hover:text-white transition-colors">Best Sellers</Link></li>
                             <li><Link href="/products?sort=newest" className="hover:text-white transition-colors">New Arrivals</Link></li>
+                        </ul>
+                    </div>
+
+                    {/* Landing Pages & Masterclasses */}
+                    <div>
+                        <h3 className="font-semibold text-white mb-4">Landing Pages & Programs</h3>
+                        <ul className="space-y-2 text-sm">
+                            <li>
+                                <Link href="/masterclass" className="hover:text-amber-400 text-amber-300 font-medium transition-colors flex items-center gap-1">
+                                    <span>🔥 Masterclass (₹49)</span>
+                                </Link>
+                            </li>
+                            <li><Link href="/claude-skills" className="hover:text-white transition-colors">Claude Skills Bundle</Link></li>
+                            <li><Link href="/editing" className="hover:text-white transition-colors">Video Editing Pack</Link></li>
+                            <li><Link href="/software" className="hover:text-white transition-colors">Software Bundles</Link></li>
+                            <li><Link href="/products" className="hover:text-white transition-colors">Special Offers</Link></li>
                         </ul>
                     </div>
 

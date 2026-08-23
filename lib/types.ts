@@ -63,6 +63,7 @@ export interface Product {
   title: string
   description: string
   price: number
+  originalPrice?: number
   category: string
   tags: string[]
   imageUrl: string
