@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
 import Link from "next/link"
-import { StoreHeader } from "@/components/store-header"
+import { Logo } from "@/components/logo"
 import { Footer } from "@/components/footer"
 import { useCart } from "@/contexts/cart-context"
 import { toast } from "@/hooks/use-toast"
@@ -29,7 +29,12 @@ import {
   Check,
   Lock,
   PlayCircle,
-  HelpCircle
+  HelpCircle,
+  Download,
+  DollarSign,
+  Target,
+  BarChart3,
+  CheckSquare
 } from "lucide-react"
 
 // Product payload for masterclass
@@ -88,315 +93,339 @@ export default function MasterclassPage() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-amber-500 selection:text-slate-950">
-      <StoreHeader />
-
-      {/* Top Banner Alert Bar */}
-      <div className="bg-gradient-to-r from-amber-500 via-orange-500 to-red-600 text-slate-950 py-2 px-4 text-center font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg">
-        <Flame className="w-4 h-4 animate-bounce text-slate-950" />
-        <span>SPECIAL LIMITED TIME OFFER: Enroll in the Masterclass Today for Only <strong>₹49</strong> (Original Price ₹2,999)</span>
-        <Flame className="w-4 h-4 animate-bounce text-slate-950" />
+      
+      {/* 1. Top Urgency Banner */}
+      <div className="bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 text-slate-950 py-2.5 px-4 text-center font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md">
+        <Flame className="w-4 h-4 animate-bounce text-slate-950 shrink-0" />
+        <span>SPECIAL LIMITED OFFER: Join the Live Masterclass Today for Only <strong>₹49</strong> <span className="line-through opacity-70">₹2,999</span> (84% OFF)</span>
+        <Flame className="w-4 h-4 animate-bounce text-slate-950 shrink-0" />
       </div>
 
-      {/* Hero Section */}
-      <section className="relative pt-12 pb-20 overflow-hidden bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 border-b border-slate-800/60">
-        {/* Glow Effects */}
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[350px] bg-amber-500/10 blur-[130px] rounded-full pointer-events-none" />
-        <div className="absolute top-1/3 right-10 w-[300px] h-[300px] bg-indigo-500/10 blur-[100px] rounded-full pointer-events-none" />
-
-        <div className="container mx-auto px-4 relative z-10 max-w-6xl">
-          <div className="flex flex-col items-center text-center max-w-4xl mx-auto">
-            
-            {/* Live Masterclass Badge */}
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs sm:text-sm font-semibold mb-6 shadow-inner">
-              <span className="relative flex h-2.5 w-2.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500"></span>
-              </span>
-              <span>LIVE 3-HOUR INTENSIVE MASTERCLASS & WORKSHOP</span>
-            </div>
-
-            {/* Main Headline */}
-            <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white leading-[1.15] mb-6">
-              Learn How To Earn <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-orange-400 to-amber-200">₹1,00,000/Month</span> Selling Digital Products From Scratch!
-            </h1>
-
-            {/* Subheadline */}
-            <p className="text-base sm:text-xl text-slate-300 max-w-3xl mb-8 leading-relaxed font-normal">
-              Complete Hindi Blueprint: Discover how to <strong>Buy/Source Digital Products</strong>, <strong>Build Your E-commerce Website</strong> in 30 minutes, and <strong>Run High-Profitable Facebook & Instagram Ads</strong> — No Coding or Prior Experience Needed!
-            </p>
-
-            {/* Countdown & Seats Bar */}
-            <div className="w-full max-w-xl bg-slate-900/90 border border-amber-500/30 rounded-2xl p-5 mb-8 backdrop-blur-md shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <Clock className="w-6 h-6 text-amber-400 animate-pulse" />
-                <div className="text-left">
-                  <p className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Offer Expires In</p>
-                  <p className="text-xl font-bold font-mono text-amber-400">
-                    {String(timeLeft.minutes).padStart(2, '0')}m : {String(timeLeft.seconds).padStart(2, '0')}s
-                  </p>
-                </div>
-              </div>
-              <div className="h-8 w-px bg-slate-800 hidden sm:block" />
-              <div className="flex items-center gap-3">
-                <Users className="w-6 h-6 text-emerald-400" />
-                <div className="text-left">
-                  <p className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Limited Seats Left</p>
-                  <p className="text-lg font-bold text-emerald-400">Only 7 Seats Remaining</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Pricing CTA Area */}
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 w-full max-w-md mb-6">
-              <button
-                onClick={handleEnroll}
-                className="w-full py-4 px-8 rounded-xl font-bold text-lg text-slate-950 bg-gradient-to-r from-amber-400 via-amber-300 to-amber-500 hover:from-amber-300 hover:to-amber-400 shadow-[0_0_35px_rgba(245,158,11,0.4)] transition-all duration-300 transform hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center gap-3 group"
-              >
-                <span>Enroll Now @ Only ₹49</span>
-                <ArrowRight className="w-5 h-5 text-slate-950 group-hover:translate-x-1 transition-transform" />
-              </button>
-            </div>
-
-            <p className="text-xs text-slate-400 flex items-center gap-2">
-              <ShieldCheck className="w-4 h-4 text-emerald-400" />
-              <span>Instant Access After Payment • 100% Satisfaction Guarantee</span>
-            </p>
-
-            {/* Highlights Bar */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-12 w-full max-w-4xl text-left">
-              {[
-                { title: "No Coding Needed", desc: "Drag & drop website builder setup" },
-                { title: "High Profit Margin", desc: "90% - 95% profit on every sale" },
-                { title: "Instant Delivery", desc: "Automated digital product delivery" },
-                { title: "Low Ad Budget", desc: "Start Facebook Ads at just ₹100/day" }
-              ].map((item, i) => (
-                <div key={i} className="bg-slate-900/60 border border-slate-800 p-4 rounded-xl backdrop-blur-sm">
-                  <CheckCircle2 className="w-5 h-5 text-amber-400 mb-2" />
-                  <h4 className="font-bold text-sm text-white mb-1">{item.title}</h4>
-                  <p className="text-xs text-slate-400 leading-snug">{item.desc}</p>
-                </div>
-              ))}
-            </div>
-
-          </div>
-        </div>
-      </section>
-
-      {/* Key Pillars Section - What You Will Learn */}
-      <section className="py-20 bg-slate-900 border-b border-slate-800">
-        <div className="container mx-auto px-4 max-w-6xl">
-          
-          <div className="text-center max-w-3xl mx-auto mb-16">
-            <span className="text-xs font-bold text-amber-400 tracking-wider uppercase bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/20">
-              Masterclass Curriculum
+      {/* 2. Minimal Landing Page Header (No Store Navigation Distractions) */}
+      <header className="py-4 border-b border-slate-800/80 bg-slate-950/90 backdrop-blur-md sticky top-0 z-40">
+        <div className="container mx-auto px-4 max-w-6xl flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Logo textClassName="text-white text-lg sm:text-xl" />
+            <span className="text-xs bg-amber-500/20 text-amber-400 font-bold px-2.5 py-0.5 rounded border border-amber-500/30">
+              MASTERCLASS
             </span>
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-white mt-4 mb-4">
-              What You Will Learn In This 3-Step Masterclass
-            </h2>
-            <p className="text-slate-400 text-sm sm:text-base">
-              Everything you need to launch, market, and scale your digital product business from 0 to 6 figures.
-            </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            
-            {/* Pillar 1 */}
-            <div className="bg-slate-950 border border-amber-500/20 rounded-2xl p-6 relative hover:border-amber-500/40 transition-all shadow-xl group">
-              <div className="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 mb-6 group-hover:scale-110 transition-transform">
-                <ShoppingBag className="w-6 h-6" />
-              </div>
-              <span className="text-xs font-bold text-amber-400 uppercase tracking-widest">Pillar #1</span>
-              <h3 className="text-xl font-bold text-white mt-1 mb-3">Digital Product Buying & Sourcing</h3>
-              <p className="text-slate-400 text-sm mb-4 leading-relaxed">
-                Learn where and how to acquire high-demand digital products, software, PLR ebooks, graphics, and video editing bundles with full Master Resell Rights (MRR).
-              </p>
-              <ul className="space-y-2 text-xs text-slate-300">
-                <li className="flex items-start gap-2">
-                  <Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                  <span>Top trusted PLR & Digital asset supplier platforms</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                  <span>Identifying trending & high-converting product niches</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                  <span>Acquiring lifetime resell rights for 95% profit margins</span>
-                </li>
-              </ul>
+          <div className="flex items-center gap-4">
+            <div className="hidden md:flex items-center gap-2 text-xs text-amber-400 font-semibold bg-slate-900 border border-amber-500/20 px-3 py-1.5 rounded-lg">
+              <Clock className="w-3.5 h-3.5 animate-pulse text-amber-400" />
+              <span>Offer Ends In: {String(timeLeft.minutes).padStart(2, '0')}m {String(timeLeft.seconds).padStart(2, '0')}s</span>
             </div>
 
-            {/* Pillar 2 */}
-            <div className="bg-slate-950 border border-amber-500/20 rounded-2xl p-6 relative hover:border-amber-500/40 transition-all shadow-xl group">
-              <div className="w-12 h-12 rounded-xl bg-blue-500/10 border border-blue-500/30 flex items-center justify-center text-blue-400 mb-6 group-hover:scale-110 transition-transform">
-                <Globe className="w-6 h-6" />
-              </div>
-              <span className="text-xs font-bold text-blue-400 uppercase tracking-widest">Pillar #2</span>
-              <h3 className="text-xl font-bold text-white mt-1 mb-3">Website & E-commerce Store Setup</h3>
-              <p className="text-slate-400 text-sm mb-4 leading-relaxed">
-                Build your own high-converting sales landing page and automated e-commerce store step-by-step in 30 minutes without writing a single line of code.
-              </p>
-              <ul className="space-y-2 text-xs text-slate-300">
-                <li className="flex items-start gap-2">
-                  <Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                  <span>No-code store setup & landing page design</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                  <span>Integrating Payment Gateways (Razorpay/XPay/UPI)</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                  <span>Automated instant download delivery to buyers</span>
-                </li>
-              </ul>
-            </div>
+            <button
+              onClick={handleEnroll}
+              className="py-2 px-4 sm:px-6 rounded-lg text-xs sm:text-sm font-extrabold text-slate-950 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 shadow-md transition-transform active:scale-95"
+            >
+              Enroll @ ₹49
+            </button>
+          </div>
+        </div>
+      </header>
 
-            {/* Pillar 3 */}
-            <div className="bg-slate-950 border border-amber-500/20 rounded-2xl p-6 relative hover:border-amber-500/40 transition-all shadow-xl group">
-              <div className="w-12 h-12 rounded-xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400 mb-6 group-hover:scale-110 transition-transform">
-                <TrendingUp className="w-6 h-6" />
-              </div>
-              <span className="text-xs font-bold text-indigo-400 uppercase tracking-widest">Pillar #3</span>
-              <h3 className="text-xl font-bold text-white mt-1 mb-3">Facebook & Instagram Ads Mastery</h3>
-              <p className="text-slate-400 text-sm mb-4 leading-relaxed">
-                Master Meta advertising to get targeted buyers every single day. Learn how to launch ads starting with just ₹100/day and scale up profitably.
-              </p>
-              <ul className="space-y-2 text-xs text-slate-300">
-                <li className="flex items-start gap-2">
-                  <Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                  <span>Setting up Facebook Business Manager & Meta Pixel</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                  <span>Writing winning ad copy & creating viral video/image ads</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                  <span>Targeting high-intent buyers & scaling budget safely</span>
-                </li>
-              </ul>
-            </div>
+      {/* 3. Hero Section - Professional High Contrast & Ultra-Clear Typography */}
+      <section className="relative pt-10 pb-20 overflow-hidden bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 border-b border-slate-800">
+        {/* Subtle Background Glows */}
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[550px] h-[300px] bg-amber-500/10 blur-[140px] rounded-full pointer-events-none" />
+        <div className="absolute top-1/3 right-10 w-[300px] h-[300px] bg-emerald-500/10 blur-[120px] rounded-full pointer-events-none" />
 
+        <div className="container mx-auto px-4 relative z-10 max-w-5xl text-center">
+          
+          {/* Badge */}
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs sm:text-sm font-bold mb-6">
+            <span className="relative flex h-2.5 w-2.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500"></span>
+            </span>
+            <span>LIVE 3-HOUR INTENSIVE WORKSHOP & RECORDING</span>
+          </div>
+
+          {/* Clear Bold Headline */}
+          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black text-white tracking-tight leading-[1.15] mb-6">
+            Learn How To Build A Profitable <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-orange-400 to-amber-200">₹1,00,000/Month</span> Digital Product Business!
+          </h1>
+
+          {/* Concise Subheadline in Clear Hindi/English */}
+          <p className="text-base sm:text-xl text-slate-300 max-w-3xl mx-auto mb-8 leading-relaxed font-normal">
+            Step-by-step practical masterclass: Discover how to <strong>Buy Digital Products</strong>, <strong>Build Your Own Sales Website</strong> in 30 minutes, and <strong>Run High-Profit Facebook Ads</strong> from scratch!
+          </p>
+
+          {/* Real-time Urgency Card */}
+          <div className="max-w-xl mx-auto bg-slate-900/90 border border-amber-500/30 rounded-2xl p-5 mb-8 shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-amber-500/10 border border-amber-500/20 rounded-xl text-amber-400">
+                <Clock className="w-6 h-6 animate-pulse" />
+              </div>
+              <div className="text-left">
+                <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Offer Expires In</p>
+                <p className="text-xl font-black font-mono text-amber-400">
+                  {String(timeLeft.minutes).padStart(2, '0')}m : {String(timeLeft.seconds).padStart(2, '0')}s
+                </p>
+              </div>
+            </div>
+            <div className="h-8 w-px bg-slate-800 hidden sm:block" />
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-400">
+                <Users className="w-6 h-6" />
+              </div>
+              <div className="text-left">
+                <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Seats Left At ₹49</p>
+                <p className="text-lg font-black text-emerald-400">Only 7 Seats Left</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Primary CTA Area */}
+          <div className="flex flex-col items-center justify-center gap-3 w-full max-w-md mx-auto mb-6">
+            <button
+              onClick={handleEnroll}
+              className="w-full py-4 px-8 rounded-xl font-black text-lg text-slate-950 bg-gradient-to-r from-amber-400 via-amber-300 to-amber-500 hover:from-amber-300 hover:to-amber-400 shadow-[0_0_35px_rgba(245,158,11,0.4)] transition-all duration-300 transform hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center gap-3 group"
+            >
+              <span>Enroll Now @ Only ₹49</span>
+              <ArrowRight className="w-5 h-5 text-slate-950 group-hover:translate-x-1 transition-transform" />
+            </button>
+
+            <div className="flex items-center gap-3 text-xs text-slate-400 mt-2">
+              <span className="flex items-center gap-1"><ShieldCheck className="w-4 h-4 text-emerald-400" /> Instant Access</span>
+              <span>•</span>
+              <span className="flex items-center gap-1"><Lock className="w-4 h-4 text-emerald-400" /> 100% Guaranteed Value</span>
+            </div>
+          </div>
+
+          {/* Key Benefit Highlights Box */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-12 text-left">
+            {[
+              { title: "1. Digital Product Buying", desc: "How & where to buy products with resell rights" },
+              { title: "2. Website Building", desc: "Create your automated store without coding" },
+              { title: "3. Facebook Ads Setup", desc: "Run high-ROI ads starting at ₹100/day" },
+              { title: "4. ₹15,000+ Free Bonuses", desc: "Get ready-to-sell digital asset bundles" }
+            ].map((item, i) => (
+              <div key={i} className="bg-slate-900/90 border border-slate-800 p-4 rounded-xl shadow-md">
+                <CheckCircle2 className="w-5 h-5 text-amber-400 mb-2" />
+                <h4 className="font-bold text-sm text-white mb-1">{item.title}</h4>
+                <p className="text-xs text-slate-400 leading-snug">{item.desc}</p>
+              </div>
+            ))}
           </div>
 
         </div>
       </section>
 
-      {/* Free Bonuses Stack Section */}
-      <section className="py-20 bg-slate-950 border-b border-slate-800 relative">
+      {/* 4. Detailed Step-by-Step Curriculum (Point-by-Point Clarity) */}
+      <section className="py-20 bg-slate-900 border-b border-slate-800">
         <div className="container mx-auto px-4 max-w-5xl">
           
           <div className="text-center max-w-3xl mx-auto mb-16">
-            <span className="text-xs font-bold text-emerald-400 tracking-wider uppercase bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
-              Exclusive Registration Bonuses
+            <span className="text-xs font-bold text-amber-400 tracking-wider uppercase bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/20">
+              COMPLETE STEP-BY-STEP BLUEPRINT
             </span>
             <h2 className="text-3xl sm:text-4xl font-extrabold text-white mt-4 mb-4">
-              Get ₹15,000+ Worth Free Bonuses Included Today!
+              Masterclass Mein Aap Kya Kya Seekhenge?
             </h2>
             <p className="text-slate-400 text-sm sm:text-base">
-              When you enroll in the Masterclass for ₹49 today, you get all these premium tools & assets for FREE!
+              Har ek point ko simple Hindi mein practically karke dikhaya jayega, taaki aap pehle din se earning shuru kar sakein.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-8">
             
-            {[
-              {
-                title: "Bonus #1: 10,000+ Ready-To-Sell Digital Products Pack",
-                value: "₹4,999",
-                desc: "Get instant access to thousands of ebooks, Canva templates, video editing presets, and software tools to start selling immediately.",
-                icon: Gift,
-                color: "text-amber-400"
-              },
-              {
-                title: "Bonus #2: High-Converting Facebook Ad Templates",
-                value: "₹3,999",
-                desc: "Proven ad copy scripts and Canva graphic templates designed to drive maximum clicks and sales on Facebook & Instagram.",
-                icon: Sparkles,
-                color: "text-blue-400"
-              },
-              {
-                title: "Bonus #3: Pre-Built E-commerce Landing Page Template",
-                value: "₹4,499",
-                desc: "Plug-and-play sales page template that you can import instantly to launch your digital store in minutes.",
-                icon: Globe,
-                color: "text-indigo-400"
-              },
-              {
-                title: "Bonus #4: VIP Student Community & Mentorship Access",
-                value: "Priceless",
-                desc: "Join our private Telegram / WhatsApp group for ongoing support, Q&A sessions, and updates on trending digital products.",
-                icon: Users,
-                color: "text-emerald-400"
-              }
-            ].map((bonus, idx) => (
-              <div key={idx} className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 flex gap-4 items-start shadow-lg">
-                <div className="p-3 bg-slate-950 border border-slate-800 rounded-xl shrink-0 text-amber-400">
-                  <bonus.icon className={`w-6 h-6 ${bonus.color}`} />
+            {/* Step 1: Buying / Sourcing */}
+            <div className="bg-slate-950 border border-amber-500/30 rounded-2xl p-6 sm:p-8 shadow-xl relative">
+              <div className="flex flex-col md:flex-row gap-6 items-start">
+                <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0 font-black text-xl">
+                  01
                 </div>
-                <div>
-                  <div className="flex items-center justify-between gap-2 mb-1">
-                    <h4 className="font-bold text-white text-base">{bonus.title}</h4>
-                    <span className="text-xs font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 shrink-0">
-                      FREE (Valued {bonus.value})
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className="text-xs font-bold px-2.5 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30 uppercase">
+                      Module 1
                     </span>
+                    <h3 className="text-xl sm:text-2xl font-bold text-white">
+                      Digital Products Buy & Source Kaise Karein?
+                    </h3>
                   </div>
-                  <p className="text-xs text-slate-400 leading-relaxed">{bonus.desc}</p>
+                  <p className="text-slate-300 text-sm sm:text-base leading-relaxed mb-4">
+                    Pehle step mein aap seekhenge ki high-converting digital products (software, ebooks, templates, graphic bundles) kahan se aur kaise khareedein jinhe aap aage **100% Profit** par baar-baar bech sakte hain.
+                  </p>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs sm:text-sm text-slate-300 bg-slate-900/60 p-4 rounded-xl border border-slate-800">
+                    <div className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                      <span><strong>PLR & MRR License:</strong> Reselling rights wale products kaise lein.</span>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                      <span><strong>Trending Products Niche:</strong> Konsa product sabse zyada bikta hai.</span>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                      <span><strong>Low Sourcing Cost:</strong> ₹100-₹200 mein hazaron products ki sourcing list.</span>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                      <span><strong>Zero Copyright Risk:</strong> Completely legal & safe resell setup.</span>
+                    </div>
+                  </div>
                 </div>
               </div>
-            ))}
+            </div>
+
+            {/* Step 2: Website Building */}
+            <div className="bg-slate-950 border border-blue-500/30 rounded-2xl p-6 sm:p-8 shadow-xl relative">
+              <div className="flex flex-col md:flex-row gap-6 items-start">
+                <div className="w-14 h-14 rounded-2xl bg-blue-500/10 border border-blue-500/30 flex items-center justify-center text-blue-400 shrink-0 font-black text-xl">
+                  02
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className="text-xs font-bold px-2.5 py-0.5 rounded bg-blue-500/20 text-blue-400 border border-blue-500/30 uppercase">
+                      Module 2
+                    </span>
+                    <h3 className="text-xl sm:text-2xl font-bold text-white">
+                      E-commerce Website & Sales Page Kaise Banayein?
+                    </h3>
+                  </div>
+                  <p className="text-slate-300 text-sm sm:text-base leading-relaxed mb-4">
+                    Bina kisi coding ke sirf 30 minutes mein ek professional e-commerce store aur sales landing page setup karna seekhein. Payment aate hi buyer ko automatic download link mil jayega.
+                  </p>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs sm:text-sm text-slate-300 bg-slate-900/60 p-4 rounded-xl border border-slate-800">
+                    <div className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                      <span><strong>No-Code Store Creation:</strong> Drag & Drop karke website tayar karein.</span>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                      <span><strong>UPI & Payment Gateway:</strong> Razorpay / XPay / QR Payment integration.</span>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                      <span><strong>Auto Digital Delivery:</strong> Customer ko instant download milne ka system.</span>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                      <span><strong>Mobile Responsive:</strong> Har phone par fast load hone wala design.</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Step 3: Facebook Ads */}
+            <div className="bg-slate-950 border border-indigo-500/30 rounded-2xl p-6 sm:p-8 shadow-xl relative">
+              <div className="flex flex-col md:flex-row gap-6 items-start">
+                <div className="w-14 h-14 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shrink-0 font-black text-xl">
+                  03
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className="text-xs font-bold px-2.5 py-0.5 rounded bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 uppercase">
+                      Module 3
+                    </span>
+                    <h3 className="text-xl sm:text-2xl font-bold text-white">
+                      Facebook & Instagram Ads Se Daily Sales Kaise Layein?
+                    </h3>
+                  </div>
+                  <p className="text-slate-300 text-sm sm:text-base leading-relaxed mb-4">
+                    Meta Ads (Facebook & Instagram Ads) chala kar daily high-paying customers attract karein. Seekhein ₹100/day ke chote budget se shuru karke daily 20-50 orders kaise laayein.
+                  </p>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs sm:text-sm text-slate-300 bg-slate-900/60 p-4 rounded-xl border border-slate-800">
+                    <div className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                      <span><strong>Meta Pixel Setup:</strong> Conversion tracking & audience mapping.</span>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                      <span><strong>High-ROI Targeting:</strong> Sahi khareedne wale logon tak ad pahanchayein.</span>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                      <span><strong>Winning Ad Creatives:</strong> Bikanewali video & image ads tayar karna.</span>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                      <span><strong>Low Cost Scaling:</strong> Kam kharche mein zyada revenue generate karna.</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
 
           </div>
 
           <div className="text-center mt-12">
             <button
               onClick={handleEnroll}
-              className="py-4 px-10 rounded-xl font-bold text-lg text-slate-950 bg-gradient-to-r from-amber-400 via-amber-300 to-amber-500 hover:from-amber-300 hover:to-amber-400 shadow-[0_0_30px_rgba(245,158,11,0.35)] transition-all transform hover:-translate-y-0.5 active:translate-y-0"
+              className="py-4 px-10 rounded-xl font-black text-lg text-slate-950 bg-gradient-to-r from-amber-400 via-amber-300 to-amber-500 hover:from-amber-300 hover:to-amber-400 shadow-[0_0_30px_rgba(245,158,11,0.35)] transition-all transform hover:-translate-y-0.5"
             >
-              Claim Bonuses & Enroll @ ₹49 Now
+              Enroll In Masterclass Now @ ₹49 Only 🚀
             </button>
           </div>
 
         </div>
       </section>
 
-      {/* Target Audience Section */}
-      <section className="py-20 bg-slate-900 border-b border-slate-800">
+      {/* 5. Bonus Stack Section (Clear Free Assets Included) */}
+      <section className="py-20 bg-slate-950 border-b border-slate-800">
         <div className="container mx-auto px-4 max-w-5xl">
           
           <div className="text-center max-w-3xl mx-auto mb-16">
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-white mb-4">
-              Who Is This Masterclass For?
+            <span className="text-xs font-bold text-emerald-400 tracking-wider uppercase bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
+              FREE REGISTRATION BONUSES
+            </span>
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-white mt-4 mb-4">
+              ₹15,000+ Ke Free Bonuses Included Today!
             </h2>
             <p className="text-slate-400 text-sm sm:text-base">
-              If you fall into any of these categories, this masterclass is 100% crafted for you.
+              ₹49 mein masterclass ke sath aapko ye saare ready-to-use digital assets completely FREE milenge:
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {[
               {
-                title: "Students & Jobseekers",
-                desc: "Looking to build a reliable side income stream online with low investment."
+                title: "Bonus 1: 10,000+ Digital Products Resell Bundle",
+                value: "₹4,999",
+                desc: "Software, Canva templates, Video presets, & eBooks jinhe aap instantly apni website par bechna shuru kar sakte hain.",
+                icon: Gift
               },
               {
-                title: "Freelancers & Marketers",
-                desc: "Wanting to package digital assets and sell recurring products."
+                title: "Bonus 2: High-Converting Facebook Ad Copies",
+                value: "₹3,999",
+                desc: "Pre-written ad scripts aur graphic templates jo Facebook ads par 5x sales lane ke liye tested hain.",
+                icon: Sparkles
               },
               {
-                title: "E-commerce Sellers",
-                desc: "Transitioning from physical products to 90%+ profit margin digital items."
+                title: "Bonus 3: Readymade E-commerce Website Template",
+                value: "₹4,499",
+                desc: "Plug-and-play sales page template jise aap 1-click mein import karke apni store tayar kar sakte hain.",
+                icon: Globe
               },
               {
-                title: "Content Creators",
-                desc: "Wanting to monetize their audience with digital guides, courses, or presets."
+                title: "Bonus 4: Private VIP Support Community",
+                value: "Priceless",
+                desc: "Private Telegram / WhatsApp group access jahan aap apne doubts pooch sakte hain aur ongoing support pa sakte hain.",
+                icon: Users
               }
-            ].map((card, i) => (
-              <div key={i} className="bg-slate-950 border border-slate-800 rounded-xl p-5 text-left">
-                <CheckCircle2 className="w-6 h-6 text-amber-400 mb-3" />
-                <h4 className="font-bold text-white text-base mb-2">{card.title}</h4>
-                <p className="text-xs text-slate-400 leading-relaxed">{card.desc}</p>
+            ].map((bonus, idx) => (
+              <div key={idx} className="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 flex gap-4 items-start shadow-md">
+                <div className="p-3 bg-slate-950 border border-slate-800 rounded-xl shrink-0 text-amber-400">
+                  <bonus.icon className="w-6 h-6" />
+                </div>
+                <div>
+                  <div className="flex items-center justify-between gap-2 mb-1">
+                    <h4 className="font-bold text-white text-base">{bonus.title}</h4>
+                    <span className="text-xs font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 shrink-0">
+                      FREE ({bonus.value})
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-400 leading-relaxed">{bonus.desc}</p>
+                </div>
               </div>
             ))}
           </div>
@@ -404,107 +433,103 @@ export default function MasterclassPage() {
         </div>
       </section>
 
-      {/* Main Pricing Box Section */}
-      <section className="py-20 bg-slate-950 relative overflow-hidden" id="enroll">
-        <div className="container mx-auto px-4 max-w-3xl relative z-10">
+      {/* 6. Pricing Offer Box (High Conversion & Clear Details) */}
+      <section className="py-20 bg-slate-900 border-b border-slate-800" id="enroll">
+        <div className="container mx-auto px-4 max-w-2xl">
           
-          <div className="bg-gradient-to-b from-slate-900 to-slate-950 border-2 border-amber-500/40 rounded-3xl p-8 sm:p-12 shadow-[0_0_50px_rgba(245,158,11,0.2)] text-center relative">
+          <div className="bg-slate-950 border-2 border-amber-500/40 rounded-3xl p-8 sm:p-10 shadow-[0_0_50px_rgba(245,158,11,0.25)] text-center relative">
             
-            {/* Top Badge */}
-            <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-amber-500 text-slate-950 font-extrabold text-xs uppercase px-4 py-1.5 rounded-full shadow-lg">
-              SPECIAL 84% OFF DISCOUNT
+            <div className="inline-block bg-amber-500 text-slate-950 font-black text-xs uppercase px-4 py-1.5 rounded-full mb-6">
+              LIMITED TIME 84% OFF DISCOUNT
             </div>
 
             <h3 className="text-2xl sm:text-3xl font-extrabold text-white mb-2">
-              Join Digital Product Selling Masterclass
+              Masterclass Enrollment Pass
             </h3>
             <p className="text-xs sm:text-sm text-slate-400 mb-6">
-              Complete 3-Hour Workshop + Recordings + ₹15,000+ Bonuses
+              Complete 3-Hour Workshop + Recordings + All ₹15,000 Bonuses
             </p>
 
-            {/* Price Display */}
             <div className="flex items-center justify-center gap-4 mb-6">
               <span className="text-slate-500 text-xl sm:text-2xl line-through font-semibold">₹2,999</span>
-              <span className="text-4xl sm:text-6xl font-extrabold text-amber-400">₹49</span>
-              <span className="text-xs font-bold bg-amber-500/20 text-amber-400 px-2.5 py-1 rounded-md border border-amber-500/30">
-                ONLY TODAY
+              <span className="text-4xl sm:text-6xl font-black text-amber-400">₹49</span>
+              <span className="text-xs font-bold bg-amber-500/20 text-amber-400 px-3 py-1 rounded border border-amber-500/30">
+                TODAY ONLY
               </span>
             </div>
 
-            {/* Checklist */}
-            <div className="text-left max-w-md mx-auto space-y-3 mb-8 text-xs sm:text-sm text-slate-300">
+            <div className="text-left max-w-md mx-auto space-y-3 mb-8 text-xs sm:text-sm text-slate-300 bg-slate-900/80 p-5 rounded-xl border border-slate-800">
               {[
-                "Step-by-Step Digital Product Buying & Sourcing Guide",
-                "No-Code Website & E-commerce Store Creation Blueprint",
-                "Facebook & Instagram Ads Mastery (₹100/day Budget Strategy)",
-                "Lifetime Access to Masterclass Recording",
-                "Free 10,000+ Digital Products Resell Bundle (Worth ₹4,999)",
-                "Facebook Ad Copies & Website Templates (Worth ₹8,498)",
-                "VIP Telegram / WhatsApp Support Group Access"
-              ].map((feat, idx) => (
-                <div key={idx} className="flex items-center gap-3">
+                "Complete Masterclass Live Session & Recording Access",
+                "Digital Products Sourcing & Buying Blueprint",
+                "30-Minute No-Code Store & Website Setup Guide",
+                "Facebook & Instagram Ads Mastery (₹100/day Strategy)",
+                "10,000+ Ready-To-Sell Digital Product Resell Assets",
+                "Pre-written Ad Copies & Store Templates",
+                "Private Telegram VIP Support Community Access"
+              ].map((point, i) => (
+                <div key={i} className="flex items-center gap-3">
                   <Check className="w-4 h-4 text-emerald-400 shrink-0" />
-                  <span>{feat}</span>
+                  <span>{point}</span>
                 </div>
               ))}
             </div>
 
-            {/* Big CTA Button */}
             <button
               onClick={handleEnroll}
-              className="w-full py-4 px-8 rounded-xl font-extrabold text-lg sm:text-xl text-slate-950 bg-gradient-to-r from-amber-400 via-amber-300 to-amber-500 hover:from-amber-300 hover:to-amber-400 shadow-[0_0_35px_rgba(245,158,11,0.4)] transition-all transform hover:-translate-y-0.5 mb-4"
+              className="w-full py-4 px-8 rounded-xl font-black text-lg sm:text-xl text-slate-950 bg-gradient-to-r from-amber-400 via-amber-300 to-amber-500 hover:from-amber-300 hover:to-amber-400 shadow-[0_0_35px_rgba(245,158,11,0.4)] transition-all transform hover:-translate-y-0.5 mb-4"
             >
               ENROLL NOW FOR ₹49 ONLY 🚀
             </button>
 
-            <div className="flex items-center justify-center gap-6 text-xs text-slate-400">
-              <span className="flex items-center gap-1"><Lock className="w-3.5 h-3.5 text-emerald-400" /> Safe & Secure Checkout</span>
-              <span className="flex items-center gap-1"><ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> Instant Access</span>
-            </div>
+            <p className="text-xs text-slate-400 flex items-center justify-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-emerald-400" />
+              <span>Instant Download Access • 100% Satisfaction Guaranteed</span>
+            </p>
 
           </div>
 
         </div>
       </section>
 
-      {/* FAQ Accordion Section */}
-      <section className="py-20 bg-slate-900 border-t border-slate-800">
+      {/* 7. Clear FAQ Section */}
+      <section className="py-20 bg-slate-950">
         <div className="container mx-auto px-4 max-w-3xl">
           
           <div className="text-center mb-12">
             <HelpCircle className="w-8 h-8 text-amber-400 mx-auto mb-3" />
             <h2 className="text-2xl sm:text-3xl font-extrabold text-white">
-              Frequently Asked Questions (FAQs)
+              Aapke Sawal aur Unke Jawab (FAQs)
             </h2>
           </div>
 
           <div className="space-y-4">
             {[
               {
-                q: "What is covered in this masterclass?",
-                a: "This masterclass teaches you 3 core pillars: 1) How to buy and source digital products with resell rights, 2) How to build your e-commerce store without coding, and 3) How to run profitable Facebook & Instagram Ads to get buyers."
+                q: "Kya ye masterclass beginners ke liye hai?",
+                a: "Haan! Agar aapko koi pehle se experience ya coding nahi aati hai, tab bhi aap is masterclass se sab kuch step-by-step seekh sakte hain."
               },
               {
-                q: "Do I need any technical or coding knowledge?",
-                a: "No! Absolutely no coding or technical experience is required. Everything is explained step-by-step in simple Hindi using beginner-friendly drag-and-drop tools."
+                q: "Kya mujhe masterclass ki recording milegi?",
+                a: "Haan! Payment complete hote hi aapko masterclass ki lifetime recording aur sabhi bonuses ka instant access mil jayega."
               },
               {
-                q: "Will I get recordings of the masterclass?",
-                a: "Yes! You will get lifetime access to the masterclass video recordings and downloadable materials right after enrollment."
+                q: "Digital products resell karne mein copyright risk hai kya?",
+                a: "Bilkul nahi! Is masterclass mein hum sirf valid PLR aur Master Resell Rights (MRR) wale products sourcing ka tarika sikhate hain jo 100% legal hai."
               },
               {
-                q: "How much ad budget do I need to start Facebook Ads?",
-                a: "You can start testing Facebook and Instagram ads with a budget as low as ₹100 to ₹200 per day. We teach you how to target high-intent buyers profitably."
+                q: "Facebook Ads ke liye kitna budget chahiye?",
+                a: "Aap daily sirf ₹100 se ₹200 ka budget laga kar ads test kar sakte hain. Hum aapko kam budget mein maximum ROI nikalna sikhate hain."
               },
               {
-                q: "How do I get the ₹15,000+ worth of free bonuses?",
-                a: "As soon as you complete your ₹49 payment, you will instantly receive access links to all digital product bundles, templates, and the VIP Telegram community."
+                q: "₹15,000 ke free bonuses kaise milenge?",
+                a: "₹49 ki payment hoti hi aapko dashboard aur email par instant 10,000+ digital products bundle, ad templates, aur VIP Telegram group ka link mil jayega."
               }
             ].map((faq, i) => (
-              <div key={i} className="bg-slate-950 border border-slate-800 rounded-xl overflow-hidden">
+              <div key={i} className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
                 <button
                   onClick={() => toggleFaq(i)}
-                  className="w-full p-5 text-left font-bold text-white flex justify-between items-center gap-4 hover:bg-slate-900/50 transition-colors"
+                  className="w-full p-5 text-left font-bold text-white flex justify-between items-center gap-4 hover:bg-slate-800/60 transition-colors"
                 >
                   <span className="text-sm sm:text-base">{faq.q}</span>
                   {openFaq === i ? (
@@ -514,7 +539,7 @@ export default function MasterclassPage() {
                   )}
                 </button>
                 {openFaq === i && (
-                  <div className="p-5 pt-0 text-slate-400 text-xs sm:text-sm border-t border-slate-800/60 leading-relaxed">
+                  <div className="p-5 pt-0 text-slate-300 text-xs sm:text-sm border-t border-slate-800/60 leading-relaxed">
                     {faq.a}
                   </div>
                 )}
@@ -525,16 +550,16 @@ export default function MasterclassPage() {
         </div>
       </section>
 
-      {/* Sticky Mobile/Desktop Bottom Action Bar */}
+      {/* 8. Sticky Action Bar */}
       <div className="fixed bottom-0 left-0 right-0 z-50 bg-slate-950/95 border-t border-amber-500/30 p-3 backdrop-blur-md shadow-2xl">
         <div className="container mx-auto px-4 max-w-4xl flex items-center justify-between gap-4">
           <div className="hidden sm:block">
-            <p className="text-xs text-amber-400 font-semibold">Masterclass Special Discount Offer</p>
-            <p className="text-sm font-extrabold text-white">Enroll Today for Only <span className="text-amber-400">₹49</span> <span className="line-through text-slate-500 text-xs font-normal">₹2,999</span></p>
+            <p className="text-xs text-amber-400 font-bold">Special Masterclass Offer</p>
+            <p className="text-sm font-extrabold text-white">Enroll Today for Only <span className="text-amber-400 font-mono text-base">₹49</span> <span className="line-through text-slate-500 text-xs font-normal">₹2,999</span></p>
           </div>
           <button
             onClick={handleEnroll}
-            className="w-full sm:w-auto py-3 px-8 rounded-xl font-bold text-sm sm:text-base text-slate-950 bg-gradient-to-r from-amber-400 via-amber-300 to-amber-500 hover:from-amber-300 hover:to-amber-400 shadow-[0_0_20px_rgba(245,158,11,0.4)] transition-all"
+            className="w-full sm:w-auto py-3 px-8 rounded-xl font-black text-sm sm:text-base text-slate-950 bg-gradient-to-r from-amber-400 via-amber-300 to-amber-500 hover:from-amber-300 hover:to-amber-400 shadow-[0_0_20px_rgba(245,158,11,0.4)] transition-all"
           >
             Enroll @ ₹49 Now 🚀
           </button>
