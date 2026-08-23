@@ -18,9 +18,9 @@ export function Footer() {
                             India's digital marketplace for software, templates, courses, and more.
                         </p>
                         <div className="flex gap-3 mt-4">
-                            <a href="#" aria-label="Twitter" className="h-8 w-8 rounded-lg bg-gray-800 flex items-center justify-center hover:bg-primary transition-colors text-xs font-bold">𝕏</a>
-                            <a href="#" aria-label="Instagram" className="h-8 w-8 rounded-lg bg-gray-800 flex items-center justify-center hover:bg-primary transition-colors text-xs">📷</a>
-                            <a href="#" aria-label="WhatsApp" className="h-8 w-8 rounded-lg bg-gray-800 flex items-center justify-center hover:bg-primary transition-colors text-xs">💬</a>
+                            <a href="https://www.facebook.com/GrabNextofficial" target="_blank" rel="noopener noreferrer" aria-label="Facebook" className="h-8 w-8 rounded-lg bg-gray-800 flex items-center justify-center hover:bg-blue-600 transition-colors text-xs font-bold text-white">f</a>
+                            <a href="https://www.instagram.com/grabnextofficial/" target="_blank" rel="noopener noreferrer" aria-label="Instagram" className="h-8 w-8 rounded-lg bg-gray-800 flex items-center justify-center hover:bg-pink-600 transition-colors text-xs font-bold text-white">📷</a>
+                            <a href="https://wa.me/919999999999" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp" className="h-8 w-8 rounded-lg bg-gray-800 flex items-center justify-center hover:bg-green-600 transition-colors text-xs">💬</a>
                         </div>
                     </div>
 

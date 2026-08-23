@@ -58,6 +58,20 @@ const TICK_MS = 18
 
 export function ShopAIChat() {
   const pathname = usePathname()
+
+  // Hide AI chat floating widget on all landing pages
+  const isLandingPage =
+    pathname?.startsWith("/masterclass") ||
+    pathname?.startsWith("/lp/") ||
+    pathname?.includes("/landing-page") ||
+    pathname === "/claude-skills" ||
+    pathname === "/editing" ||
+    pathname === "/software"
+
+  if (isLandingPage) {
+    return null
+  }
+
   const [isOpen, setIsOpen] = useState(false)
   const [messages, setMessages] = useState<Message[]>([INITIAL_MESSAGE])
 
