@@ -56,7 +56,7 @@ export default function UsersAdminPage() {
             // Update local state without reloading everything immediately
             setUsers(prev => prev.map(u => u.uid === uid ? { ...u, role: newRole } : u))
             if (selectedUser && selectedUser.uid === uid) {
-                setSelectedUser(prev => prev ? { ...prev, role: newRole } : null)
+                setSelectedUser((prev: any) => prev ? { ...prev, role: newRole } : null)
             }
         } catch (error: any) {
             toast({ title: "Error", description: error.message, variant: "destructive" })

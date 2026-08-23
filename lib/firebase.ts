@@ -15,10 +15,10 @@ const firebaseConfig = {
 // Validate config
 const isConfigValid = Object.values(firebaseConfig).every(value => value !== undefined && value !== "")
 
-let app;
-let auth;
-let db;
-let storage;
+let app: any;
+let auth: any;
+let db: any;
+let storage: any;
 
 if (typeof window !== "undefined") {
   if (isConfigValid) {

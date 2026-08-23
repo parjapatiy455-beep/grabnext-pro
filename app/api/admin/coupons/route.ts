@@ -2,7 +2,7 @@ export const runtime = 'edge'
 import { NextRequest, NextResponse } from 'next/server'
 import { executeQuery } from '@/lib/db'
 import { getSession } from '@/lib/session'
-import { runMigrations } from '../../init/route'
+import { runMigrations } from '@/lib/migrations'
 
 export const dynamic = 'force-dynamic'
 

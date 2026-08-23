@@ -22,8 +22,15 @@ export const signUpWithEmail = async (email: string, password: string, displayNa
     body: JSON.stringify({ email, password, displayName })
   });
 
+  if (!res.ok) {
+    let errorMsg = 'Failed to sign up';
+    try {
+      const err = await res.json();
+      errorMsg = err.error || errorMsg;
+    } catch {}
+    throw new Error(errorMsg);
+  }
   const data = await res.json();
-  if (!res.ok) throw new Error(data.error || 'Failed to sign up');
   return data.user;
 }
 
@@ -34,8 +41,15 @@ export const signInWithEmail = async (email: string, password: string) => {
     body: JSON.stringify({ email, password })
   });
 
+  if (!res.ok) {
+    let errorMsg = 'Failed to sign in';
+    try {
+      const err = await res.json();
+      errorMsg = err.error || errorMsg;
+    } catch {}
+    throw new Error(errorMsg);
+  }
   const data = await res.json();
-  if (!res.ok) throw new Error(data.error || 'Failed to sign in');
   return data.user;
 }
 
@@ -54,8 +68,15 @@ export const confirmGuestPassword = async (newPassword: string) => {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ newPassword })
   });
+  if (!res.ok) {
+    let errorMsg = 'Failed to confirm password';
+    try {
+      const err = await res.json();
+      errorMsg = err.error || errorMsg;
+    } catch {}
+    throw new Error(errorMsg);
+  }
   const data = await res.json();
-  if (!res.ok) throw new Error(data.error || 'Failed to confirm password');
   return data;
 }
 

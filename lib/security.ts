@@ -1,11 +1,20 @@
-import type { NextRequest } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 import { rateLimit } from "./rate-limit"
 
 export async function securityMiddleware(request: NextRequest) {
   // Rate limiting
   const rateLimitResult = await rateLimit(request)
   if (!rateLimitResult.success) {
-    return new Response("Too many requests", { status: 429 })
+    return NextResponse.json(
+      { error: "Too many requests. Please try again later.", success: false },
+      {
+        status: 429,
+        headers: {
+          "Content-Type": "application/json",
+          "Retry-After": "60",
+        },
+      }
+    )
   }
 
   // Removed input validation from middleware because reading request.json() 

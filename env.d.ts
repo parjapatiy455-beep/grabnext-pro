@@ -32,3 +32,5 @@ interface CloudflareEnv {
   TELEGRAM_BOT_TOKEN?: string;
   TELEGRAM_CHAT_ID?: string;
 }
+
+declare module 'backblaze-b2';

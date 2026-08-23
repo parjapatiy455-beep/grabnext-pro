@@ -13,6 +13,15 @@ async function getSettings() {
     } catch { return {} }
 }
 
+function extractJSON(text: string) {
+    try {
+        const clean = text.replace(/```json/g, '').replace(/```/g, '').trim()
+        return JSON.parse(clean)
+    } catch {
+        return []
+    }
+}
+
 const SYSTEM_PROMPT = `You are an expert frontend developer, landing page designer, and copywriter.
 When asked to create a landing page, return ONLY raw, valid HTML code using Tailwind CSS classes for styling.
 Do NOT use any markdown formatting, do not wrap the output in \`\`\`html tags, and do not provide any explanations.
