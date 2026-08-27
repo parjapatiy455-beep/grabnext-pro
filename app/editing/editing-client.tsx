@@ -1,16 +1,16 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useCart } from "@/contexts/cart-context"
-import { ChevronDown, MessageSquare, ShieldCheck, CheckCircle2, Play, Volume2, VolumeX } from "lucide-react"
+import { ChevronDown, MessageSquare, ShieldCheck, CheckCircle2, Play, Volume2, VolumeX, Clock, Lock, Shield, Zap, Sparkles } from "lucide-react"
 
 // Fallback product info in case API fetch takes time or isn't loaded yet
 const FALLBACK_PRODUCT = {
   id: "mega-video-editing-bundle-the-ultimate-toolkit-for-creators-cf1b23",
   title: "Video Editing Assets Bundle",
-  price: 149,
+  price: 199,
   category: "digital",
   tags: ["digital", "bundle"],
   imageUrl: "https://wbveb.idigitalcampus.com/wp-content/uploads/2025/02/hero1.webp",
@@ -46,37 +46,137 @@ export function EditingLandingPageClient() {
   })
   
   // Video player controls
-  const [isMuted, setIsMuted] = useState(true)
+  const [isMuted, setIsMuted] = useState(false)
+  const [hasInteracted, setHasInteracted] = useState(false)
+  const videoRef = useRef<HTMLVideoElement | null>(null)
 
-  // Prefetch product by slug on mount
+  const handlePlayWithSound = () => {
+    if (videoRef.current) {
+      videoRef.current.muted = false
+      setIsMuted(false)
+      videoRef.current.play().then(() => {
+        setHasInteracted(true)
+      }).catch(err => {
+        console.log("Play with sound prevented by browser:", err)
+      })
+    }
+  }
+
+  const toggleMute = () => {
+    if (videoRef.current) {
+      const newMuted = !videoRef.current.muted
+      videoRef.current.muted = newMuted
+      setIsMuted(newMuted)
+      if (!newMuted) {
+        setHasInteracted(true)
+        videoRef.current.play().catch(() => {})
+      }
+    }
+  }
+
+  // Attempt unmuted play on load, fallback to muted autoplay if browser restricts
+  useEffect(() => {
+    if (videoRef.current) {
+      videoRef.current.muted = false
+      videoRef.current.play().then(() => {
+        setIsMuted(false)
+        setHasInteracted(true)
+      }).catch(() => {
+        if (videoRef.current) {
+          videoRef.current.muted = true
+          setIsMuted(true)
+          videoRef.current.play().catch(() => {})
+        }
+      })
+    }
+  }, [])
+
+  // Offer Urgency Countdown Timer (15 mins)
+  const [timeLeft, setTimeLeft] = useState({ minutes: 14, seconds: 59 })
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev.seconds > 0) return { ...prev, seconds: prev.seconds - 1 }
+        if (prev.minutes > 0) return { minutes: prev.minutes - 1, seconds: 59 }
+        return { minutes: 14, seconds: 59 }
+      })
+    }, 1000)
+    return () => clearInterval(timer)
+  }, [])
+
+  // Prefetch product by slug on mount & track Meta Pixel / Google Ads ViewContent
   useEffect(() => {
     fetch("/api/products/mega-video-editing-bundle-the-ultimate-toolkit-for-creators-cf1b23")
       .then(res => res.json())
       .then(data => {
         if (data && data.id) {
-          setProduct(data)
+          // Ensure price is 199 for campaign consistency
+          setProduct({ ...data, price: 199 })
         }
       })
       .catch(err => console.error("Prefetch product failed", err))
   }, [])
 
+  // Track Meta Pixel ViewContent & Google Ads view_item on mount / product change
+  useEffect(() => {
+    const targetProduct = product || FALLBACK_PRODUCT
+    try {
+      import("@/lib/pixel").then(({ trackViewContent }) => {
+        trackViewContent({
+          content_name: targetProduct.title,
+          content_ids: [targetProduct.id],
+          contents: [{ id: targetProduct.id, quantity: 1, item_price: 199 }],
+          value: 199,
+          currency: "INR"
+        })
+      })
+
+      // Google Ads / Analytics GTAG Event
+      if (typeof window !== "undefined" && (window as any).gtag) {
+        ;(window as any).gtag("event", "view_item", {
+          currency: "INR",
+          value: 199,
+          items: [{ item_id: targetProduct.id, item_name: targetProduct.title, price: 199 }]
+        })
+      }
+    } catch (err) {
+      console.error("Pixel ViewContent tracking error:", err)
+    }
+  }, [product])
+
   // Handle direct checkout (add to cart & redirect)
   const handlePurchase = (e: React.MouseEvent) => {
     e.preventDefault()
     const targetProduct = product || FALLBACK_PRODUCT
+    const purchaseProduct = { ...targetProduct, price: 199 }
     clearCart()
-    addToCart(targetProduct)
+    addToCart(purchaseProduct)
     
     // Track Meta Pixel AddToCart event
     try {
       import("@/lib/pixel").then(({ trackAddToCart }) => {
         trackAddToCart({
-          content_name: targetProduct.title,
-          content_ids: [targetProduct.id],
-          contents: [{ id: targetProduct.id, quantity: 1, item_price: targetProduct.price }],
-          value: targetProduct.price,
+          content_name: purchaseProduct.title,
+          content_ids: [purchaseProduct.id],
+          contents: [{ id: purchaseProduct.id, quantity: 1, item_price: 199 }],
+          value: 199,
+          currency: "INR"
         })
       })
+
+      // Track Google Ads / GTAG add_to_cart & begin_checkout events
+      if (typeof window !== "undefined" && (window as any).gtag) {
+        ;(window as any).gtag("event", "add_to_cart", {
+          currency: "INR",
+          value: 199,
+          items: [{ item_id: purchaseProduct.id, item_name: purchaseProduct.title, price: 199 }]
+        })
+        ;(window as any).gtag("event", "begin_checkout", {
+          currency: "INR",
+          value: 199,
+          items: [{ item_id: purchaseProduct.id, item_name: purchaseProduct.title, price: 199 }]
+        })
+      }
     } catch (err) {
       console.error("Pixel tracking error:", err)
     }
@@ -182,15 +282,20 @@ export function EditingLandingPageClient() {
         }
       `}} />
 
-      {/* TOP ANNOUNCEMENT BANNER */}
-      <div className="bg-gradient-to-r from-violet-950 via-indigo-900 to-violet-950 border-b border-violet-850/50 py-3 text-center px-4 relative z-30">
+      {/* TOP ANNOUNCEMENT BANNER WITH COUNTDOWN */}
+      <div className="bg-gradient-to-r from-violet-950 via-indigo-900 to-violet-950 border-b border-violet-850/50 py-2.5 text-center px-4 relative z-30">
         <a 
           onClick={handlePurchase}
           href="/checkout"
-          className="text-xs sm:text-sm font-semibold tracking-wide hover:underline inline-flex items-center gap-2 group text-violet-200"
+          className="text-xs sm:text-sm font-semibold tracking-wide hover:underline inline-flex flex-wrap items-center justify-center gap-2 group text-violet-200"
         >
           <span className="inline-flex h-2 w-2 rounded-full bg-emerald-400 animate-ping"></span>
-          <span>You asked, we listened. Get Lifetime Access now at just <del className="text-slate-450 mr-1">₹2,999</del> <strong className="text-white text-base">₹149</strong>. Offer extended for 24 Hours only! <span className="group-hover:translate-x-1 inline-block transition-transform">HURRY UP! ⚡</span></span>
+          <span>Get Lifetime Access now at just <del className="text-slate-450 mr-1">₹2,999</del> <strong className="text-white text-base">₹199</strong>. Offer Ends In:</span>
+          <span className="inline-flex items-center gap-1 font-mono font-bold bg-violet-900/80 px-2 py-0.5 rounded text-amber-300 border border-violet-700/50 text-xs">
+            <Clock className="h-3 w-3 animate-pulse" />
+            {String(timeLeft.minutes).padStart(2, '0')}:{String(timeLeft.seconds).padStart(2, '0')}
+          </span>
+          <span className="group-hover:translate-x-1 inline-block transition-transform text-xs font-bold text-emerald-400">HURRY UP! ⚡</span>
         </a>
       </div>
 
@@ -201,8 +306,8 @@ export function EditingLandingPageClient() {
         <div className="absolute top-1/3 left-1/4 w-[250px] h-[250px] bg-cyan-600/5 rounded-full blur-[80px] -z-10" />
 
         <div className="space-y-6">
-          <p className="text-violet-400 font-extrabold uppercase tracking-widest text-xs md:text-sm">
-            🔥 Ultimate Creator Cheat-Code
+          <p className="text-violet-400 font-extrabold uppercase tracking-widest text-xs md:text-sm flex items-center justify-center gap-1.5">
+            <Sparkles className="h-4 w-4 text-amber-400 animate-spin" /> 🔥 Ultimate Creator Cheat-Code
           </p>
           <h1 className="text-3xl md:text-5xl lg:text-6xl font-black tracking-tight leading-tight max-w-5xl mx-auto">
             Stop Spending Hours Editing From Scratch & <span className="bg-gradient-to-r from-cyan-400 to-violet-400 bg-clip-text text-transparent text-cyan-glow">Cut Your Editing Time By 90%!</span>
@@ -217,14 +322,14 @@ export function EditingLandingPageClient() {
 
           {/* Value Tags */}
           <div className="flex flex-wrap justify-center gap-3 pt-2 text-xs md:text-sm">
-            <span className="px-4 py-2 rounded-full bg-slate-900/80 border border-slate-800 text-slate-350">
-              🔒 Lifetime Access
+            <span className="px-4 py-2 rounded-full bg-slate-900/80 border border-slate-800 text-slate-350 flex items-center gap-1.5">
+              <Lock className="h-3.5 w-3.5 text-violet-400" /> Lifetime Access
             </span>
-            <span className="px-4 py-2 rounded-full bg-slate-900/80 border border-slate-800 text-slate-350">
-              💸 One-time Payment
+            <span className="px-4 py-2 rounded-full bg-slate-900/80 border border-slate-800 text-slate-350 flex items-center gap-1.5">
+              <Zap className="h-3.5 w-3.5 text-amber-400" /> One-time Payment
             </span>
-            <span className="px-4 py-2 rounded-full bg-slate-900/80 border border-slate-800 text-slate-350">
-              ⚡ Instant Digital Download
+            <span className="px-4 py-2 rounded-full bg-slate-900/80 border border-slate-800 text-slate-350 flex items-center gap-1.5">
+              <Shield className="h-3.5 w-3.5 text-emerald-400" /> Instant Digital Download
             </span>
           </div>
 
@@ -238,10 +343,18 @@ export function EditingLandingPageClient() {
               <svg aria-hidden="true" className="h-5 w-5 fill-current text-white animate-bounce" viewBox="0 0 320 512" xmlns="http://www.w3.org/2000/svg">
                 <path d="M302.189 329.126H196.105l55.831 135.993c3.889 9.428-.555 19.999-9.444 23.999l-49.165 21.427c-9.165 4-19.443-.571-23.332-9.714l-53.053-129.136-86.664 89.138C18.729 472.71 0 463.554 0 447.977V18.299C0 1.899 19.921-6.096 30.277 5.443l284.412 292.542c11.472 11.179 3.007 31.141-12.5 31.141z"></path>
               </svg>
-              <span>⚡ GET EVERYTHING AT JUST ₹149</span>
+              <span>⚡ GET EVERYTHING AT JUST ₹199</span>
             </a>
+            
+            {/* TRUST BADGES UNDER HERO BUTTON */}
+            <div className="flex flex-wrap items-center justify-center gap-4 text-slate-400 text-xs mt-4">
+              <span className="flex items-center gap-1"><ShieldCheck className="h-4 w-4 text-emerald-400" /> Instant UPI Access</span>
+              <span className="flex items-center gap-1"><Lock className="h-4 w-4 text-indigo-400" /> 256-Bit SSL Encrypted</span>
+              <span className="flex items-center gap-1"><CheckCircle2 className="h-4 w-4 text-violet-400" /> 100% Verified Assets</span>
+            </div>
+
             <p className="text-[10px] text-slate-500 uppercase tracking-widest font-semibold mt-3">
-              *Price will change back to ₹2,999 once the 24-hour offer ends
+              *Price will change back to ₹2,999 once the offer ends
             </p>
           </div>
         </div>
@@ -250,27 +363,61 @@ export function EditingLandingPageClient() {
         <div className="mt-12 max-w-4xl mx-auto rounded-2xl overflow-hidden bg-slate-900/60 border border-slate-800 shadow-2xl p-2 md:p-3 relative group">
           <div className="flex items-center justify-between px-3 pb-3 border-b border-slate-850 text-slate-500 text-xs">
             <span className="flex items-center gap-1.5 font-semibold text-slate-400">
-              <span className="h-2 w-2 rounded-full bg-red-500"></span> DEMO_PREVIEW.MP4
+              <span className="h-2 w-2 rounded-full bg-red-500 animate-ping"></span> DEMO_PREVIEW.MP4
             </span>
             <button 
-              onClick={() => setIsMuted(!isMuted)} 
-              className="hover:text-white p-1 rounded transition-colors"
-              title={isMuted ? "Unmute Video" : "Mute Video"}
+              onClick={toggleMute} 
+              className="hover:text-white px-2.5 py-1 bg-violet-900/60 border border-violet-700/50 rounded-lg flex items-center gap-1.5 text-xs text-violet-200 transition-colors"
+              title={isMuted ? "Unmute Sound" : "Mute Sound"}
             >
-              {isMuted ? <VolumeX className="h-4 w-4 text-violet-400" /> : <Volume2 className="h-4 w-4 text-emerald-400 animate-pulse" />}
+              {isMuted ? (
+                <>
+                  <VolumeX className="h-4 w-4 text-amber-400" />
+                  <span className="text-[11px] font-bold text-amber-300">CLICK TO UNMUTE AUDIO 🔊</span>
+                </>
+              ) : (
+                <>
+                  <Volume2 className="h-4 w-4 text-emerald-400 animate-pulse" />
+                  <span className="text-[11px] font-bold text-emerald-400">AUDIO ON 🎵</span>
+                </>
+              )}
             </button>
           </div>
 
-          <div className="aspect-video w-full relative bg-black">
+          <div className="aspect-video w-full relative bg-black overflow-hidden group">
             <video 
-              className="w-full h-full object-cover" 
+              ref={videoRef}
+              className="w-full h-full object-cover cursor-pointer" 
               src="https://wbveb.idigitalcampus.com/wp-content/uploads/2025/05/Video-Editing-Bundle-Demo-1280x720-1.mp4" 
               autoPlay 
               loop 
               muted={isMuted} 
               playsInline
               controls
+              onClick={handlePlayWithSound}
             />
+
+            {/* "CLICK HERE TO PLAY (WITH SOUND)" OVERLAY BUTTON */}
+            {(!hasInteracted || isMuted) && (
+              <div 
+                onClick={handlePlayWithSound}
+                className="absolute inset-0 bg-slate-950/45 backdrop-blur-[2px] flex flex-col items-center justify-center cursor-pointer z-10 p-4 transition-all duration-300 hover:bg-slate-950/30"
+              >
+                <div className="neon-pulse-btn bg-gradient-to-r from-violet-600 via-indigo-600 to-violet-600 text-white font-black px-6 py-3.5 sm:px-8 sm:py-4 rounded-2xl shadow-2xl flex items-center gap-3 transform hover:scale-105 transition-all border border-violet-400/50">
+                  <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-full bg-white/20 flex items-center justify-center shrink-0 animate-bounce">
+                    <Play className="h-5 w-5 sm:h-6 sm:w-6 fill-white text-white ml-0.5" />
+                  </div>
+                  <div className="flex flex-col text-left">
+                    <span className="text-sm sm:text-lg font-black tracking-wide uppercase text-white leading-tight">
+                      🔊 CLICK HERE TO PLAY (WITH SOUND)
+                    </span>
+                    <span className="text-[10px] sm:text-xs text-violet-200 font-semibold leading-tight mt-0.5">
+                      Tap to play demo preview with full audio ⚡
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -392,7 +539,7 @@ export function EditingLandingPageClient() {
             <svg aria-hidden="true" className="h-5 w-5 fill-current text-white animate-bounce" viewBox="0 0 320 512" xmlns="http://www.w3.org/2000/svg">
               <path d="M302.189 329.126H196.105l55.831 135.993c3.889 9.428-.555 19.999-9.444 23.999l-49.165 21.427c-9.165 4-19.443-.571-23.332-9.714l-53.053-129.136-86.664 89.138C18.729 472.71 0 463.554 0 447.977V18.299C0 1.899 19.921-6.096 30.277 5.443l284.412 292.542c11.472 11.179 3.007 31.141-12.5 31.141z"></path>
             </svg>
-            <span>⚡ GET INSTANT DOWNLOAD ACCESS FOR ₹149</span>
+            <span>⚡ GET INSTANT DOWNLOAD ACCESS FOR ₹199</span>
           </a>
         </div>
       </section>
@@ -466,7 +613,7 @@ export function EditingLandingPageClient() {
             <svg aria-hidden="true" className="h-5 w-5 fill-current text-white animate-bounce" viewBox="0 0 320 512" xmlns="http://www.w3.org/2000/svg">
               <path d="M302.189 329.126H196.105l55.831 135.993c3.889 9.428-.555 19.999-9.444 23.999l-49.165 21.427c-9.165 4-19.443-.571-23.332-9.714l-53.053-129.136-86.664 89.138C18.729 472.71 0 463.554 0 447.977V18.299C0 1.899 19.921-6.096 30.277 5.443l284.412 292.542c11.472 11.179 3.007 31.141-12.5 31.141z"></path>
             </svg>
-            <span>⚡ CLAIM YOUR LIFETIME ACCESS AT ₹149</span>
+            <span>⚡ CLAIM YOUR LIFETIME ACCESS AT ₹199</span>
           </a>
         </div>
       </section>
@@ -496,7 +643,7 @@ export function EditingLandingPageClient() {
                 />
               </div>
               <span className="px-3 py-1 bg-violet-900/50 text-violet-300 font-black rounded-lg text-xs tracking-wider">STEP 01</span>
-              <h3 className="font-bold text-slate-200">Click &ldquo;Get Everything at ₹149&rdquo; Button</h3>
+              <h3 className="font-bold text-slate-200">Click &ldquo;Get Everything at ₹199&rdquo; Button</h3>
               <p className="text-xs text-slate-450 leading-relaxed">
                 You will be redirected to the GrabNext secure product details checkout page.
               </p>
@@ -551,7 +698,7 @@ export function EditingLandingPageClient() {
                 <svg aria-hidden="true" className="h-5 w-5 fill-current text-white animate-bounce" viewBox="0 0 320 512" xmlns="http://www.w3.org/2000/svg">
                   <path d="M302.189 329.126H196.105l55.831 135.993c3.889 9.428-.555 19.999-9.444 23.999l-49.165 21.427c-9.165 4-19.443-.571-23.332-9.714l-53.053-129.136-86.664 89.138C18.729 472.71 0 463.554 0 447.977V18.299C0 1.899 19.921-6.096 30.277 5.443l284.412 292.542c11.472 11.179 3.007 31.141-12.5 31.141z"></path>
                 </svg>
-                <span>⚡ DOWNLOAD INSTANTLY FOR JUST ₹149</span>
+                <span>⚡ DOWNLOAD INSTANTLY FOR JUST ₹199</span>
               </a>
             </div>
           </div>
@@ -664,7 +811,7 @@ export function EditingLandingPageClient() {
       <div className="md:hidden fixed bottom-0 inset-x-0 bg-slate-950/80 backdrop-blur-md border-t border-slate-900 p-3 z-45 flex items-center justify-between gap-3">
         <div className="flex flex-col">
           <span className="text-[9px] text-violet-400 font-bold uppercase tracking-widest leading-none">Limited Offer</span>
-          <span className="text-sm font-black text-white leading-tight">₹149 <del className="text-[10px] font-semibold text-slate-500 ml-1">₹2,999</del></span>
+          <span className="text-sm font-black text-white leading-tight">₹199 <del className="text-[10px] font-semibold text-slate-500 ml-1">₹2,999</del></span>
         </div>
         <a 
           onClick={handlePurchase}

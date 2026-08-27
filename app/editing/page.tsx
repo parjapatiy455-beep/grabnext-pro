@@ -6,10 +6,10 @@ export const dynamic = "force-dynamic"
 
 export const metadata: Metadata = {
   title: "World's Biggest Video Editing Bundle | GrabNext",
-  description: "Get over 70 GB of premium video editing assets: 800+ transitions, 2,000+ FX presets, 10,000+ fonts, 3,050+ sound effects, cinematic LUTs & full masterclass. Lifetime access for only ₹149!",
+  description: "Get over 70 GB of premium video editing assets: 800+ transitions, 2,000+ FX presets, 10,000+ fonts, 3,050+ sound effects, cinematic LUTs & full masterclass. Lifetime access for only ₹199!",
   openGraph: {
     title: "World's Biggest Video Editing Bundle | GrabNext",
-    description: "Get over 70 GB of premium video editing assets: 800+ transitions, 2,000+ FX presets, 10,000+ fonts, 3,050+ sound effects, cinematic LUTs & full masterclass. Lifetime access for only ₹149!",
+    description: "Get over 70 GB of premium video editing assets: 800+ transitions, 2,000+ FX presets, 10,000+ fonts, 3,050+ sound effects, cinematic LUTs & full masterclass. Lifetime access for only ₹199!",
     url: "https://shop.grabnext.app/editing",
     siteName: "GrabNext",
     images: [
@@ -26,7 +26,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "World's Biggest Video Editing Bundle | GrabNext",
-    description: "Get over 70 GB of video editing assets, LUTs, FX, templates, and courses. Lifetime access for only ₹149.",
+    description: "Get over 70 GB of video editing assets, LUTs, FX, templates, and courses. Lifetime access for only ₹199.",
     images: ["https://wbveb.idigitalcampus.com/wp-content/uploads/2025/02/hero1.webp"]
   },
   alternates: {
