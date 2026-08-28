@@ -63,13 +63,10 @@ export function EditingLandingPageClient() {
       sessionStorage.setItem("copiedCouponCode", "SAVE50")
     } catch {}
     setCopiedCoupon(true)
-    setTimeout(() => setCopiedCoupon(false), 3000)
-  }
-
-  const handleClaimOffer = (e: React.MouseEvent) => {
-    e.preventDefault()
-    handleCopyCoupon()
-    handlePurchase(e)
+    setTimeout(() => {
+      setCopiedCoupon(false)
+      setShowPromoModal(false)
+    }, 1800)
   }
   
   // Video player controls
@@ -920,8 +917,8 @@ export function EditingLandingPageClient() {
             </p>
 
             {/* Coupon Box */}
-            <div className="my-5 p-4 bg-slate-950/80 border-2 border-dashed border-amber-400/60 rounded-2xl flex items-center justify-between gap-3 shadow-inner">
-              <div className="flex items-center gap-2.5 text-left">
+            <div className="my-5 p-4 bg-slate-950/80 border-2 border-dashed border-amber-400/60 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3 shadow-inner">
+              <div className="flex items-center gap-2.5 text-left w-full sm:w-auto">
                 <Tag className="h-5 w-5 text-amber-400 shrink-0" />
                 <div>
                   <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Coupon Code</span>
@@ -930,38 +927,41 @@ export function EditingLandingPageClient() {
               </div>
               <button
                 onClick={handleCopyCoupon}
-                className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 shrink-0 ${
+                className={`w-full sm:w-auto px-5 py-3 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 shrink-0 ${
                   copiedCoupon
                     ? "bg-emerald-500 text-white shadow-lg scale-105"
-                    : "bg-amber-400 hover:bg-amber-300 text-slate-950 shadow-md hover:scale-105"
+                    : "bg-gradient-to-r from-amber-400 to-yellow-500 hover:from-amber-300 hover:to-yellow-400 text-slate-950 shadow-md hover:scale-105"
                 }`}
               >
                 {copiedCoupon ? (
                   <>
-                    <Check className="h-4 w-4" /> Copied!
+                    <Check className="h-4 w-4" /> Code Copied & Saved!
                   </>
                 ) : (
                   <>
-                    <Copy className="h-4 w-4" /> Copy Code
+                    <Copy className="h-4 w-4" /> Copy Coupon Code
                   </>
                 )}
               </button>
             </div>
 
+            {copiedCoupon ? (
+              <p className="text-xs text-emerald-400 font-semibold mb-3 animate-pulse">
+                ✓ 50% OFF coupon code saved! It will automatically apply when you decide to buy.
+              </p>
+            ) : (
+              <p className="text-[11px] text-slate-400 mb-3">
+                Click "Copy Coupon Code" to save 50% discount for when you're ready to order.
+              </p>
+            )}
+
             {/* Action Buttons */}
-            <div className="space-y-2.5">
-              <button
-                onClick={handleClaimOffer}
-                className="w-full py-3.5 px-6 rounded-xl font-black text-sm text-slate-950 bg-gradient-to-r from-amber-400 via-amber-300 to-amber-500 hover:from-amber-300 hover:to-amber-400 shadow-[0_0_25px_rgba(245,158,11,0.4)] transition-all transform active:scale-95 flex items-center justify-center gap-2"
-              >
-                <Zap className="h-4 w-4 text-slate-950 fill-current" />
-                <span>CLAIM 50% OFF & CHECKOUT NOW</span>
-              </button>
+            <div className="pt-1">
               <button
                 onClick={() => setShowPromoModal(false)}
-                className="text-xs text-slate-500 hover:text-slate-400 font-medium transition-colors"
+                className="w-full py-2.5 px-4 rounded-xl text-xs font-semibold text-slate-300 hover:text-white bg-slate-850 hover:bg-slate-800 transition-colors border border-slate-800"
               >
-                No thanks, I will pay full price
+                Continue Browsing Page
               </button>
             </div>
           </div>
