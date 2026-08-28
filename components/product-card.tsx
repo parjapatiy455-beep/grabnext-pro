@@ -103,6 +103,8 @@ export function ProductCard({ product }: ProductCardProps) {
           <img
             src={currentImg}
             alt={product?.title || "product"}
+            decoding="async"
+            loading="lazy"
             className="h-full w-full object-contain transition-transform duration-300 group-hover:scale-105"
             style={{
               opacity: fade ? 1 : 0,

@@ -23,11 +23,39 @@ function useBannerCarousel(total: number) {
   return { idx, next, prev, setIdx }
 }
 
+const getInitialProds = (): Product[] => {
+  if (typeof window !== 'undefined') {
+    try {
+      const s = sessionStorage.getItem('gn_products_cache')
+      if (s) {
+        const arr = JSON.parse(s)
+        if (Array.isArray(arr)) return arr.filter((p: any) => p.isActive)
+      }
+    } catch {}
+  }
+  return []
+}
+
+const getInitialCats = (): any[] => {
+  if (typeof window !== 'undefined') {
+    try {
+      const s = sessionStorage.getItem('gn_cats_cache')
+      if (s) {
+        const arr = JSON.parse(s)
+        if (Array.isArray(arr)) return arr.filter((c: any) => c.isActive !== 0)
+      }
+    } catch {}
+  }
+  return []
+}
+
 export default function HomePage() {
-  const [products, setProducts] = useState<Product[]>([])
-  const [categories, setCategories] = useState<any[]>([])
+  const initialProds = getInitialProds()
+  const initialCats = getInitialCats()
+  const [products, setProducts] = useState<Product[]>(initialProds)
+  const [categories, setCategories] = useState<any[]>(initialCats)
   const [banners, setBanners] = useState<any[]>([])   // empty = no carousel shown
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(initialProds.length === 0)
 
   const { idx, next, prev, setIdx } = useBannerCarousel(banners.length)
 

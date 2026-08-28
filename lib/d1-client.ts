@@ -1,24 +1,85 @@
 // Client helper to connect to internal API Routes
 
 // --- Products ---
-export async function fetchProducts() {
-  try {
-    const res = await fetch(`/api/products`, { cache: 'no-store' });
-    if (!res.ok) {
-      console.error("[v0] Products API responded with status:", res.status);
-      return [];
+let _productsCache: any[] | null = null
+let _categoriesCache: any[] | null = null
+
+export function clearProductsCache() {
+  _productsCache = null
+  if (typeof window !== 'undefined') {
+    try { sessionStorage.removeItem('gn_products_cache') } catch {}
+  }
+}
+
+export function clearCategoriesCache() {
+  _categoriesCache = null
+  if (typeof window !== 'undefined') {
+    try { sessionStorage.removeItem('gn_cats_cache') } catch {}
+  }
+}
+
+export async function fetchProducts(options?: { forceRefresh?: boolean }) {
+  // 1. Return in-memory cache immediately if available for 0ms render
+  if (_productsCache && !options?.forceRefresh) {
+    // Revalidate in background asynchronously
+    fetchProductsFromAPI().then((fresh) => {
+      if (fresh && fresh.length > 0) _productsCache = fresh
+    })
+    return _productsCache
+  }
+
+  // 2. Try sessionStorage for fast instant load across page transitions
+  if (typeof window !== 'undefined' && !options?.forceRefresh) {
+    try {
+      const stored = sessionStorage.getItem('gn_products_cache')
+      if (stored) {
+        const parsed = JSON.parse(stored)
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          _productsCache = parsed
+          // Revalidate in background
+          fetchProductsFromAPI().then((fresh) => {
+            if (fresh && fresh.length > 0) {
+              _productsCache = fresh
+              sessionStorage.setItem('gn_products_cache', JSON.stringify(fresh))
+            }
+          })
+          return parsed
+        }
+      }
+    } catch {}
+  }
+
+  // 3. Fresh fetch
+  const fresh = await fetchProductsFromAPI()
+  if (fresh && fresh.length > 0) {
+    _productsCache = fresh
+    if (typeof window !== 'undefined') {
+      try { sessionStorage.setItem('gn_products_cache', JSON.stringify(fresh)) } catch {}
     }
-    const data = await res.json();
-    return Array.isArray(data) ? data : [];
+  }
+  return fresh
+}
+
+async function fetchProductsFromAPI() {
+  try {
+    const res = await fetch(`/api/products`, {
+      headers: { 'Accept': 'application/json' },
+    })
+    if (!res.ok) {
+      console.error("[v0] Products API responded with status:", res.status)
+      return _productsCache || []
+    }
+    const data = await res.json()
+    return Array.isArray(data) ? data : []
   } catch (error) {
-    console.error("[v0] Failed to fetch products:", error);
-    return [];
+    console.error("[v0] Failed to fetch products:", error)
+    return _productsCache || []
   }
 }
 
 export async function fetchProductById(id: string) {
   try {
-    const res = await fetch(`/api/products/${id}`, { cache: 'no-store' });
+    const res = await fetch(`/api/products/${id}`);
     if (!res.ok) return null;
     return res.json();
   } catch (error) {
@@ -29,6 +90,7 @@ export async function fetchProductById(id: string) {
 
 export async function createD1Product(productData: any) {
   try {
+    clearProductsCache()
     const res = await fetch(`/api/products`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -47,6 +109,7 @@ export async function createD1Product(productData: any) {
 
 export async function updateD1Product(id: string, productData: any) {
   try {
+    clearProductsCache()
     const res = await fetch(`/api/products/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -65,6 +128,7 @@ export async function updateD1Product(id: string, productData: any) {
 
 export async function deleteD1Product(id: string) {
   try {
+    clearProductsCache()
     const res = await fetch(`/api/products/${id}`, {
       method: "DELETE",
     });
@@ -80,6 +144,7 @@ export async function deleteD1Product(id: string) {
 
 export async function reorderD1Products(payload: { items?: { id: string; displayOrder: number }[]; orderedIds?: string[] }) {
   try {
+    clearProductsCache()
     const res = await fetch(`/api/products/reorder`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -125,22 +190,53 @@ export async function submitReview(reviewData: {
 }
 
 // --- Categories ---
-export async function fetchCategories() {
-  try {
-    const res = await fetch(`/api/categories`, { cache: 'no-store' });
-    if (!res.ok) {
-      console.error("[v0] Categories API responded with status:", res.status);
-      return [];
+export async function fetchCategories(options?: { forceRefresh?: boolean }) {
+  if (_categoriesCache && !options?.forceRefresh) {
+    fetchCategoriesFromAPI().then((fresh) => { if (fresh && fresh.length > 0) _categoriesCache = fresh })
+    return _categoriesCache
+  }
+  if (typeof window !== 'undefined' && !options?.forceRefresh) {
+    try {
+      const stored = sessionStorage.getItem('gn_cats_cache')
+      if (stored) {
+        const parsed = JSON.parse(stored)
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          _categoriesCache = parsed
+          fetchCategoriesFromAPI().then((fresh) => {
+            if (fresh && fresh.length > 0) {
+              _categoriesCache = fresh
+              sessionStorage.setItem('gn_cats_cache', JSON.stringify(fresh))
+            }
+          })
+          return parsed
+        }
+      }
+    } catch {}
+  }
+  const fresh = await fetchCategoriesFromAPI()
+  if (fresh && fresh.length > 0) {
+    _categoriesCache = fresh
+    if (typeof window !== 'undefined') {
+      try { sessionStorage.setItem('gn_cats_cache', JSON.stringify(fresh)) } catch {}
     }
-    const data = await res.json();
-    return Array.isArray(data) ? data : [];
+  }
+  return fresh
+}
+
+async function fetchCategoriesFromAPI() {
+  try {
+    const res = await fetch(`/api/categories`, { headers: { 'Accept': 'application/json' } })
+    if (!res.ok) return _categoriesCache || []
+    const data = await res.json()
+    return Array.isArray(data) ? data : []
   } catch (error) {
-    console.error("[v0] Failed to fetch categories:", error);
-    return [];
+    console.error("[v0] Failed to fetch categories:", error)
+    return _categoriesCache || []
   }
 }
 
 export async function createD1Category(name: string, description: string, imageUrl?: string) {
+  clearCategoriesCache()
   const res = await fetch(`/api/categories`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
