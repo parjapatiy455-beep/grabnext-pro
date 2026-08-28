@@ -75,16 +75,29 @@ function OrderRow({ order, onStatusChange }: { order: any; onStatusChange: (id: 
         </div>
 
         {/* Customer */}
-        <div className="flex-1 min-w-[180px]">
-          <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide">Customer</p>
-          <p className="text-sm font-semibold text-gray-800">{order.userName || order.userEmail || order.userId || "—"}</p>
-          {order.userEmail && order.userName && (
-            <p className="text-xs text-gray-500">{order.userEmail}</p>
-          )}
+        <div className="flex-1 min-w-[220px]">
+          <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide">Customer Details</p>
+          <p className="text-sm font-bold text-gray-900 flex items-center gap-1.5">
+            <User className="h-3.5 w-3.5 text-blue-500 shrink-0" />
+            {order.userName || "Customer"}
+          </p>
+          <div className="flex flex-col gap-0.5 mt-0.5 text-xs">
+            {order.userEmail && (
+              <span className="flex items-center gap-1 text-gray-600">
+                <Mail className="h-3 w-3 text-purple-500 shrink-0" /> {order.userEmail}
+              </span>
+            )}
+            {order.userPhone && (
+              <span className="flex items-center gap-1 text-gray-600">
+                <Phone className="h-3 w-3 text-emerald-500 shrink-0" /> {order.userPhone}
+              </span>
+            )}
+            <span className="font-mono text-[10px] text-gray-400">UID: {order.userId || "guest"}</span>
+          </div>
         </div>
 
         {/* Date */}
-        <div className="min-w-[160px]">
+        <div className="min-w-[150px]">
           <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide flex items-center gap-1"><CalendarDays className="h-3 w-3" />Date & Time</p>
           <p className="text-sm text-gray-700">{formatDateTime(order.createdAt)}</p>
         </div>
@@ -116,37 +129,37 @@ function OrderRow({ order, onStatusChange }: { order: any; onStatusChange: (id: 
         <div className="border-t border-gray-100 bg-gray-50 px-5 py-5 space-y-5">
           <div className="grid md:grid-cols-2 gap-5">
             {/* Customer Info */}
-            <div className="bg-white border border-gray-200 rounded-xl p-4">
-              <h4 className="text-xs font-bold uppercase tracking-wide text-gray-500 mb-3 flex items-center gap-1.5">
-                <User className="h-3.5 w-3.5" /> Customer Information
+            <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm space-y-3">
+              <h4 className="text-xs font-bold uppercase tracking-wide text-gray-500 flex items-center gap-1.5 border-b pb-2">
+                <User className="h-4 w-4 text-blue-500" /> Customer Information
               </h4>
-              <div className="space-y-2 text-sm">
-                {order.userName && (
-                  <p className="flex items-center gap-2 text-gray-700">
-                    <User className="h-3.5 w-3.5 text-gray-400 shrink-0" />
-                    <strong>Name:</strong> {order.userName}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+                  <p className="text-[10px] uppercase font-bold text-slate-400">Name</p>
+                  <p className="font-semibold text-slate-800 flex items-center gap-1 mt-0.5">
+                    <User className="h-3.5 w-3.5 text-blue-500 shrink-0" /> {order.userName || "Guest Customer"}
                   </p>
-                )}
-                {order.userEmail && (
-                  <p className="flex items-center gap-2 text-gray-700">
-                    <Mail className="h-3.5 w-3.5 text-gray-400 shrink-0" />
-                    <strong>Email:</strong>{" "}
-                    <a href={`mailto:${order.userEmail}`} className="text-blue-600 hover:underline">
-                      {order.userEmail}
+                </div>
+                <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+                  <p className="text-[10px] uppercase font-bold text-slate-400">Email Address</p>
+                  {order.userEmail ? (
+                    <a href={`mailto:${order.userEmail}`} className="font-medium text-blue-600 hover:underline flex items-center gap-1 mt-0.5 truncate">
+                      <Mail className="h-3.5 w-3.5 text-purple-500 shrink-0" /> {order.userEmail}
                     </a>
-                  </p>
-                )}
-                {order.userPhone && (
-                  <p className="flex items-center gap-2 text-gray-700">
-                    <Phone className="h-3.5 w-3.5 text-gray-400 shrink-0" />
-                    <strong>Phone:</strong> {order.userPhone}
-                  </p>
-                )}
-                {order.userId && (
-                  <p className="flex items-center gap-2 text-gray-500 text-xs">
-                    <span className="font-mono bg-gray-100 px-2 py-0.5 rounded">User ID: {order.userId}</span>
-                  </p>
-                )}
+                  ) : <p className="text-gray-400 text-xs">Not provided</p>}
+                </div>
+                <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+                  <p className="text-[10px] uppercase font-bold text-slate-400">Phone Number</p>
+                  {order.userPhone ? (
+                    <a href={`tel:${order.userPhone}`} className="font-semibold text-emerald-700 flex items-center gap-1 mt-0.5">
+                      <Phone className="h-3.5 w-3.5 text-emerald-500 shrink-0" /> {order.userPhone}
+                    </a>
+                  ) : <p className="text-gray-400 text-xs">Not provided</p>}
+                </div>
+                <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+                  <p className="text-[10px] uppercase font-bold text-slate-400">Account User ID</p>
+                  <p className="font-mono text-xs text-slate-600 mt-0.5 truncate">{order.userId || "guest"}</p>
+                </div>
               </div>
             </div>
 
@@ -314,6 +327,7 @@ export default function AdminOrdersPage() {
         o.id?.toLowerCase().includes(q) ||
         o.userName?.toLowerCase().includes(q) ||
         o.userEmail?.toLowerCase().includes(q) ||
+        o.userPhone?.toLowerCase().includes(q) ||
         o.userId?.toLowerCase().includes(q) ||
         o.paymentId?.toLowerCase().includes(q)
       )

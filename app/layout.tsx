@@ -5,7 +5,7 @@ import { AuthProvider } from "@/contexts/auth-context"
 import { CartProvider } from "@/contexts/cart-context"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/toaster"
-import { ShopAIChat } from "@/components/shop-ai-chat"
+import { WhatsAppToggle } from "@/components/whatsapp-toggle"
 import { FacebookPixelScript, FacebookPixelRouteTracker } from "@/components/facebook-pixel"
 import "./globals.css"
 
@@ -185,7 +185,7 @@ html {
               <FacebookPixelRouteTracker />
               {children}
               <Toaster />
-              <ShopAIChat />
+              <WhatsAppToggle />
             </CartProvider>
           </AuthProvider>
         </ThemeProvider>
