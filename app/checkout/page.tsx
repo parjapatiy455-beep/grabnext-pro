@@ -95,6 +95,38 @@ export default function CheckoutPage() {
     }
   }, [user])
 
+  // Auto-apply saved/prefilled coupon code (e.g. SAVE50 from /editing popup)
+  useEffect(() => {
+    if (totalAmount > 0 && !appliedCoupon) {
+      let saved = ""
+      try {
+        saved = sessionStorage.getItem("copiedCouponCode") || ""
+      } catch {}
+      if (!saved && typeof window !== "undefined") {
+        saved = new URLSearchParams(window.location.search).get("coupon") || ""
+      }
+      if (saved) {
+        const clean = saved.toUpperCase().trim()
+        setCouponCode(clean)
+        setIsApplyingCoupon(true)
+        fetch('/api/coupons/validate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code: clean, cartTotal: totalAmount })
+        })
+          .then((r) => r.json())
+          .then((data) => {
+            if (data.valid) {
+              setAppliedCoupon(data)
+              toast({ title: `🎉 Coupon ${clean} Applied!`, description: `Instant 50% discount active.` })
+            }
+          })
+          .catch(() => {})
+          .finally(() => setIsApplyingCoupon(false))
+      }
+    }
+  }, [totalAmount, appliedCoupon])
+
   const formatPrice = (price: number) =>
     new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(price)
 
