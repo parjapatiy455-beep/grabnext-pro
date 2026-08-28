@@ -14,10 +14,10 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const all = searchParams.get('all') === '1'
 
-    // Simple, reliable query — no JOIN that might break D1
+    // Simple, reliable query — sort by displayOrder ASC then createdAt DESC
     const sql = all
-      ? 'SELECT * FROM products ORDER BY createdAt DESC'
-      : 'SELECT * FROM products WHERE isActive = 1 ORDER BY createdAt DESC'
+      ? 'SELECT * FROM products ORDER BY displayOrder ASC, createdAt DESC'
+      : 'SELECT * FROM products WHERE isActive = 1 ORDER BY displayOrder ASC, createdAt DESC'
 
     // Second query: aggregate ratings per product
     const ratingsSql = 'SELECT productId, ROUND(AVG(rating),1) AS avgRating, COUNT(id) AS reviewCount FROM reviews GROUP BY productId'
@@ -47,6 +47,7 @@ export async function GET(request: NextRequest) {
       price: Number(p.price),
       originalPrice: p.originalPrice ? Number(p.originalPrice) : null,
       salesCount: Number(p.salesCount || 0),
+      displayOrder: Number(p.displayOrder || 0),
       avgRating: ratingsMap[p.id]?.avgRating ?? 0,
       reviewCount: ratingsMap[p.id]?.reviewCount ?? 0,
     }))
@@ -70,12 +71,13 @@ export async function POST(request: NextRequest) {
     const slug = makeSlug(data.title || 'product') + '-' + id.slice(0, 6)
     const images = data.images && data.images.length > 0 ? data.images : (data.imageUrl ? [data.imageUrl] : [])
     const imageUrl = images[0] || data.imageUrl || ''
+    const displayOrder = typeof data.displayOrder === 'number' ? data.displayOrder : (parseInt(data.displayOrder, 10) || 0)
 
     await executeQuery(
-      `INSERT INTO products (id, title, description, price, originalPrice, category, tags, imageUrl, images, slug, downloadUrl, isActive, salesCount, pageCode, pageType, createdBy, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO products (id, title, description, price, originalPrice, category, tags, imageUrl, images, slug, downloadUrl, isActive, salesCount, pageCode, pageType, createdBy, displayOrder, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [id, data.title || '', data.description || '', data.price || 0, data.originalPrice || null,
         data.category || 'general', JSON.stringify(data.tags || []), imageUrl, JSON.stringify(images), slug,
-        data.downloadUrl || '', data.isActive !== false ? 1 : 0, 0, data.pageCode || null, data.pageType || 'shop', data.createdBy || 'admin', now, now]
+        data.downloadUrl || '', data.isActive !== false ? 1 : 0, 0, data.pageCode || null, data.pageType || 'shop', data.createdBy || 'admin', displayOrder, now, now]
     )
     return NextResponse.json({ success: true, id, slug }, { status: 201 })
   } catch (error: any) {

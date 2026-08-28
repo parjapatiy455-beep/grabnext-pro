@@ -53,6 +53,9 @@ ALTER TABLE products ADD COLUMN pageType TEXT DEFAULT 'shop';
 -- Products: add pageCode for landing page content JSON
 ALTER TABLE products ADD COLUMN pageCode TEXT;
 
+-- Products: add displayOrder for custom sorting
+ALTER TABLE products ADD COLUMN displayOrder INTEGER DEFAULT 0;
+
 -- =============================================
 -- 5. LANDING PAGE ANALYTICS & FORM SUBMISSIONS
 -- =============================================
@@ -98,6 +101,7 @@ ALTER TABLE categories ADD COLUMN imageUrl TEXT;
 -- =============================================
 CREATE INDEX IF NOT EXISTS idx_products_category ON products(category);
 CREATE INDEX IF NOT EXISTS idx_products_isActive ON products(isActive);
+CREATE INDEX IF NOT EXISTS idx_products_displayOrder ON products(displayOrder);
 CREATE INDEX IF NOT EXISTS idx_orders_userId ON orders(userId);
 CREATE INDEX IF NOT EXISTS idx_reviews_productId ON reviews(productId);
 CREATE INDEX IF NOT EXISTS idx_banners_isActive ON banners(isActive);

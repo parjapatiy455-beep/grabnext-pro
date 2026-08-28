@@ -25,7 +25,7 @@ export function ProductsContent() {
     const [loading, setLoading] = useState(true)
     const [searchTerm, setSearchTerm] = useState(urlQ)
     const [selectedCategory, setSelectedCategory] = useState<string | null>(urlCategory)
-    const [sortBy, setSortBy] = useState<"newest" | "price-asc" | "price-desc" | "popular">("newest")
+    const [sortBy, setSortBy] = useState<"featured" | "newest" | "price-asc" | "price-desc" | "popular">("featured")
     const [showFilters, setShowFilters] = useState(false)
     const [maxProductPrice, setMaxProductPrice] = useState(10000)
     const [priceRange, setPriceRange] = useState<[number, number]>([0, 10000])
@@ -67,6 +67,12 @@ export function ProductsContent() {
             return matchSearch && matchCat && matchPrice
         })
         .sort((a, b) => {
+            if (sortBy === "featured") {
+                const orderA = a.displayOrder && a.displayOrder > 0 ? a.displayOrder : 999999
+                const orderB = b.displayOrder && b.displayOrder > 0 ? b.displayOrder : 999999
+                if (orderA !== orderB) return orderA - orderB
+                return Number(b.createdAt || 0) - Number(a.createdAt || 0)
+            }
             if (sortBy === "price-asc") return a.price - b.price
             if (sortBy === "price-desc") return b.price - a.price
             if (sortBy === "popular") return (b.salesCount || 0) - (a.salesCount || 0)
@@ -100,6 +106,7 @@ export function ProductsContent() {
                         </div>
                         <select value={sortBy} onChange={(e) => setSortBy(e.target.value as any)}
                             className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none h-9">
+                            <option value="featured">Featured (Admin Order)</option>
                             <option value="newest">Newest</option>
                             <option value="popular">Popular</option>
                             <option value="price-asc">Price ↑</option>

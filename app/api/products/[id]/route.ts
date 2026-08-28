@@ -29,6 +29,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       price: Number(row.price),
       originalPrice: row.originalPrice ? Number(row.originalPrice) : null,
       salesCount: Number(row.salesCount),
+      displayOrder: Number(row.displayOrder || 0),
     })
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 })
@@ -50,12 +51,13 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
     const images = data.images && data.images.length > 0 ? data.images : (data.imageUrl ? [data.imageUrl] : [])
     const imageUrl = images[0] || data.imageUrl || ''
+    const displayOrder = typeof data.displayOrder === 'number' ? data.displayOrder : (parseInt(data.displayOrder, 10) || 0)
 
     await executeQuery(
-      `UPDATE products SET title=?, description=?, price=?, originalPrice=?, category=?, tags=?, imageUrl=?, images=?, slug=?, downloadUrl=?, isActive=?, pageCode=?, pageType=?, updatedAt=? WHERE id=?`,
+      `UPDATE products SET title=?, description=?, price=?, originalPrice=?, category=?, tags=?, imageUrl=?, images=?, slug=?, downloadUrl=?, isActive=?, pageCode=?, pageType=?, displayOrder=?, updatedAt=? WHERE id=?`,
       [data.title, data.description || '', data.price, data.originalPrice || null, data.category,
       JSON.stringify(data.tags || []), imageUrl, JSON.stringify(images), slug,
-      data.downloadUrl || '', data.isActive ? 1 : 0, data.pageCode || null, data.pageType || 'shop', now, params.id]
+      data.downloadUrl || '', data.isActive ? 1 : 0, data.pageCode || null, data.pageType || 'shop', displayOrder, now, params.id]
     )
     return NextResponse.json({ success: true, slug })
   } catch (error: any) {

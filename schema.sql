@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS products (
   pageCode TEXT,
   pageType TEXT DEFAULT 'shop',
   createdBy TEXT,
+  displayOrder INTEGER DEFAULT 0,
   createdAt INTEGER,
   updatedAt INTEGER
 );
@@ -76,5 +77,6 @@ CREATE TABLE IF NOT EXISTS reviews (
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_products_category ON products(category);
 CREATE INDEX IF NOT EXISTS idx_products_isActive ON products(isActive);
+CREATE INDEX IF NOT EXISTS idx_products_displayOrder ON products(displayOrder);
 CREATE INDEX IF NOT EXISTS idx_orders_userId ON orders(userId);
 CREATE INDEX IF NOT EXISTS idx_reviews_productId ON reviews(productId);

@@ -78,6 +78,24 @@ export async function deleteD1Product(id: string) {
   }
 }
 
+export async function reorderD1Products(payload: { items?: { id: string; displayOrder: number }[]; orderedIds?: string[] }) {
+  try {
+    const res = await fetch(`/api/products/reorder`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || "Failed to reorder products");
+    }
+    return res.json();
+  } catch (error) {
+    console.error("[v0] Reorder Products Error:", error);
+    throw error;
+  }
+}
+
 // --- Reviews ---
 export async function fetchProductReviews(productId: string) {
   try {

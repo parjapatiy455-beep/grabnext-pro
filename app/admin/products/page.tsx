@@ -11,8 +11,8 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
-import { fetchProducts, createD1Product, updateD1Product, deleteD1Product, fetchCategories } from "@/lib/d1-client"
-import { Plus, Search, Trash2, Edit, Loader2, Upload, ImageIcon, FileText, Video, Link as LinkIcon, File, X } from "lucide-react"
+import { fetchProducts, createD1Product, updateD1Product, deleteD1Product, fetchCategories, reorderD1Products } from "@/lib/d1-client"
+import { Plus, Search, Trash2, Edit, Loader2, Upload, ImageIcon, FileText, Video, Link as LinkIcon, File, X, ArrowUp, ArrowDown, ArrowUpDown, Save, Check } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 import type { Product, DigitalAsset } from "@/lib/types"
 import Image from "next/image"
@@ -27,6 +27,7 @@ const EMPTY_FORM = {
   downloadUrl: "",
   tags: "",
   isActive: true,
+  displayOrder: "0",
 }
 
 type FormData = typeof EMPTY_FORM & { isActive: boolean }
@@ -210,7 +211,7 @@ function ProductForm({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-3 gap-3">
         <div>
           <Label>Category *</Label>
           <Select value={form.category} onValueChange={(v) => setForm({ ...form, category: v })}>
@@ -226,6 +227,10 @@ function ProductForm({
               <SelectItem value="general">General</SelectItem>
             </SelectContent>
           </Select>
+        </div>
+        <div>
+          <Label>Position (1 = top)</Label>
+          <Input type="number" min="0" value={form.displayOrder} onChange={(e) => setForm({ ...form, displayOrder: e.target.value })} placeholder="1, 2, 3..." />
         </div>
         <div>
           <Label>Tags (comma separated)</Label>
@@ -339,6 +344,8 @@ export default function ProductsPage() {
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [editProduct, setEditProduct] = useState<Product | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const [savingOrder, setSavingOrder] = useState(false)
+  const [isOrderChanged, setIsOrderChanged] = useState(false)
 
   const loadData = async () => {
     setLoading(true)
@@ -346,6 +353,7 @@ export default function ProductsPage() {
       const [prods, cats] = await Promise.all([fetchProducts(), fetchCategories()])
       setProducts(prods)
       setCategories(cats)
+      setIsOrderChanged(false)
     } catch {
       toast({ title: "Error loading data", variant: "destructive" })
     } finally {
@@ -354,6 +362,46 @@ export default function ProductsPage() {
   }
 
   useEffect(() => { loadData() }, [])
+
+  const handleMove = (index: number, direction: 'up' | 'down') => {
+    const targetIndex = direction === 'up' ? index - 1 : index + 1
+    if (targetIndex < 0 || targetIndex >= products.length) return
+    const newProds = [...products]
+    const temp = newProds[index]
+    newProds[index] = newProds[targetIndex]
+    newProds[targetIndex] = temp
+    newProds.forEach((p, idx) => {
+      p.displayOrder = idx + 1
+    })
+    setProducts(newProds)
+    setIsOrderChanged(true)
+  }
+
+  const handleOrderChange = (id: string, newOrderVal: number) => {
+    setProducts((prev) => {
+      const updated = prev.map((p) => (p.id === id ? { ...p, displayOrder: newOrderVal } : p))
+      return updated.sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0))
+    })
+    setIsOrderChanged(true)
+  }
+
+  const saveOrder = async () => {
+    setSavingOrder(true)
+    try {
+      const items = products.map((p, idx) => ({
+        id: p.id,
+        displayOrder: typeof p.displayOrder === "number" && p.displayOrder > 0 ? p.displayOrder : idx + 1,
+      }))
+      await reorderD1Products({ items })
+      toast({ title: "✅ Product arrangement saved!" })
+      setIsOrderChanged(false)
+      loadData()
+    } catch (err: any) {
+      toast({ title: "Failed to save order", description: err.message, variant: "destructive" })
+    } finally {
+      setSavingOrder(false)
+    }
+  }
 
   const handleCreate = async (form: FormData) => {
     setSubmitting(true)
@@ -364,6 +412,7 @@ export default function ProductsPage() {
         originalPrice: form.originalPrice ? parseFloat(form.originalPrice) : null,
         tags: form.tags.split(",").map((t: string) => t.trim()).filter(Boolean),
         isActive: form.isActive,
+        displayOrder: parseInt(form.displayOrder, 10) || 0,
       })
       toast({ title: "✅ Product created!" })
       setIsCreateOpen(false)
@@ -385,6 +434,7 @@ export default function ProductsPage() {
         originalPrice: form.originalPrice ? parseFloat(form.originalPrice) : null,
         tags: form.tags.split(",").map((t: string) => t.trim()).filter(Boolean),
         isActive: form.isActive,
+        displayOrder: parseInt(form.displayOrder, 10) || 0,
       })
       toast({ title: "✅ Product updated!" })
       setEditProduct(null)
@@ -424,19 +474,30 @@ export default function ProductsPage() {
       downloadUrl: editProduct.downloadUrl || "",
       tags: Array.isArray(editProduct.tags) ? editProduct.tags.join(", ") : "",
       isActive: editProduct.isActive,
+      displayOrder: editProduct.displayOrder ? String(editProduct.displayOrder) : "0",
     }
     : EMPTY_FORM as FormData
 
   return (
     <div className="p-8 space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Products</h1>
-          <p className="text-sm text-muted-foreground mt-1">{products.length} total products</p>
+          <h1 className="text-3xl font-bold">Products Arrangement</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            {products.length} total products. Rearrange products using ▲ ▼ or position inputs to set which appear first on website.
+          </p>
         </div>
-        <Button asChild>
-          <Link href="/admin/products/new"><Plus className="mr-2 h-4 w-4" />Add Product</Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          {isOrderChanged && (
+            <Button onClick={saveOrder} disabled={savingOrder} className="bg-emerald-600 hover:bg-emerald-700 text-white animate-pulse">
+              {savingOrder ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+              Save Product Order
+            </Button>
+          )}
+          <Button asChild>
+            <Link href="/admin/products/new"><Plus className="mr-2 h-4 w-4" />Add Product</Link>
+          </Button>
+        </div>
       </div>
 
       {/* Edit Dialog */}
@@ -453,22 +514,30 @@ export default function ProductsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Search */}
-      <div className="flex items-center gap-2 bg-white p-2 rounded-md border max-w-sm">
-        <Search className="h-4 w-4 text-gray-500" />
-        <Input
-          className="border-0 focus-visible:ring-0 h-8"
-          placeholder="Search products..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
+      {/* Search & Actions Bar */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+        <div className="flex items-center gap-2 bg-white p-2 rounded-md border max-w-sm w-full">
+          <Search className="h-4 w-4 text-gray-500" />
+          <Input
+            className="border-0 focus-visible:ring-0 h-8"
+            placeholder="Search products..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+        {isOrderChanged && (
+          <span className="text-xs font-semibold text-amber-600 bg-amber-50 px-3 py-1.5 rounded-md border border-amber-200 flex items-center gap-1.5">
+            <ArrowUpDown className="h-3.5 w-3.5" /> Order changed! Don't forget to click "Save Product Order".
+          </span>
+        )}
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-md border">
+      <div className="bg-white rounded-md border overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-44">Order / Position</TableHead>
               <TableHead>Image</TableHead>
               <TableHead>Name</TableHead>
               <TableHead>Category</TableHead>
@@ -479,14 +548,53 @@ export default function ProductsPage() {
           </TableHeader>
           <TableBody>
             {loading ? (
-              <TableRow><TableCell colSpan={6} className="text-center py-10"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></TableCell></TableRow>
+              <TableRow><TableCell colSpan={7} className="text-center py-10"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></TableCell></TableRow>
             ) : filtered.length === 0 ? (
-              <TableRow><TableCell colSpan={6} className="text-center py-10 text-gray-500">No products found</TableCell></TableRow>
+              <TableRow><TableCell colSpan={7} className="text-center py-10 text-gray-500">No products found</TableCell></TableRow>
             ) : (
-              filtered.map((product) => (
-                <TableRow key={product.id}>
+              filtered.map((product, index) => (
+                <TableRow key={product.id} className="hover:bg-slate-50/80 transition-colors">
                   <TableCell>
-                    <div className="relative h-10 w-10 rounded overflow-hidden bg-gray-50">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs font-mono font-bold bg-slate-100 text-slate-700 px-2 py-1 rounded min-w-[32px] text-center">
+                        #{product.displayOrder || (index + 1)}
+                      </span>
+                      <div className="flex flex-col gap-0.5">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-5 w-5 p-0 hover:bg-slate-200"
+                          disabled={index === 0}
+                          onClick={() => handleMove(index, 'up')}
+                          title="Move Up"
+                        >
+                          <ArrowUp className="h-3 w-3 text-slate-700" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-5 w-5 p-0 hover:bg-slate-200"
+                          disabled={index === filtered.length - 1}
+                          onClick={() => handleMove(index, 'down')}
+                          title="Move Down"
+                        >
+                          <ArrowDown className="h-3 w-3 text-slate-700" />
+                        </Button>
+                      </div>
+                      <Input
+                        type="number"
+                        min="1"
+                        className="w-14 h-7 text-xs px-1 text-center"
+                        value={product.displayOrder || (index + 1)}
+                        onChange={(e) => handleOrderChange(product.id, parseInt(e.target.value, 10) || 1)}
+                        title="Directly enter position number"
+                      />
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="relative h-10 w-10 rounded overflow-hidden bg-gray-50 border">
                       <Image
                         src={product.imageUrl || "/placeholder.svg"}
                         alt={product.title}
@@ -518,7 +626,6 @@ export default function ProductsPage() {
                       </Button>
                     </div>
                   </TableCell>
-
                 </TableRow>
               ))
             )}

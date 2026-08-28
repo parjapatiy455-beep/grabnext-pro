@@ -101,6 +101,7 @@ export async function runMigrations() {
 
   await safeAddColumn('products', 'originalPrice', 'REAL')
   await safeAddColumn('products', 'pageType', "TEXT DEFAULT 'shop'")
+  await safeAddColumn('products', 'displayOrder', 'INTEGER DEFAULT 0')
 
   await safeAddColumn('orders', 'userEmail', 'TEXT')
   await safeAddColumn('orders', 'userName', 'TEXT')

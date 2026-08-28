@@ -10,6 +10,7 @@ export async function GET() {
         "ALTER TABLE products ADD COLUMN originalPrice REAL;",
         "ALTER TABLE products ADD COLUMN slug TEXT;",
         "ALTER TABLE products ADD COLUMN images TEXT;",
+        "ALTER TABLE products ADD COLUMN displayOrder INTEGER DEFAULT 0;",
         
         // Also create missing tables just in case
         `CREATE TABLE IF NOT EXISTS lp_analytics (

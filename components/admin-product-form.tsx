@@ -22,6 +22,7 @@ interface ProductFormProps {
 const EMPTY = {
     title: "", description: "", price: "", originalPrice: "", category: "",
     tags: "", downloadUrl: "", isActive: true, images: [] as string[],
+    displayOrder: "0",
 }
 
 export function AdminProductForm({ mode, productId }: ProductFormProps) {
@@ -65,6 +66,7 @@ export function AdminProductForm({ mode, productId }: ProductFormProps) {
                     downloadUrl: p.downloadUrl || "",
                     isActive: p.isActive !== false,
                     images: Array.isArray(p.images) ? p.images : (p.imageUrl ? [p.imageUrl] : []),
+                    displayOrder: p.displayOrder ? p.displayOrder.toString() : "0",
                 })
                 setDigitalAssets(parsedAssets)
                 setLoading(false)
@@ -168,6 +170,7 @@ export function AdminProductForm({ mode, productId }: ProductFormProps) {
                 imageUrl: form.images[0] || "",
                 downloadUrl: JSON.stringify(digitalAssets), // Store assets as JSON
                 isActive: form.isActive,
+                displayOrder: parseInt(form.displayOrder, 10) || 0,
                 pageType: "shop",
             }
             const url = mode === "edit" ? `/api/products/${productId}` : "/api/products"
@@ -257,7 +260,7 @@ export function AdminProductForm({ mode, productId }: ProductFormProps) {
                                             </div>
                                         </div>
                                     </div>
-                                    <div className="grid grid-cols-2 gap-4">
+                                    <div className="grid grid-cols-3 gap-4">
                                         <div>
                                             <Label>Category *</Label>
                                             <select
@@ -269,6 +272,11 @@ export function AdminProductForm({ mode, productId }: ProductFormProps) {
                                                 {categories.map(c => <option key={c.id} value={c.slug}>{c.name}</option>)}
                                                 <option value="general">General</option>
                                             </select>
+                                        </div>
+                                        <div>
+                                            <Label>Display Position <span className="text-gray-400 text-[10px] font-normal">(1 = top)</span></Label>
+                                            <Input type="number" min="0" value={form.displayOrder} onChange={e => setForm(f => ({ ...f, displayOrder: e.target.value }))}
+                                                placeholder="1, 2, 3..." className="mt-1.5 h-11 border-gray-200" />
                                         </div>
                                         <div>
                                             <Label>Tags <span className="text-gray-400 text-[10px] font-normal">(comma separated)</span></Label>

@@ -75,6 +75,7 @@ export interface Product {
   pageCode?: string   // JSON: LandingSection[]
   pageType?: "shop" | "landing"
   createdBy: string // Admin user ID who created this product
+  displayOrder?: number
 }
 
 export interface CartItem {
