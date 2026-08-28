@@ -53,12 +53,22 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     const imageUrl = images[0] || data.imageUrl || ''
     const displayOrder = typeof data.displayOrder === 'number' ? data.displayOrder : (parseInt(data.displayOrder, 10) || 0)
 
-    await executeQuery(
-      `UPDATE products SET title=?, description=?, price=?, originalPrice=?, category=?, tags=?, imageUrl=?, images=?, slug=?, downloadUrl=?, isActive=?, pageCode=?, pageType=?, displayOrder=?, updatedAt=? WHERE id=?`,
-      [data.title, data.description || '', data.price, data.originalPrice || null, data.category,
-      JSON.stringify(data.tags || []), imageUrl, JSON.stringify(images), slug,
-      data.downloadUrl || '', data.isActive ? 1 : 0, data.pageCode || null, data.pageType || 'shop', displayOrder, now, params.id]
-    )
+    try {
+      await executeQuery(
+        `UPDATE products SET title=?, description=?, price=?, originalPrice=?, category=?, tags=?, imageUrl=?, images=?, slug=?, downloadUrl=?, isActive=?, pageCode=?, pageType=?, displayOrder=?, updatedAt=? WHERE id=?`,
+        [data.title, data.description || '', data.price, data.originalPrice || null, data.category,
+        JSON.stringify(data.tags || []), imageUrl, JSON.stringify(images), slug,
+        data.downloadUrl || '', data.isActive ? 1 : 0, data.pageCode || null, data.pageType || 'shop', displayOrder, now, params.id]
+      )
+    } catch (err: any) {
+      await executeQuery('ALTER TABLE products ADD COLUMN displayOrder INTEGER DEFAULT 0').catch(() => {})
+      await executeQuery(
+        `UPDATE products SET title=?, description=?, price=?, originalPrice=?, category=?, tags=?, imageUrl=?, images=?, slug=?, downloadUrl=?, isActive=?, pageCode=?, pageType=?, updatedAt=? WHERE id=?`,
+        [data.title, data.description || '', data.price, data.originalPrice || null, data.category,
+        JSON.stringify(data.tags || []), imageUrl, JSON.stringify(images), slug,
+        data.downloadUrl || '', data.isActive ? 1 : 0, data.pageCode || null, data.pageType || 'shop', now, params.id]
+      )
+    }
     return NextResponse.json({ success: true, slug })
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 })

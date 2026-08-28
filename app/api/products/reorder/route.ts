@@ -27,6 +27,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid payload. Expected items array or orderedIds array.' }, { status: 400 })
     }
 
+    // Ensure column exists
+    await executeQuery('ALTER TABLE products ADD COLUMN displayOrder INTEGER DEFAULT 0').catch(() => {})
+
     // Execute updates in parallel for fast batch saving
     await Promise.all(
       updates.map(({ id, displayOrder }) =>

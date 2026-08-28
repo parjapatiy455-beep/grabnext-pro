@@ -14,19 +14,31 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const all = searchParams.get('all') === '1'
 
-    // Simple, reliable query — sort by displayOrder ASC then createdAt DESC
-    const sql = all
+    // Try primary query with displayOrder sorting
+    const primarySql = all
       ? 'SELECT * FROM products ORDER BY displayOrder ASC, createdAt DESC'
       : 'SELECT * FROM products WHERE isActive = 1 ORDER BY displayOrder ASC, createdAt DESC'
 
-    // Second query: aggregate ratings per product
+    const fallbackSql = all
+      ? 'SELECT * FROM products ORDER BY createdAt DESC'
+      : 'SELECT * FROM products WHERE isActive = 1 ORDER BY createdAt DESC'
+
     const ratingsSql = 'SELECT productId, ROUND(AVG(rating),1) AS avgRating, COUNT(id) AS reviewCount FROM reviews GROUP BY productId'
 
-    // Run both in parallel
-    const [productRows, ratingRows] = await Promise.all([
-      executeQuery(sql),
-      executeQuery(ratingsSql).catch(() => [] as any[]),  // ratings optional — don't break if reviews table empty
-    ])
+    let productRows: any[] = []
+
+    try {
+      productRows = await executeQuery(primarySql)
+    } catch (err: any) {
+      console.warn('[Products GET] Primary query with displayOrder failed, falling back to createdAt DESC:', err.message)
+      // Attempt to auto-add displayOrder column in DB if missing
+      executeQuery('ALTER TABLE products ADD COLUMN displayOrder INTEGER DEFAULT 0').catch(() => {})
+      // Fallback query without displayOrder in ORDER BY
+      productRows = await executeQuery(fallbackSql).catch(() => [])
+    }
+
+    // Aggregate ratings per product
+    const ratingRows = await executeQuery(ratingsSql).catch(() => [] as any[])
 
     // Build a ratings map
     const ratingsMap: Record<string, { avgRating: number; reviewCount: number }> = {}
@@ -73,12 +85,22 @@ export async function POST(request: NextRequest) {
     const imageUrl = images[0] || data.imageUrl || ''
     const displayOrder = typeof data.displayOrder === 'number' ? data.displayOrder : (parseInt(data.displayOrder, 10) || 0)
 
-    await executeQuery(
-      `INSERT INTO products (id, title, description, price, originalPrice, category, tags, imageUrl, images, slug, downloadUrl, isActive, salesCount, pageCode, pageType, createdBy, displayOrder, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, data.title || '', data.description || '', data.price || 0, data.originalPrice || null,
-        data.category || 'general', JSON.stringify(data.tags || []), imageUrl, JSON.stringify(images), slug,
-        data.downloadUrl || '', data.isActive !== false ? 1 : 0, 0, data.pageCode || null, data.pageType || 'shop', data.createdBy || 'admin', displayOrder, now, now]
-    )
+    try {
+      await executeQuery(
+        `INSERT INTO products (id, title, description, price, originalPrice, category, tags, imageUrl, images, slug, downloadUrl, isActive, salesCount, pageCode, pageType, createdBy, displayOrder, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [id, data.title || '', data.description || '', data.price || 0, data.originalPrice || null,
+          data.category || 'general', JSON.stringify(data.tags || []), imageUrl, JSON.stringify(images), slug,
+          data.downloadUrl || '', data.isActive !== false ? 1 : 0, 0, data.pageCode || null, data.pageType || 'shop', data.createdBy || 'admin', displayOrder, now, now]
+      )
+    } catch (err: any) {
+      await executeQuery('ALTER TABLE products ADD COLUMN displayOrder INTEGER DEFAULT 0').catch(() => {})
+      await executeQuery(
+        `INSERT INTO products (id, title, description, price, originalPrice, category, tags, imageUrl, images, slug, downloadUrl, isActive, salesCount, pageCode, pageType, createdBy, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [id, data.title || '', data.description || '', data.price || 0, data.originalPrice || null,
+          data.category || 'general', JSON.stringify(data.tags || []), imageUrl, JSON.stringify(images), slug,
+          data.downloadUrl || '', data.isActive !== false ? 1 : 0, 0, data.pageCode || null, data.pageType || 'shop', data.createdBy || 'admin', now, now]
+      )
+    }
     return NextResponse.json({ success: true, id, slug }, { status: 201 })
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 })
