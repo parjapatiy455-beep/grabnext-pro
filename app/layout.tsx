@@ -5,6 +5,7 @@ import { AuthProvider } from "@/contexts/auth-context"
 import { CartProvider } from "@/contexts/cart-context"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/toaster"
+import { CartDrawer } from "@/components/cart-drawer"
 import { WhatsAppToggle } from "@/components/whatsapp-toggle"
 import { FacebookPixelScript, FacebookPixelRouteTracker } from "@/components/facebook-pixel"
 import "./globals.css"
@@ -184,6 +185,7 @@ html {
               {/* Tracks PageView on every SPA route change */}
               <FacebookPixelRouteTracker />
               {children}
+              <CartDrawer />
               <Toaster />
               <WhatsAppToggle />
             </CartProvider>

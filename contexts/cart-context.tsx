@@ -60,7 +60,7 @@ export const CartProvider = ({ children }: CartProviderProps) => {
     localStorage.setItem("digital-store-cart", JSON.stringify(items))
   }, [items])
 
-  const addToCart = (product: Product, quantity = 1) => {
+  const addToCart = (product: Product, quantity = 1, openDrawer = true) => {
     setItems((prevItems) => {
       const existingItem = prevItems.find((item) => item.productId === product.id)
 
@@ -80,6 +80,9 @@ export const CartProvider = ({ children }: CartProviderProps) => {
         return [...prevItems, { productId: product.id, product, quantity }]
       }
     })
+    if (openDrawer) {
+      setDrawerOpen(true)
+    }
   }
 
   const removeFromCart = (productId: string) => {

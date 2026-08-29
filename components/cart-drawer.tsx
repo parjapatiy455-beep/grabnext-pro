@@ -25,7 +25,7 @@ export function CartDrawer({ children }: CartDrawerProps) {
 
   return (
     <Sheet open={isDrawerOpen} onOpenChange={setDrawerOpen}>
-      <SheetTrigger asChild>{children}</SheetTrigger>
+      {children && <SheetTrigger asChild>{children}</SheetTrigger>}
       <SheetContent className="w-full sm:max-w-lg">
         <SheetHeader className="animate-slide-up">
           <SheetTitle className="flex items-center gap-2">
