@@ -442,11 +442,11 @@ export default function SoftwareFunnelPage({ params }: { params?: { slug?: strin
   
   const [isBonusClaimed, setIsBonusClaimed] = useState(false);
 
-  // Promo modal & SAVE40 coupon code state
+  // Promo modal & SAVE50 coupon code state
   const [showPromoModal, setShowPromoModal] = useState(false);
   const [copiedCoupon, setCopiedCoupon] = useState(false);
 
-  // 5-second timer for 40% OFF promo modal popup (same as /editing page)
+  // 5-second timer for 50% OFF promo modal popup (same as /editing page)
   useEffect(() => {
     const timer = setTimeout(() => {
       setShowPromoModal(true);
@@ -456,10 +456,10 @@ export default function SoftwareFunnelPage({ params }: { params?: { slug?: strin
 
   const handleCopyCoupon = () => {
     if (typeof navigator !== "undefined" && navigator.clipboard) {
-      navigator.clipboard.writeText("SAVE40");
+      navigator.clipboard.writeText("SAVE50");
     }
     try {
-      sessionStorage.setItem("copiedCouponCode", "SAVE40");
+      sessionStorage.setItem("copiedCouponCode", "SAVE50");
     } catch {}
     setCopiedCoupon(true);
     setTimeout(() => {
@@ -734,13 +734,13 @@ export default function SoftwareFunnelPage({ params }: { params?: { slug?: strin
               <span className="text-gray-700 font-extrabold text-xs sm:text-sm">Rating: 4.9 | 3426 Reviews</span>
             </div>
 
-            {/* Special SAVE40 Coupon Box */}
+            {/* Special SAVE50 Coupon Box */}
             <div className="w-full max-w-md my-4 p-4 bg-amber-500/10 border-2 border-dashed border-amber-400/60 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3 shadow-sm mx-auto">
               <div className="flex items-center gap-2.5 text-left">
                 <Tag className="h-5 w-5 text-amber-500 shrink-0" />
                 <div>
-                  <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider block">Special Coupon Code (40% OFF)</span>
-                  <span className="text-xl font-mono font-black text-amber-600 tracking-wider">SAVE40</span>
+                  <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider block">Special Coupon Code (50% OFF)</span>
+                  <span className="text-xl font-mono font-black text-amber-600 tracking-wider">SAVE50</span>
                 </div>
               </div>
               <button
@@ -1304,7 +1304,7 @@ export default function SoftwareFunnelPage({ params }: { params?: { slug?: strin
           </div>
         )}
 
-        {/* 40% OFF Secret Promo Modal (same as /editing landing page) */}
+        {/* 50% OFF Secret Promo Modal (same as /editing landing page) */}
         {showPromoModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
             <div className="bg-slate-900 border border-amber-500/30 rounded-3xl p-6 sm:p-8 max-w-md w-full text-center relative shadow-2xl overflow-hidden">
@@ -1328,10 +1328,10 @@ export default function SoftwareFunnelPage({ params }: { params?: { slug?: strin
 
               {/* Main Headline */}
               <h3 className="text-2xl sm:text-3xl font-black text-white leading-tight">
-                Wait! Get <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-amber-300 to-yellow-500">40% EXTRA OFF</span>
+                Wait! Get <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-amber-300 to-yellow-500">50% EXTRA OFF</span>
               </h3>
               <p className="text-xs text-slate-300 mt-1.5 leading-relaxed">
-                Use this secret coupon code to get 40% discount instantly at checkout!
+                Use this secret coupon code to get 50% discount instantly at checkout!
               </p>
 
               {/* Coupon Box */}
@@ -1340,7 +1340,7 @@ export default function SoftwareFunnelPage({ params }: { params?: { slug?: strin
                   <Tag className="h-5 w-5 text-amber-400 shrink-0" />
                   <div>
                     <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Coupon Code</span>
-                    <span className="text-xl font-mono font-black text-amber-300 tracking-wider">SAVE40</span>
+                    <span className="text-xl font-mono font-black text-amber-300 tracking-wider">SAVE50</span>
                   </div>
                 </div>
                 <button
@@ -1365,11 +1365,11 @@ export default function SoftwareFunnelPage({ params }: { params?: { slug?: strin
 
               {copiedCoupon ? (
                 <p className="text-xs text-emerald-400 font-semibold mb-3 animate-pulse">
-                  ✓ 40% OFF coupon code saved! It will automatically apply when you decide to buy.
+                  ✓ 50% OFF coupon code saved! It will automatically apply when you decide to buy.
                 </p>
               ) : (
                 <p className="text-[11px] text-slate-400 mb-3">
-                  Click "Copy Coupon Code" to save 40% discount for when you're ready to order.
+                  Click "Copy Coupon Code" to save 50% discount for when you're ready to order.
                 </p>
               )}
 
