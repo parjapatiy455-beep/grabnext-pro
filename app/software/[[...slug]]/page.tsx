@@ -446,11 +446,11 @@ export default function SoftwareFunnelPage({ params }: { params?: { slug?: strin
   const [showPromoModal, setShowPromoModal] = useState(false);
   const [copiedCoupon, setCopiedCoupon] = useState(false);
 
-  // 5-second timer for 50% OFF promo modal popup (same as /editing page)
+  // 30-second timer for 50% OFF promo modal popup (same as /editing page)
   useEffect(() => {
     const timer = setTimeout(() => {
       setShowPromoModal(true);
-    }, 5000);
+    }, 30000);
     return () => clearTimeout(timer);
   }, []);
 
@@ -509,12 +509,12 @@ export default function SoftwareFunnelPage({ params }: { params?: { slug?: strin
     }
   }, [matchedProduct]);
 
-  // Open dynamic popup after exactly 5 seconds if a matched product is found and has not been claimed yet
+  // Open dynamic popup after exactly 30 seconds if a matched product is found and has not been claimed yet
   useEffect(() => {
     if (!matchedProduct || isBonusClaimed) return;
     const delayTimer = setTimeout(() => {
       setShowPopup(true);
-    }, 5000);
+    }, 30000);
     return () => clearTimeout(delayTimer);
   }, [matchedProduct, isBonusClaimed]);
 

@@ -47,11 +47,11 @@ export function EditingLandingPageClient() {
   const [showPromoModal, setShowPromoModal] = useState(false)
   const [copiedCoupon, setCopiedCoupon] = useState(false)
 
-  // 5-second timer for 50% OFF promo modal popup
+  // 30-second timer for 50% OFF promo modal popup
   useEffect(() => {
     const timer = setTimeout(() => {
       setShowPromoModal(true)
-    }, 5000)
+    }, 30000)
     return () => clearTimeout(timer)
   }, [])
 
