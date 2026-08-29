@@ -117,7 +117,7 @@ export default function CheckoutPage() {
           .then((data) => {
             if (data.valid) {
               setAppliedCoupon(data)
-              toast({ title: `🎉 Coupon ${clean} Applied!`, description: `Instant 50% discount active.` })
+              toast({ title: `🎉 Coupon ${clean} Applied!`, description: `Instant ${data.value || 40}% discount active.` })
             }
           })
           .catch(() => {})

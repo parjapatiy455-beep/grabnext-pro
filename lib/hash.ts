@@ -34,7 +34,8 @@ export async function hashData(value: string | undefined | null): Promise<string
     
     // Fallback for Node.js environments where Web Crypto isn't globally exposed but 'crypto' module is available
     if (typeof process !== "undefined" && process.versions && process.versions.node) {
-      const cryptoModule = require("crypto")
+      const req = eval('require')
+      const cryptoModule = req("crypto")
       return cryptoModule.createHash("sha256").update(normalized).digest("hex")
     }
     

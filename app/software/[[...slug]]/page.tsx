@@ -7,6 +7,7 @@ import { useCart } from "@/contexts/cart-context";
 import { useRouter } from "next/navigation";
 import { trackAddToCart } from "@/lib/pixel";
 import { toast } from "@/hooks/use-toast";
+import { X, Gift, Tag, Copy, Check } from "lucide-react";
 
 /* ── Animated CTA Button (matches Elementor .btn class) ── */
 const BTN_STYLE: React.CSSProperties = {
@@ -441,6 +442,32 @@ export default function SoftwareFunnelPage({ params }: { params?: { slug?: strin
   
   const [isBonusClaimed, setIsBonusClaimed] = useState(false);
 
+  // Promo modal & SAVE40 coupon code state
+  const [showPromoModal, setShowPromoModal] = useState(false);
+  const [copiedCoupon, setCopiedCoupon] = useState(false);
+
+  // 5-second timer for 40% OFF promo modal popup (same as /editing page)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowPromoModal(true);
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const handleCopyCoupon = () => {
+    if (typeof navigator !== "undefined" && navigator.clipboard) {
+      navigator.clipboard.writeText("SAVE40");
+    }
+    try {
+      sessionStorage.setItem("copiedCouponCode", "SAVE40");
+    } catch {}
+    setCopiedCoupon(true);
+    setTimeout(() => {
+      setCopiedCoupon(false);
+      setShowPromoModal(false);
+    }, 1800);
+  };
+
   const router = useRouter();
   const { addToCart, clearCart } = useCart();
 
@@ -702,9 +729,38 @@ export default function SoftwareFunnelPage({ params }: { params?: { slug?: strin
             </div>
 
             {/* Dashed Rating Badge */}
-            <div className="inline-flex items-center gap-2 border border-dashed border-gray-300 rounded-xl px-4 py-2 bg-gray-50 mb-8 shadow-sm">
+            <div className="inline-flex items-center gap-2 border border-dashed border-gray-300 rounded-xl px-4 py-2 bg-gray-50 mb-4 shadow-sm">
               <span className="text-yellow-400 text-sm sm:text-base flex select-none">⭐⭐⭐⭐⭐</span>
               <span className="text-gray-700 font-extrabold text-xs sm:text-sm">Rating: 4.9 | 3426 Reviews</span>
+            </div>
+
+            {/* Special SAVE40 Coupon Box */}
+            <div className="w-full max-w-md my-4 p-4 bg-amber-500/10 border-2 border-dashed border-amber-400/60 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3 shadow-sm mx-auto">
+              <div className="flex items-center gap-2.5 text-left">
+                <Tag className="h-5 w-5 text-amber-500 shrink-0" />
+                <div>
+                  <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider block">Special Coupon Code (40% OFF)</span>
+                  <span className="text-xl font-mono font-black text-amber-600 tracking-wider">SAVE40</span>
+                </div>
+              </div>
+              <button
+                onClick={handleCopyCoupon}
+                className={`w-full sm:w-auto px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 shrink-0 ${
+                  copiedCoupon
+                    ? "bg-emerald-500 text-white shadow-md"
+                    : "bg-gradient-to-r from-amber-400 to-yellow-500 hover:from-amber-300 hover:to-yellow-400 text-slate-950 shadow-sm hover:scale-105"
+                }`}
+              >
+                {copiedCoupon ? (
+                  <>
+                    <Check className="h-4 w-4" /> Code Copied!
+                  </>
+                ) : (
+                  <>
+                    <Copy className="h-4 w-4" /> Copy Coupon Code
+                  </>
+                )}
+              </button>
             </div>
 
             {/* Giant Green CTA Button */}
@@ -1244,6 +1300,88 @@ export default function SoftwareFunnelPage({ params }: { params?: { slug?: strin
                 </div>
               )}
 
+            </div>
+          </div>
+        )}
+
+        {/* 40% OFF Secret Promo Modal (same as /editing landing page) */}
+        {showPromoModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="bg-slate-900 border border-amber-500/30 rounded-3xl p-6 sm:p-8 max-w-md w-full text-center relative shadow-2xl overflow-hidden">
+              {/* Glowing background accent */}
+              <div className="absolute -top-24 -left-24 w-48 h-48 bg-amber-500/20 rounded-full blur-3xl pointer-events-none" />
+              <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-yellow-500/20 rounded-full blur-3xl pointer-events-none" />
+
+              {/* Close Button */}
+              <button
+                onClick={() => setShowPromoModal(false)}
+                className="absolute top-4 right-4 h-8 w-8 rounded-full bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition-colors z-10"
+                aria-label="Close modal"
+              >
+                <X className="h-4 w-4" />
+              </button>
+
+              {/* Header Badge */}
+              <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-bold uppercase tracking-wider mb-3">
+                <Gift className="h-3.5 w-3.5" /> Special Exclusive Gift
+              </div>
+
+              {/* Main Headline */}
+              <h3 className="text-2xl sm:text-3xl font-black text-white leading-tight">
+                Wait! Get <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-amber-300 to-yellow-500">40% EXTRA OFF</span>
+              </h3>
+              <p className="text-xs text-slate-300 mt-1.5 leading-relaxed">
+                Use this secret coupon code to get 40% discount instantly at checkout!
+              </p>
+
+              {/* Coupon Box */}
+              <div className="my-5 p-4 bg-slate-950/80 border-2 border-dashed border-amber-400/60 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3 shadow-inner">
+                <div className="flex items-center gap-2.5 text-left w-full sm:w-auto">
+                  <Tag className="h-5 w-5 text-amber-400 shrink-0" />
+                  <div>
+                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Coupon Code</span>
+                    <span className="text-xl font-mono font-black text-amber-300 tracking-wider">SAVE40</span>
+                  </div>
+                </div>
+                <button
+                  onClick={handleCopyCoupon}
+                  className={`w-full sm:w-auto px-5 py-3 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 shrink-0 ${
+                    copiedCoupon
+                      ? "bg-emerald-500 text-white shadow-lg scale-105"
+                      : "bg-gradient-to-r from-amber-400 to-yellow-500 hover:from-amber-300 hover:to-yellow-400 text-slate-950 shadow-md hover:scale-105"
+                  }`}
+                >
+                  {copiedCoupon ? (
+                    <>
+                      <Check className="h-4 w-4" /> Code Copied & Saved!
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="h-4 w-4" /> Copy Coupon Code
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {copiedCoupon ? (
+                <p className="text-xs text-emerald-400 font-semibold mb-3 animate-pulse">
+                  ✓ 40% OFF coupon code saved! It will automatically apply when you decide to buy.
+                </p>
+              ) : (
+                <p className="text-[11px] text-slate-400 mb-3">
+                  Click "Copy Coupon Code" to save 40% discount for when you're ready to order.
+                </p>
+              )}
+
+              {/* Action Buttons */}
+              <div className="pt-1">
+                <button
+                  onClick={() => setShowPromoModal(false)}
+                  className="w-full py-2.5 px-4 rounded-xl text-xs font-semibold text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 transition-colors border border-slate-700"
+                >
+                  Continue Browsing Page
+                </button>
+              </div>
             </div>
           </div>
         )}

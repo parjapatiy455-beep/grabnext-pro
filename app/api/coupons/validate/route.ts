@@ -36,19 +36,20 @@ export async function POST(request: NextRequest) {
         }
 
         if (!coupons || coupons.length === 0) {
-            if (cleanCode === 'SAVE50') {
-                const discountAmount = Math.round(total * 0.50)
+            if (cleanCode === 'SAVE50' || cleanCode === 'SAVE40') {
+                const percentage = cleanCode === 'SAVE40' ? 40 : 50
+                const discountAmount = Math.round(total * (percentage / 100))
                 // Asynchronously attempt to seed into database
                 executeQuery(
                     'INSERT INTO coupons (id, code, type, value, isActive, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?)',
-                    ['cpn_' + crypto.randomUUID().slice(0, 8), 'SAVE50', 'percentage', 50, 1, Date.now(), Date.now()]
+                    ['cpn_' + crypto.randomUUID().slice(0, 8), cleanCode, 'percentage', percentage, 1, Date.now(), Date.now()]
                 ).catch(() => {})
 
                 return NextResponse.json({
                     valid: true,
-                    code: 'SAVE50',
+                    code: cleanCode,
                     type: 'percentage',
-                    value: 50,
+                    value: percentage,
                     discountAmount: Math.max(0, discountAmount)
                 })
             }
