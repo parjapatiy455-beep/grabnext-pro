@@ -8,6 +8,7 @@ import { Toaster } from "@/components/ui/toaster"
 import { CartDrawer } from "@/components/cart-drawer"
 import { WhatsAppToggle } from "@/components/whatsapp-toggle"
 import { FacebookPixelScript, FacebookPixelRouteTracker } from "@/components/facebook-pixel"
+import { GoogleAnalyticsRouteTracker } from "@/components/google-analytics"
 import { getSiteUrl, DEFAULT_SITE_TITLE, DEFAULT_SITE_DESCRIPTION, DEFAULT_SEO_KEYWORDS } from "@/lib/site"
 import "./globals.css"
 
@@ -95,6 +96,7 @@ export default function RootLayout({
       <head>
         <meta name="google-adsense-account" content="ca-pub-4010815088153941" />
         <link rel="alternate" type="text/plain" href={`${siteUrl}/llms.txt`} title="LLM Knowledge Base" />
+        {/* ── Google Analytics 4 (GA4 Script + Gtag Config) ── */}
         <script async src="https://www.googletagmanager.com/gtag/js?id=G-C3HYF0VYC0"></script>
         <script
           dangerouslySetInnerHTML={{
@@ -102,7 +104,10 @@ export default function RootLayout({
               window.dataLayer = window.dataLayer || [];
               function gtag(){dataLayer.push(arguments);}
               gtag('js', new Date());
-              gtag('config', 'G-C3HYF0VYC0');
+              gtag('config', 'G-C3HYF0VYC0', {
+                page_path: window.location.pathname,
+                send_page_view: true
+              });
             `,
           }}
         />
@@ -190,6 +195,8 @@ html {
             <CartProvider>
               {/* Tracks PageView on every SPA route change */}
               <FacebookPixelRouteTracker />
+              {/* Tracks GA4 PageView on every SPA route change */}
+              <GoogleAnalyticsRouteTracker />
               {children}
               <CartDrawer />
               <Toaster />

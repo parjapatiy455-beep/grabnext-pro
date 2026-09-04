@@ -1,9 +1,10 @@
 /**
  * lib/pixel.ts
- * Centralized Meta (Facebook) Pixel & Conversions API (CAPI) helper.
+ * Centralized Meta (Facebook) Pixel, CAPI & Google Analytics (GA4) helper.
  */
 
-// We get the pixel ID from env, with a fallback for local dev if missing
+import { gaViewItem, gaAddToCart, gaBeginCheckout, gaPurchase } from "@/lib/gtag"
+
 export const FB_PIXEL_ID = process.env.NEXT_PUBLIC_FB_PIXEL_ID || "864520106659183"
 
 // ── TypeScript declarations ───────────────────────────────────────────────────
@@ -65,29 +66,21 @@ function _fbq(
 export { _fbq as fbq }
 
 // ── CAPI Sync Helper ──────────────────────────────────────────────────────────
-/**
- * Generates an event ID, fires the browser pixel, and sends a CAPI request.
- */
 export function trackEventWithCAPI(
   eventName: StandardEvent | string,
   customData: Record<string, any> = {},
   userData: UserData = {},
   isCustom = false
 ) {
-  // 1. Generate unique event ID for deduplication
   const eventId = typeof crypto !== "undefined" && crypto.randomUUID 
     ? crypto.randomUUID() 
     : `evt_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`
 
   const action = isCustom ? "trackCustom" : "track"
 
-  // 2. Fire Browser Pixel
   _fbq(action, eventName, customData, { eventID: eventId })
 
-  // 3. Fire Server-Side CAPI
-  // We only send CAPI if we're in the browser. Next.js server components shouldn't call this directly.
   if (typeof window !== "undefined") {
-    // Collect the current page URL for CAPI event_source_url
     const eventUrl = window.location.href
 
     fetch("/api/capi", {
@@ -108,7 +101,7 @@ export function trackEventWithCAPI(
   }
 }
 
-// ── Standard event helpers ────────────────────────────────────────────────────
+// ── Standard event helpers (Meta + GA4 Dual Tracker) ──────────────────────────
 
 export function trackPageView(userData?: UserData): void {
   trackEventWithCAPI("PageView", {}, userData)
@@ -127,6 +120,14 @@ export function trackViewContent(params: {
     currency: "INR",
     ...params,
   }, userData)
+
+  // Dual Track in Google Analytics (GA4)
+  gaViewItem({
+    id: params.content_ids[0] || "product",
+    name: params.content_name,
+    category: params.content_category,
+    price: params.value,
+  })
 }
 
 export function trackAddToCart(params: {
@@ -141,6 +142,14 @@ export function trackAddToCart(params: {
     currency: "INR",
     ...params,
   }, userData)
+
+  // Dual Track in Google Analytics (GA4)
+  gaAddToCart({
+    id: params.content_ids[0] || "product",
+    name: params.content_name,
+    price: params.value,
+    quantity: params.contents?.[0]?.quantity || 1,
+  })
 }
 
 export function trackInitiateCheckout(params: {
@@ -154,6 +163,12 @@ export function trackInitiateCheckout(params: {
     currency: "INR",
     ...params,
   }, userData)
+
+  // Dual Track in Google Analytics (GA4)
+  gaBeginCheckout({
+    value: params.value,
+    items: params.contents?.map((c) => ({ id: c.id, name: c.id, price: c.item_price || params.value })),
+  })
 }
 
 export function trackAddPaymentInfo(params: {
@@ -180,6 +195,13 @@ export function trackPurchase(params: {
     currency: "INR",
     ...params,
   }, userData)
+
+  // Dual Track in Google Analytics (GA4)
+  gaPurchase({
+    transaction_id: `tx_${Date.now()}`,
+    value: params.value,
+    items: params.contents?.map((c) => ({ id: c.id, name: c.id, price: c.item_price || params.value })),
+  })
 }
 
 export function trackLead(params?: {
