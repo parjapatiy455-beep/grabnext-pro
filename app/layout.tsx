@@ -8,91 +8,93 @@ import { Toaster } from "@/components/ui/toaster"
 import { CartDrawer } from "@/components/cart-drawer"
 import { WhatsAppToggle } from "@/components/whatsapp-toggle"
 import { FacebookPixelScript, FacebookPixelRouteTracker } from "@/components/facebook-pixel"
+import { getSiteUrl, DEFAULT_SITE_TITLE, DEFAULT_SITE_DESCRIPTION, DEFAULT_SEO_KEYWORDS } from "@/lib/site"
 import "./globals.css"
 
-export const metadata: Metadata = {
-  title: {
-    default: "Grabnext - Buy Digital Products, Software, Courses & Templates Online India",
-    template: "%s | Grabnext",
-  },
-  description:
-    "Grabnext is India's trusted digital marketplace. Buy software, online courses, design templates, ebooks & more at the best prices with instant delivery and secure UPI payment.",
-  keywords: [
-    "grabnext",
-    "buy digital products india",
-    "software buy online india",
-    "online courses india",
-    "design templates",
-    "ebooks india",
-    "digital download india",
-    "instant delivery digital goods",
-    "buy software cheap india",
-    "digital marketplace india",
-  ],
-  authors: [{ name: "Grabnext", url: "https://shop.grabnext.app" }],
-  creator: "Grabnext",
-  publisher: "Grabnext",
-  metadataBase: new URL("https://shop.grabnext.app"),
-  openGraph: {
-    type: "website",
-    locale: "en_IN",
-    url: "https://shop.grabnext.app",
-    siteName: "Grabnext",
-    title: "Grabnext - Buy Digital Products Online India",
-    description:
-      "India's trusted digital store. Software, courses, templates & more at the best prices with instant delivery.",
-    images: [
-      {
-        url: "/favicon.png",
-        width: 512,
-        height: 512,
-        alt: "Grabnext - Digital Marketplace India",
-      },
-    ],
-  },
-  twitter: {
-    card: "summary_large_image",
-    site: "@grabnext",
-    creator: "@grabnext",
-    title: "Grabnext - Buy Digital Products Online India",
-    description:
-      "India's trusted digital store. Software, courses, templates & more with instant delivery.",
-    images: ["/favicon.png"],
-  },
-  robots: {
-    index: true,
-    follow: true,
-    googleBot: {
+export async function generateMetadata(): Promise<Metadata> {
+  const siteUrl = getSiteUrl()
+
+  return {
+    title: {
+      default: DEFAULT_SITE_TITLE,
+      template: "%s | Grabnext",
+    },
+    description: DEFAULT_SITE_DESCRIPTION,
+    keywords: DEFAULT_SEO_KEYWORDS,
+    authors: [{ name: "Grabnext", url: siteUrl }],
+    creator: "Grabnext",
+    publisher: "Grabnext",
+    metadataBase: new URL(siteUrl),
+    openGraph: {
+      type: "website",
+      locale: "en_IN",
+      url: siteUrl,
+      siteName: "Grabnext",
+      title: "Grabnext - Buy Digital Products, Software & Bundles Online India",
+      description:
+        "India's trusted digital store. Software, courses, Canva templates, video editing bundles & more at the best prices with instant delivery and secure UPI payment.",
+      images: [
+        {
+          url: `${siteUrl}/logo.png`,
+          width: 512,
+          height: 512,
+          alt: "Grabnext - Digital Marketplace India",
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      site: "@grabnext",
+      creator: "@grabnext",
+      title: "Grabnext - Buy Digital Products & Software Online India",
+      description:
+        "India's trusted digital store. Buy software, courses, design templates & video bundles with instant delivery.",
+      images: [`${siteUrl}/logo.png`],
+    },
+    robots: {
       index: true,
       follow: true,
-      "max-image-preview": "large",
-      "max-snippet": -1,
-      "max-video-preview": -1,
+      googleBot: {
+        index: true,
+        follow: true,
+        "max-image-preview": "large",
+        "max-snippet": -1,
+        "max-video-preview": -1,
+      },
     },
-  },
-  verification: {
-    google: "a6IFtvu-QdswT63axIr-jp_-vPxu2OYz5dpN6y8CZmk",
-  },
-  icons: {
-    icon: "/favicon.png",
-    shortcut: "/favicon.png",
-    apple: "/favicon.png",
-  },
-  alternates: {
-    canonical: "https://shop.grabnext.app",
-  },
+    verification: {
+      google: "a6IFtvu-QdswT63axIr-jp_-vPxu2OYz5dpN6y8CZmk",
+    },
+    icons: {
+      icon: "/favicon.png",
+      shortcut: "/favicon.png",
+      apple: "/favicon.png",
+    },
+    alternates: {
+      canonical: siteUrl,
+    },
+    other: {
+      "ai:site_type": "Digital Products Marketplace",
+      "ai:target_market": "India",
+      "ai:llms_txt": `${siteUrl}/llms.txt`,
+      "ai:currency": "INR",
+      "ai:payment_methods": "UPI, Google Pay, PhonePe, Paytm"
+    }
+  }
 }
-
 
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  const siteUrl = getSiteUrl()
+
   return (
     <html lang="en" suppressHydrationWarning className={`${GeistSans.variable}`}>
       <head>
         <meta name="google-adsense-account" content="ca-pub-4010815088153941" />
+        <link rel="alternate" type="text/plain" href={`${siteUrl}/llms.txt`} title="LLM Knowledge Base" />
         <script async src="https://www.googletagmanager.com/gtag/js?id=G-C3HYF0VYC0"></script>
         <script
           dangerouslySetInnerHTML={{
@@ -126,7 +128,7 @@ html {
 }
         `
         }} />
-        {/* ── WebSite + Organization Structured Data (AI & Search Discovery) ── */}
+        {/* ── WebSite + Organization + OnlineStore Structured Data (AI & Search Discovery) ── */}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
@@ -135,33 +137,37 @@ html {
                 "@context": "https://schema.org",
                 "@type": "WebSite",
                 "name": "Grabnext",
-                "url": "https://shop.grabnext.app",
-                "alternateName": "Grabnext Digital Marketplace",
-                "description": "India's trusted digital marketplace. Buy software, online courses, design templates, ebooks & more with instant delivery.",
+                "url": siteUrl,
+                "alternateName": ["Grabnext Digital Marketplace", "Grabnext Store"],
+                "description": DEFAULT_SITE_DESCRIPTION,
                 "potentialAction": {
                   "@type": "SearchAction",
                   "target": {
                     "@type": "EntryPoint",
-                    "urlTemplate": "https://shop.grabnext.app/products?q={search_term_string}"
+                    "urlTemplate": `${siteUrl}/products?q={search_term_string}`
                   },
                   "query-input": "required name=search_term_string"
                 }
               },
               {
                 "@context": "https://schema.org",
-                "@type": "Organization",
+                "@type": "OnlineStore",
                 "name": "Grabnext",
-                "url": "https://shop.grabnext.app",
-                "logo": "https://shop.grabnext.app/favicon.png",
-                "description": "Grabnext is India's trusted digital marketplace for software, courses, templates & digital downloads with instant delivery.",
+                "url": siteUrl,
+                "logo": `${siteUrl}/logo.png`,
+                "description": DEFAULT_SITE_DESCRIPTION,
+                "currenciesAccepted": "INR",
+                "paymentAccepted": "UPI, Google Pay, PhonePe, Paytm",
+                "priceRange": "₹49 - ₹1999",
                 "contactPoint": {
                   "@type": "ContactPoint",
                   "contactType": "customer support",
-                  "url": "https://shop.grabnext.app/contact",
+                  "url": `${siteUrl}/contact`,
                   "availableLanguage": ["English", "Hindi"]
                 },
                 "sameAs": [
-                  "https://grabnext.pages.dev"
+                  "https://grabnext.pages.dev",
+                  "https://shop.grabnext.app"
                 ]
               }
             ])

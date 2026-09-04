@@ -1,12 +1,13 @@
 import { MetadataRoute } from 'next'
 import { executeQuery } from '@/lib/db'
+import { getSiteUrl } from '@/lib/site'
 
 export const runtime = 'edge'
 export const dynamic = 'force-dynamic'
 export const revalidate = 3600 // Cache for 1 hour
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-    const baseUrl = 'https://shop.grabnext.app'
+    const baseUrl = getSiteUrl()
 
     let productEntries: any[] = []
     let categoryEntries: any[] = []
@@ -28,7 +29,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
                 if (p.imageUrl) {
                     entry.images = [
                         {
-                            url: p.imageUrl,
+                            url: p.imageUrl.startsWith('http') ? p.imageUrl : `${baseUrl}${p.imageUrl}`,
                             title: p.title || '',
                             caption: `Buy ${p.title || ''} on Grabnext`,
                         },
@@ -52,13 +53,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         }
     } catch (error) {
         console.error("Sitemap generation error (expected during build if DB is internal):", error)
-        // Continue with empty entries to allow the build to succeed
     }
 
-    // Static pages — always included
+    // Static pages — always included with priority & keywords alignment
     const staticPages = [
         { route: '',           priority: 1.0, freq: 'daily'   },
         { route: '/products',  priority: 0.9, freq: 'daily'   },
+        { route: '/software',  priority: 0.9, freq: 'weekly'  },
+        { route: '/editing',   priority: 0.9, freq: 'weekly'  },
+        { route: '/masterclass', priority: 0.8, freq: 'weekly' },
+        { route: '/claude-skills', priority: 0.8, freq: 'weekly' },
+        { route: '/categories', priority: 0.7, freq: 'weekly' },
         { route: '/about',     priority: 0.5, freq: 'monthly' },
         { route: '/contact',   priority: 0.5, freq: 'monthly' },
         { route: '/faq',       priority: 0.6, freq: 'weekly'  },

@@ -8,7 +8,7 @@ import { ProductCard } from "@/components/product-card"
 import { Button } from "@/components/ui/button"
 import { fetchProducts, fetchCategories } from "@/lib/d1-client"
 import type { Product } from "@/lib/types"
-import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react"
+import { ArrowRight, ChevronLeft, ChevronRight, ShieldCheck, Zap, Download, Award, HelpCircle } from "lucide-react"
 
 // ─── Carousel ───────────────────────────────────────────────────────────────
 function useBannerCarousel(total: number) {
@@ -48,6 +48,21 @@ const getInitialCats = (): any[] => {
   }
   return []
 }
+
+const FAQ_ITEMS = [
+  {
+    q: "Grabnext par digital products buy kaise karein?",
+    a: "Aap kisi bhi product par click karke Cart me add kar sakte hain aur UPI (Google Pay, PhonePe, Paytm, QR) se instant checkout kar sakte hain. Payment hote hi download link email aur screen par mil jata hai."
+  },
+  {
+    q: "Kya sabhi digital products par instant download milta hai?",
+    a: "Haan! Sabhi software, video editing bundles, Canva templates, aur masterclasses instant auto-delivery system ke dwara provide kiye jate hain."
+  },
+  {
+    q: "Grabnext par software aur templates safe hain?",
+    a: "Bilkul! Hum 100% verified digital tools, source code, templates, aur masterclass courses provide karte hain with 24/7 WhatsApp customer support."
+  }
+]
 
 export default function HomePage() {
   const initialProds = getInitialProds()
@@ -91,7 +106,46 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-slate-100 dark:bg-slate-950 flex flex-col text-slate-900 dark:text-slate-100 transition-colors">
+      
+      {/* FAQ Schema Markup for Google Search Rich Snippets */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "FAQPage",
+            "mainEntity": FAQ_ITEMS.map((f) => ({
+              "@type": "Question",
+              "name": f.q,
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": f.a
+              }
+            }))
+          })
+        }}
+      />
+
       <StoreHeader />
+
+      {/* Hero Title Section for SEO Keyword Indexing */}
+      <section className="bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 text-white py-6 px-4 border-b border-indigo-500/20">
+        <div className="container mx-auto text-center max-w-4xl">
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-black tracking-tight text-white mb-2">
+            Grabnext — Buy Digital Products, Software, Templates & Masterclasses Online India
+          </h1>
+          <p className="text-xs sm:text-sm text-indigo-200 font-medium max-w-2xl mx-auto">
+            India's #1 trusted store for cheap software source code, video editing assets bundles, Canva templates & digital downloads with instant UPI delivery.
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-4 mt-3 text-[11px] text-amber-300 font-semibold">
+            <span className="flex items-center gap-1"><Zap className="w-3.5 h-3.5" /> Instant UPI Download</span>
+            <span>•</span>
+            <span className="flex items-center gap-1"><ShieldCheck className="w-3.5 h-3.5" /> 100% Secure Payment</span>
+            <span>•</span>
+            <span className="flex items-center gap-1"><Award className="w-3.5 h-3.5" /> Best Price Guarantee</span>
+          </div>
+        </div>
+      </section>
 
       {/* Category Quick-Nav */}
       {categories.length > 0 && (
@@ -120,7 +174,7 @@ export default function HomePage() {
         </div>
       )}
 
-      <main className="flex-1 container mx-auto px-3 md:px-4 py-4 space-y-5">
+      <main className="flex-1 container mx-auto px-3 md:px-4 py-4 space-y-6">
 
         {/* Banner Carousel — only if admin added banners */}
         {banners.length > 0 && (
@@ -170,8 +224,8 @@ export default function HomePage() {
         <section className="bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-2xl p-5 shadow-sm transition-colors">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h2 className="text-lg font-bold text-slate-900 dark:text-white">All Products</h2>
-              <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Browse all our products</p>
+              <h2 className="text-lg font-bold text-slate-900 dark:text-white">All Digital Products & Software</h2>
+              <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Explore best-selling templates, courses, assets & software</p>
             </div>
             <Button asChild variant="outline" size="sm" className="text-xs h-8">
               <Link href="/products">View All <ArrowRight className="ml-1 h-3 w-3" /></Link>
@@ -213,6 +267,46 @@ export default function HomePage() {
             </div>
           </section>
         )}
+
+        {/* Dedicated SEO Keyword Content Block for Googlebot Indexing */}
+        <section className="bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-2xl p-6 shadow-sm transition-colors space-y-4">
+          <h2 className="text-xl font-extrabold text-slate-900 dark:text-white">
+            Why Choose Grabnext for Buying Digital Products in India?
+          </h2>
+          <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+            Grabnext is India's leading digital download marketplace offering high-quality <strong>software source codes</strong>, <strong>video editing bundles</strong> (Premiere Pro, After Effects, LUTs, FX presets), <strong>Canva design templates</strong>, <strong>Instagram reels bundles</strong>, and <strong>online masterclass courses</strong> at unbeatable prices.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+            <div className="p-4 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-100 dark:border-slate-800">
+              <h3 className="font-bold text-sm text-slate-900 dark:text-white mb-1">⚡ Instant UPI Downloads</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Pay via Google Pay, PhonePe, Paytm or UPI ID and get instant download links sent straight to your email.</p>
+            </div>
+            <div className="p-4 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-100 dark:border-slate-800">
+              <h3 className="font-bold text-sm text-slate-900 dark:text-white mb-1">🛡️ Lifetime Access & Support</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400">All digital assets come with lifetime access links and dedicated WhatsApp customer support.</p>
+            </div>
+            <div className="p-4 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-100 dark:border-slate-800">
+              <h3 className="font-bold text-sm text-slate-900 dark:text-white mb-1">💰 Unbeatable INR Prices</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Get premium masterclasses and digital product bundles starting at just ₹49 to ₹199.</p>
+            </div>
+          </div>
+        </section>
+
+        {/* Visible FAQ Accordion for Search Crawlers */}
+        <section className="bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-2xl p-6 shadow-sm transition-colors">
+          <div className="flex items-center gap-2 mb-4">
+            <HelpCircle className="h-5 w-5 text-primary" />
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white">Frequently Asked Questions</h2>
+          </div>
+          <div className="space-y-3">
+            {FAQ_ITEMS.map((item, i) => (
+              <div key={i} className="p-4 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40">
+                <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-1">{item.q}</h3>
+                <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">{item.a}</p>
+              </div>
+            ))}
+          </div>
+        </section>
 
       </main>
       <Footer />

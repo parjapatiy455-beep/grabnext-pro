@@ -7,6 +7,7 @@ import { executeQuery } from '@/lib/db'
 import { ProductDetailView } from './product-detail-view'
 import { LandingPageView } from './landing-page-view'
 import { Product } from '@/lib/types'
+import { getSiteUrl } from '@/lib/site'
 
 type Props = {
     params: { id: string }
@@ -85,14 +86,15 @@ export async function generateMetadata(
     }
     const keywords = keywordParts.filter(Boolean).join(', ')
 
-    const canonicalUrl = `https://grabnext.pages.dev/products/${(product as any).slug || product.id}`
+    const siteUrl = getSiteUrl()
+    const canonicalUrl = `${siteUrl}/products/${(product as any).slug || product.id}`
     const priceStr = `₹${product.price}`
 
     return {
         title: `${product.title} - Buy Online at ₹${product.price} | Grabnext`,
         description: cleanDescription,
         keywords,
-        authors: [{ name: 'Grabnext', url: 'https://grabnext.pages.dev' }],
+        authors: [{ name: 'Grabnext', url: siteUrl }],
         creator: 'Grabnext',
         publisher: 'Grabnext',
         category: product.category,
@@ -167,6 +169,9 @@ export default async function Page({ params }: Props) {
                 ? [product.imageUrl]
                 : []
 
+    const siteUrl = getSiteUrl()
+    const productUrl = `${siteUrl}/products/${(product as any).slug || product.id}`
+
     return (
         <>
             <script
@@ -185,10 +190,10 @@ export default async function Page({ params }: Props) {
                             "name": "Grabnext"
                         },
                         "category": product.category,
-                        "url": `https://grabnext.pages.dev/products/${(product as any).slug || product.id}`,
+                        "url": productUrl,
                         "offers": {
                             "@type": "Offer",
-                            "url": `https://grabnext.pages.dev/products/${(product as any).slug || product.id}`,
+                            "url": productUrl,
                             "priceCurrency": "INR",
                             "price": product.price,
                             "priceValidUntil": new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
@@ -199,7 +204,7 @@ export default async function Page({ params }: Props) {
                             "seller": {
                                 "@type": "Organization",
                                 "name": "Grabnext",
-                                "url": "https://grabnext.pages.dev"
+                                "url": siteUrl
                             }
                         },
                         ...(product.tags && Array.isArray(product.tags) && product.tags.length > 0

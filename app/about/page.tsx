@@ -2,10 +2,33 @@ import { StoreHeader } from "@/components/store-header"
 import { Footer } from "@/components/footer"
 import { ShoppingBag, Shield, Zap, Users } from "lucide-react"
 import type { Metadata } from "next"
+import { getSiteUrl } from "@/lib/site"
 
-export const metadata: Metadata = {
-    title: "About Us | Grabnext",
-    description: "Learn about Grabnext — India's premier digital marketplace for software, templates, courses, and more.",
+export async function generateMetadata(): Promise<Metadata> {
+    const siteUrl = getSiteUrl()
+    const pageUrl = `${siteUrl}/about`
+
+    return {
+        title: "About Us | Grabnext - India's Trusted Digital Marketplace",
+        description: "Learn about Grabnext — India's premier digital marketplace for software source code, design templates, video editing assets, and online masterclass courses.",
+        keywords: [
+            "about grabnext",
+            "digital marketplace india",
+            "buy software templates india",
+            "instant digital downloads india",
+            "grabnext company"
+        ],
+        alternates: {
+            canonical: pageUrl,
+        },
+        openGraph: {
+            title: "About Us | Grabnext Digital Store",
+            description: "India's premier digital marketplace for software, templates, courses, and digital assets.",
+            url: pageUrl,
+            siteName: "Grabnext",
+            type: "website",
+        }
+    }
 }
 
 const stats = [
