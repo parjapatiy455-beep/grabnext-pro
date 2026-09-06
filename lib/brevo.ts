@@ -259,57 +259,85 @@ export async function sendOrderSuccessEmail(orderId: string) {
       downloadLinksHtml += `</div>`
     })
 
+    const logoUrl = `${appUrl}/logo.png`
     const viewAccessUrl = `${appUrl}/checkout/success?utr=${order.paymentId || order.id}`
 
-    // 4. Construct HTML Email Body
+    // 4. Construct Animated HTML Email Body with Logo
     const htmlContent = `
       <!DOCTYPE html>
       <html>
       <head>
         <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Order Confirmation - ${order.id}</title>
+        <style>
+          @keyframes pulseGlow {
+            0% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.4); }
+            50% { box-shadow: 0 0 16px 4px rgba(37, 99, 235, 0.5); }
+            100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.4); }
+          }
+          @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+          }
+          .animated-header-bar {
+            height: 4px;
+            background: linear-gradient(90deg, #2563eb, #8b5cf6, #ec4899, #2563eb);
+            background-size: 200% 100%;
+            animation: shimmer 3s infinite linear;
+          }
+          .pulse-btn {
+            animation: pulseGlow 2.5s infinite ease-in-out;
+          }
+        </style>
       </head>
       <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f1f5f9; margin: 0; padding: 20px;">
-        <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+        <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);">
           
-          <!-- Header -->
-          <div style="background-color: #0f172a; padding: 24px; text-align: center; color: #ffffff;">
-            <h1 style="margin: 0; font-size: 24px; font-weight: 700; letter-spacing: 0.5px;">${senderName}</h1>
-            <p style="margin: 6px 0 0 0; color: #94a3b8; font-size: 14px;">Order & Download Confirmation</p>
+          <!-- Animated Accent Top Line -->
+          <div class="animated-header-bar" style="height: 4px; background: linear-gradient(90deg, #2563eb, #8b5cf6, #ec4899); text-align: center;"></div>
+
+          <!-- Header with Brand Logo -->
+          <div style="background-color: #0f172a; padding: 28px 24px; text-align: center; color: #ffffff;">
+            <img src="${logoUrl}" alt="${senderName}" style="max-height: 48px; width: auto; display: block; margin: 0 auto 12px auto; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4)); border: 0;" />
+            <h1 style="margin: 0; font-size: 22px; font-weight: 800; letter-spacing: 0.5px; color: #ffffff;">${senderName}</h1>
+            <p style="margin: 6px 0 0 0; color: #94a3b8; font-size: 13px; font-weight: 500;">Order & Instant Download Confirmation</p>
           </div>
 
           <!-- Body Container -->
-          <div style="padding: 24px;">
-            <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 16px; text-align: center; margin-bottom: 24px;">
-              <h2 style="margin: 0; color: #166534; font-size: 18px;">🎉 Thank You for Your Purchase!</h2>
-              <p style="margin: 4px 0 0 0; color: #15803d; font-size: 13px;">Your order has been confirmed successfully.</p>
+          <div style="padding: 28px 24px;">
+            
+            <!-- Success Status Badge -->
+            <div style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border: 1px solid #bbf7d0; border-radius: 12px; padding: 18px; text-align: center; margin-bottom: 24px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.6);">
+              <h2 style="margin: 0; color: #166534; font-size: 19px; font-weight: 800;">🎉 Purchase Confirmed!</h2>
+              <p style="margin: 4px 0 0 0; color: #15803d; font-size: 13px; font-weight: 500;">Your digital files are ready to download immediately.</p>
             </div>
 
-            <p style="font-size: 14px; color: #334155; margin-bottom: 20px;">
+            <p style="font-size: 14px; color: #334155; margin-bottom: 20px; line-height: 1.5;">
               Hi <strong>${recipientName}</strong>,<br>
-              Here are the download links for your purchased items. You can download them directly below or access them anytime on your dashboard.
+              Thank you for shopping with us! Here are your direct product download links. You can click on any file below to download it right now.
             </p>
 
-            <!-- Order Meta Details -->
-            <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px; font-size: 13px; color: #475569; background-color: #f8fafc; border-radius: 8px; padding: 12px;">
+            <!-- Order Meta Details Box -->
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px; font-size: 13px; color: #475569; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px;">
               <tr>
-                <td style="padding: 6px 12px;"><strong>Order ID:</strong> ${order.id}</td>
-                <td style="padding: 6px 12px; text-align: right;"><strong>Payment Ref (UTR):</strong> ${order.paymentId || 'Completed'}</td>
+                <td style="padding: 10px 14px;"><strong>Order ID:</strong> <span style="font-family: monospace; font-weight: 700; color: #0f172a;">${order.id}</span></td>
+                <td style="padding: 10px 14px; text-align: right;"><strong>Payment Ref:</strong> <span style="font-family: monospace; color: #2563eb;">${order.paymentId || 'Completed'}</span></td>
               </tr>
               <tr>
-                <td style="padding: 6px 12px;"><strong>Total Amount:</strong> ₹${order.totalAmount}</td>
-                <td style="padding: 6px 12px; text-align: right;"><strong>Status:</strong> Paid</td>
+                <td style="padding: 10px 14px; border-top: 1px dashed #e2e8f0;"><strong>Total Paid:</strong> ₹${order.totalAmount}</td>
+                <td style="padding: 10px 14px; text-align: right; border-top: 1px dashed #e2e8f0;"><span style="background-color: #dcfce7; color: #166534; padding: 2px 8px; border-radius: 999px; font-weight: 700; font-size: 11px;">PAID</span></td>
               </tr>
             </table>
 
             <!-- Downloads Section -->
-            <h3 style="color: #0f172a; font-size: 16px; margin: 24px 0 12px 0; border-bottom: 2px solid #e2e8f0; padding-bottom: 6px;">
+            <h3 style="color: #0f172a; font-size: 16px; font-weight: 700; margin: 24px 0 14px 0; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px;">
               📥 Your Download Links
             </h3>
             ${downloadLinksHtml}
 
-            <!-- Items Purchased Table -->
-            <h3 style="color: #0f172a; font-size: 16px; margin: 24px 0 12px 0; border-bottom: 2px solid #e2e8f0; padding-bottom: 6px;">
+            <!-- Items Summary Table -->
+            <h3 style="color: #0f172a; font-size: 16px; font-weight: 700; margin: 24px 0 14px 0; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px;">
               🛍️ Order Summary
             </h3>
             <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px;">
@@ -322,26 +350,27 @@ export async function sendOrderSuccessEmail(orderId: string) {
               <tbody>
                 ${itemsTableHtml}
                 <tr>
-                  <td style="padding: 12px; font-size: 14px; font-weight: bold; color: #0f172a;">Total Paid</td>
-                  <td style="padding: 12px; font-size: 14px; font-weight: bold; color: #0f172a; text-align: right;">₹${order.totalAmount}</td>
+                  <td style="padding: 12px; font-size: 14px; font-weight: 800; color: #0f172a;">Total Paid</td>
+                  <td style="padding: 12px; font-size: 14px; font-weight: 800; color: #0f172a; text-align: right;">₹${order.totalAmount}</td>
                 </tr>
               </tbody>
             </table>
 
-            <!-- Direct Button -->
+            <!-- Animated Call-to-Action Button -->
             <div style="text-align: center; margin: 32px 0;">
-              <a href="${viewAccessUrl}" target="_blank" style="background-color: #16a34a; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-size: 15px; font-weight: 600; display: inline-block; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+              <a href="${viewAccessUrl}" target="_blank" class="pulse-btn" style="background: linear-gradient(135deg, #16a34a 0%, #15803d 100%); color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 10px; font-size: 15px; font-weight: 700; display: inline-block; box-shadow: 0 4px 14px rgba(22, 163, 74, 0.35);">
                 🚀 View Purchases on Store
               </a>
             </div>
 
-            <p style="font-size: 12px; color: #64748b; text-align: center; margin-top: 30px;">
-              If you have any questions or need help with your download, please reply to this email or contact support.
+            <p style="font-size: 12px; color: #64748b; text-align: center; margin-top: 28px; line-height: 1.4;">
+              If you have any questions or need assistance, simply reply to this email.
             </p>
           </div>
 
-          <!-- Footer -->
-          <div style="background-color: #f8fafc; padding: 16px; text-align: center; border-top: 1px solid #e2e8f0; font-size: 12px; color: #94a3b8;">
+          <!-- Footer with Logo -->
+          <div style="background-color: #f8fafc; padding: 20px; text-align: center; border-top: 1px solid #e2e8f0; font-size: 12px; color: #94a3b8;">
+            <img src="${logoUrl}" alt="${senderName}" style="max-height: 24px; width: auto; opacity: 0.6; margin: 0 auto 6px auto; display: block;" />
             © ${new Date().getFullYear()} ${senderName}. All rights reserved.
           </div>
         </div>
@@ -398,12 +427,13 @@ export async function sendOrderFailedEmail(orderId: string, reason?: string) {
 
     const items: any[] = order.items ? JSON.parse(order.items) : []
     const retryCheckoutUrl = `${appUrl}/checkout`
+    const logoUrl = `${appUrl}/logo.png`
 
     let itemsListHtml = ''
     items.forEach((item: any) => {
       itemsListHtml += `
-        <li style="margin-bottom: 6px; font-size: 14px; color: #334155;">
-          <strong>${item.title || 'Product'}</strong> - ₹${item.price || 0}
+        <li style="margin-bottom: 8px; font-size: 14px; color: #334155;">
+          <strong>${item.title || 'Product'}</strong> — <span style="color: #0f172a; font-weight: 700;">₹${item.price || 0}</span>
         </li>
       `
     })
@@ -413,58 +443,86 @@ export async function sendOrderFailedEmail(orderId: string, reason?: string) {
       <html>
       <head>
         <meta charset="utf-8">
-        <title>Payment Failed - ${order.id}</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Payment Unsuccessful - ${order.id}</title>
+        <style>
+          @keyframes pulseFailed {
+            0% { box-shadow: 0 0 0 0 rgba(234, 88, 12, 0.4); }
+            50% { box-shadow: 0 0 16px 4px rgba(234, 88, 12, 0.5); }
+            100% { box-shadow: 0 0 0 0 rgba(234, 88, 12, 0.4); }
+          }
+          @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+          }
+          .animated-header-bar-failed {
+            height: 4px;
+            background: linear-gradient(90deg, #f97316, #ef4444, #f59e0b, #f97316);
+            background-size: 200% 100%;
+            animation: shimmer 3s infinite linear;
+          }
+          .pulse-btn-failed {
+            animation: pulseFailed 2.5s infinite ease-in-out;
+          }
+        </style>
       </head>
       <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f1f5f9; margin: 0; padding: 20px;">
-        <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+        <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);">
           
-          <!-- Header -->
-          <div style="background-color: #0f172a; padding: 24px; text-align: center; color: #ffffff;">
-            <h1 style="margin: 0; font-size: 24px; font-weight: 700;">${senderName}</h1>
-            <p style="margin: 6px 0 0 0; color: #94a3b8; font-size: 14px;">Payment Notification</p>
+          <!-- Animated Accent Top Line -->
+          <div class="animated-header-bar-failed"></div>
+
+          <!-- Header with Brand Logo -->
+          <div style="background-color: #0f172a; padding: 28px 24px; text-align: center; color: #ffffff;">
+            <img src="${logoUrl}" alt="${senderName}" style="max-height: 48px; width: auto; display: block; margin: 0 auto 12px auto; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4)); border: 0;" />
+            <h1 style="margin: 0; font-size: 22px; font-weight: 800; color: #ffffff;">${senderName}</h1>
+            <p style="margin: 6px 0 0 0; color: #94a3b8; font-size: 13px; font-weight: 500;">Payment Status Alert</p>
           </div>
 
           <!-- Body Container -->
-          <div style="padding: 24px;">
-            <div style="background-color: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 16px; text-align: center; margin-bottom: 24px;">
-              <h2 style="margin: 0; color: #991b1b; font-size: 18px;">⚠️ Payment Unsuccessful</h2>
-              <p style="margin: 4px 0 0 0; color: #dc2626; font-size: 13px;">Your payment for Order #${order.id} could not be completed.</p>
+          <div style="padding: 28px 24px;">
+            
+            <!-- Failed Banner -->
+            <div style="background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); border: 1px solid #fecaca; border-radius: 12px; padding: 18px; text-align: center; margin-bottom: 24px;">
+              <h2 style="margin: 0; color: #991b1b; font-size: 19px; font-weight: 800;">⚠️ Payment Unsuccessful</h2>
+              <p style="margin: 4px 0 0 0; color: #dc2626; font-size: 13px; font-weight: 500;">Your payment for Order #${order.id} was not completed.</p>
             </div>
 
-            <p style="font-size: 14px; color: #334155; margin-bottom: 20px;">
+            <p style="font-size: 14px; color: #334155; margin-bottom: 20px; line-height: 1.5;">
               Hi <strong>${recipientName}</strong>,<br>
-              We noticed that your recent payment attempt for order <strong>${order.id}</strong> (Total: ₹${order.totalAmount}) failed or was cancelled.
+              We noticed that your recent payment attempt for order <strong style="color: #0f172a;">${order.id}</strong> (Total: <strong>₹${order.totalAmount}</strong>) was cancelled or interrupted.
             </p>
 
             ${
               reason
-                ? `<p style="font-size: 13px; color: #ef4444; background-color: #fff1f2; padding: 10px; border-radius: 6px;"><strong>Reason:</strong> ${reason}</p>`
+                ? `<p style="font-size: 13px; color: #b91c1c; background-color: #fff1f2; border: 1px solid #fecaca; padding: 12px 16px; border-radius: 8px; font-weight: 500;"><strong>Notice:</strong> ${reason}</p>`
                 : ''
             }
 
-            <h3 style="color: #0f172a; font-size: 15px; margin: 20px 0 10px 0;">Items in your order:</h3>
+            <h3 style="color: #0f172a; font-size: 15px; font-weight: 700; margin: 24px 0 10px 0;">Items waiting in your order:</h3>
             <ul style="padding-left: 20px; margin: 0 0 24px 0;">
               ${itemsListHtml}
             </ul>
 
-            <p style="font-size: 13px; color: #475569; margin-bottom: 24px;">
-              Don't worry! If any money was deducted from your bank account, it will automatically be refunded back to you by your bank within 3-5 working days. You can retry your purchase below.
+            <p style="font-size: 13px; color: #475569; margin-bottom: 24px; line-height: 1.5; background-color: #f8fafc; padding: 12px 16px; border-radius: 8px; border-left: 4px solid #f97316;">
+              💡 <strong>Need to try again?</strong> If any amount was debited by your bank, it will be automatically refunded within 3-5 business days. You can complete your purchase using the retry link below.
             </p>
 
-            <!-- Retry Button -->
-            <div style="text-align: center; margin: 28px 0;">
-              <a href="${retryCheckoutUrl}" target="_blank" style="background-color: #ea580c; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-size: 15px; font-weight: 600; display: inline-block;">
+            <!-- Animated Retry Button -->
+            <div style="text-align: center; margin: 32px 0;">
+              <a href="${retryCheckoutUrl}" target="_blank" class="pulse-btn-failed" style="background: linear-gradient(135deg, #ea580c 0%, #c2410c 100%); color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 10px; font-size: 15px; font-weight: 700; display: inline-block; box-shadow: 0 4px 14px rgba(234, 88, 12, 0.35);">
                 🔄 Retry Checkout / Complete Payment
               </a>
             </div>
 
-            <p style="font-size: 12px; color: #64748b; text-align: center; margin-top: 30px;">
-              Need help? Feel free to reply to this email and our support team will assist you.
+            <p style="font-size: 12px; color: #64748b; text-align: center; margin-top: 28px;">
+              Need help with payment? Reply directly to this email and our support team will assist you.
             </p>
           </div>
 
-          <!-- Footer -->
-          <div style="background-color: #f8fafc; padding: 16px; text-align: center; border-top: 1px solid #e2e8f0; font-size: 12px; color: #94a3b8;">
+          <!-- Footer with Logo -->
+          <div style="background-color: #f8fafc; padding: 20px; text-align: center; border-top: 1px solid #e2e8f0; font-size: 12px; color: #94a3b8;">
+            <img src="${logoUrl}" alt="${senderName}" style="max-height: 24px; width: auto; opacity: 0.6; margin: 0 auto 6px auto; display: block;" />
             © ${new Date().getFullYear()} ${senderName}. All rights reserved.
           </div>
         </div>
@@ -488,18 +546,53 @@ export async function sendOrderFailedEmail(orderId: string, reason?: string) {
  * Sends a test email to test Brevo configuration
  */
 export async function sendTestBrevoEmail(toEmail: string) {
-  const { senderName, source } = await getBrevoSettings()
+  const { senderName, source, appUrl } = await getBrevoSettings()
+  const logoUrl = `${appUrl}/logo.png`
   const htmlContent = `
-    <div style="font-family: sans-serif; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
-      <h2 style="color: #2563eb;">✅ Brevo Email Integration Working!</h2>
-      <p>This is a test email sent from <strong>${senderName}</strong> using Brevo Transactional Email Service.</p>
-      <p style="font-size: 12px; color: #64748b;">Credentials Source: <strong>${source.toUpperCase()}</strong></p>
-      <p style="font-size: 12px; color: #64748b;">Timestamp: ${new Date().toISOString()}</p>
-    </div>
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <style>
+        @keyframes shimmer {
+          0% { background-position: -200% 0; }
+          100% { background-position: 200% 0; }
+        }
+        .animated-header-bar {
+          height: 4px;
+          background: linear-gradient(90deg, #2563eb, #8b5cf6, #ec4899, #2563eb);
+          background-size: 200% 100%;
+          animation: shimmer 3s infinite linear;
+        }
+      </style>
+    </head>
+    <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f1f5f9; padding: 20px; margin: 0;">
+      <div style="max-width: 550px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1);">
+        <div class="animated-header-bar"></div>
+        <div style="background-color: #0f172a; padding: 24px; text-align: center; color: #ffffff;">
+          <img src="${logoUrl}" alt="${senderName}" style="max-height: 44px; width: auto; margin: 0 auto 10px auto; display: block; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4));" />
+          <h2 style="margin: 0; font-size: 20px; font-weight: 800;">${senderName}</h2>
+          <p style="margin: 4px 0 0 0; color: #94a3b8; font-size: 13px;">Email Service Verification Test</p>
+        </div>
+        <div style="padding: 24px;">
+          <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 16px; text-align: center; margin-bottom: 20px;">
+            <h3 style="margin: 0; color: #166534; font-size: 17px;">✅ Brevo Service Connected Successfully!</h3>
+            <p style="margin: 4px 0 0 0; color: #15803d; font-size: 13px;">Your email configuration is working and ready to deliver transactional emails.</p>
+          </div>
+          <p style="font-size: 13px; color: #475569; margin: 0 0 12px 0;"><strong>Credentials Source:</strong> <span style="background: #e2e8f0; padding: 2px 8px; border-radius: 4px; font-weight: 700; color: #0f172a;">${source.toUpperCase()}</span></p>
+          <p style="font-size: 12px; color: #94a3b8; margin: 0;">Sent at: ${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })} IST</p>
+        </div>
+        <div style="background-color: #f8fafc; padding: 16px; text-align: center; border-top: 1px solid #e2e8f0; font-size: 12px; color: #94a3b8;">
+          <img src="${logoUrl}" alt="${senderName}" style="max-height: 20px; width: auto; opacity: 0.6; margin: 0 auto 4px auto; display: block;" />
+          © ${new Date().getFullYear()} ${senderName}. All rights reserved.
+        </div>
+      </div>
+    </body>
+    </html>
   `
   return await sendBrevoEmail({
     toEmail,
-    subject: `Test Email from ${senderName}`,
+    subject: `✅ Test Email from ${senderName}`,
     htmlContent,
   })
 }
