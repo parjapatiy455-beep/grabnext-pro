@@ -70,6 +70,7 @@ export async function POST(request: NextRequest) {
         <html>
         <head>
           <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
           <style>
             @keyframes shimmer {
               0% { background-position: -200% 0; }
@@ -81,22 +82,27 @@ export async function POST(request: NextRequest) {
               background-size: 200% 100%;
               animation: shimmer 3s infinite linear;
             }
+            @media only screen and (max-width: 600px) {
+              .email-body { padding: 0 !important; background-color: #ffffff !important; }
+              .email-card { width: 100% !important; border-radius: 0px !important; box-shadow: none !important; margin: 0 !important; }
+              .content-box { padding: 20px 14px !important; }
+              .header-box { padding: 22px 14px !important; }
+            }
           </style>
         </head>
-        <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f1f5f9; margin: 0; padding: 20px;">
-          <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1);">
+        <body class="email-body" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f1f5f9; margin: 0; padding: 20px 0; -webkit-text-size-adjust: 100%;">
+          <div class="email-card" style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.08);">
             <div class="animated-header-bar"></div>
-            <div style="background-color: #0f172a; padding: 28px 24px; text-align: center; color: #ffffff;">
-              <img src="${logoUrl}" alt="${senderName}" style="max-height: 48px; width: auto; margin: 0 auto 12px auto; display: block; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4)); border: 0;" />
-              <h1 style="margin: 0; font-size: 22px; font-weight: 800; color: #ffffff;">${senderName}</h1>
-              <p style="margin: 6px 0 0 0; color: #94a3b8; font-size: 13px;">Sample Purchase Confirmation (Test)</p>
+            <div class="header-box" style="background-color: #0f172a; padding: 26px 20px; text-align: center; color: #ffffff;">
+              <img src="${logoUrl}" alt="${senderName}" style="height: 52px; max-height: 52px; width: auto; margin: 0 auto; display: block; border: 0;" />
+              <p style="margin: 8px 0 0 0; color: #94a3b8; font-size: 13px;">Sample Purchase Confirmation (Test)</p>
             </div>
-            <div style="padding: 28px 24px;">
-              <div style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border: 1px solid #bbf7d0; border-radius: 12px; padding: 16px; text-align: center; margin-bottom: 24px;">
+            <div class="content-box" style="padding: 24px 20px;">
+              <div style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border: 1px solid #bbf7d0; border-radius: 12px; padding: 16px; text-align: center; margin-bottom: 22px;">
                 <h2 style="margin: 0; color: #166534; font-size: 18px; font-weight: 800;">🎉 Sample Purchase Confirmed!</h2>
                 <p style="margin: 4px 0 0 0; color: #15803d; font-size: 13px;">Order ID: <strong>ORD-TEST-1234</strong> | UTR: <strong>UTR987654321</strong></p>
               </div>
-              <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 18px; margin-bottom: 24px;">
+              <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 18px; margin-bottom: 22px;">
                 <h3 style="margin: 0 0 10px 0; color: #0f172a; font-size: 15px;">📦 Premium Video Editing FX Bundle (Sample Product)</h3>
                 <a href="${appUrl}/dashboard" target="_blank" style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color: #ffffff; text-decoration: none; padding: 10px 20px; border-radius: 8px; font-weight: 700; font-size: 13px; display: inline-block; box-shadow: 0 4px 12px rgba(37,99,235,0.3);">
                   📥 Access / Download Asset
@@ -104,8 +110,8 @@ export async function POST(request: NextRequest) {
               </div>
               <p style="font-size: 12px; color: #64748b; text-align: center;">This is a test notification email demonstrating purchase confirmation with product download links.</p>
             </div>
-            <div style="background-color: #f8fafc; padding: 16px; text-align: center; border-top: 1px solid #e2e8f0; font-size: 12px; color: #94a3b8;">
-              <img src="${logoUrl}" alt="${senderName}" style="max-height: 22px; width: auto; opacity: 0.6; margin: 0 auto 4px auto; display: block;" />
+            <div style="background-color: #f8fafc; padding: 16px 20px; text-align: center; border-top: 1px solid #e2e8f0; font-size: 12px; color: #94a3b8;">
+              <img src="${logoUrl}" alt="${senderName}" style="height: 22px; max-height: 22px; width: auto; opacity: 0.7; margin: 0 auto 4px auto; display: block;" />
               © ${new Date().getFullYear()} ${senderName}. All rights reserved.
             </div>
           </div>
@@ -132,6 +138,7 @@ export async function POST(request: NextRequest) {
         <html>
         <head>
           <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
           <style>
             @keyframes shimmer {
               0% { background-position: -200% 0; }
@@ -143,30 +150,35 @@ export async function POST(request: NextRequest) {
               background-size: 200% 100%;
               animation: shimmer 3s infinite linear;
             }
+            @media only screen and (max-width: 600px) {
+              .email-body { padding: 0 !important; background-color: #ffffff !important; }
+              .email-card { width: 100% !important; border-radius: 0px !important; box-shadow: none !important; margin: 0 !important; }
+              .content-box { padding: 20px 14px !important; }
+              .header-box { padding: 22px 14px !important; }
+            }
           </style>
         </head>
-        <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f1f5f9; margin: 0; padding: 20px;">
-          <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1);">
+        <body class="email-body" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f1f5f9; margin: 0; padding: 20px 0; -webkit-text-size-adjust: 100%;">
+          <div class="email-card" style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.08);">
             <div class="animated-header-bar-failed"></div>
-            <div style="background-color: #0f172a; padding: 28px 24px; text-align: center; color: #ffffff;">
-              <img src="${logoUrl}" alt="${senderName}" style="max-height: 48px; width: auto; margin: 0 auto 12px auto; display: block; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4)); border: 0;" />
-              <h1 style="margin: 0; font-size: 22px; font-weight: 800; color: #ffffff;">${senderName}</h1>
-              <p style="margin: 6px 0 0 0; color: #94a3b8; font-size: 13px;">Sample Payment Alert (Test)</p>
+            <div class="header-box" style="background-color: #0f172a; padding: 26px 20px; text-align: center; color: #ffffff;">
+              <img src="${logoUrl}" alt="${senderName}" style="height: 52px; max-height: 52px; width: auto; margin: 0 auto; display: block; border: 0;" />
+              <p style="margin: 8px 0 0 0; color: #94a3b8; font-size: 13px;">Sample Payment Alert (Test)</p>
             </div>
-            <div style="padding: 28px 24px;">
-              <div style="background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); border: 1px solid #fecaca; border-radius: 12px; padding: 16px; text-align: center; margin-bottom: 24px;">
+            <div class="content-box" style="padding: 24px 20px;">
+              <div style="background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); border: 1px solid #fecaca; border-radius: 12px; padding: 16px; text-align: center; margin-bottom: 22px;">
                 <h2 style="margin: 0; color: #991b1b; font-size: 18px; font-weight: 800;">⚠️ Sample Payment Unsuccessful</h2>
                 <p style="margin: 4px 0 0 0; color: #dc2626; font-size: 13px;">Order: <strong>ORD-TEST-1234</strong> | Total: <strong>₹499</strong></p>
               </div>
-              <div style="text-align: center; margin: 28px 0;">
+              <div style="text-align: center; margin: 26px 0;">
                 <a href="${appUrl}/checkout" target="_blank" style="background: linear-gradient(135deg, #ea580c 0%, #c2410c 100%); color: #ffffff; text-decoration: none; padding: 12px 26px; border-radius: 10px; font-weight: 700; font-size: 14px; display: inline-block; box-shadow: 0 4px 14px rgba(234,88,12,0.35);">
                   🔄 Retry Checkout
                 </a>
               </div>
               <p style="font-size: 12px; color: #64748b; text-align: center;">This is a test notification email demonstrating payment failure alerts.</p>
             </div>
-            <div style="background-color: #f8fafc; padding: 16px; text-align: center; border-top: 1px solid #e2e8f0; font-size: 12px; color: #94a3b8;">
-              <img src="${logoUrl}" alt="${senderName}" style="max-height: 22px; width: auto; opacity: 0.6; margin: 0 auto 4px auto; display: block;" />
+            <div style="background-color: #f8fafc; padding: 16px 20px; text-align: center; border-top: 1px solid #e2e8f0; font-size: 12px; color: #94a3b8;">
+              <img src="${logoUrl}" alt="${senderName}" style="height: 22px; max-height: 22px; width: auto; opacity: 0.7; margin: 0 auto 4px auto; display: block;" />
               © ${new Date().getFullYear()} ${senderName}. All rights reserved.
             </div>
           </div>
