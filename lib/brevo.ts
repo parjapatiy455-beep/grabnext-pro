@@ -11,12 +11,17 @@ function getEnv(key: string): string | undefined {
 }
 
 export async function getBrevoSettings() {
-  let apiKey = getEnv('BREVO_API_KEY')
-  let senderEmail = getEnv('BREVO_SENDER_EMAIL')
-  let senderName = getEnv('BREVO_SENDER_NAME') || 'Grabnext'
-  let appUrl = getEnv('NEXT_PUBLIC_APP_URL') || 'https://grabnext.in'
+  const envApiKey = getEnv('BREVO_API_KEY')?.trim()
+  const envSenderEmail = getEnv('BREVO_SENDER_EMAIL')?.trim()
+  const envSenderName = getEnv('BREVO_SENDER_NAME')?.trim()
+  const envAppUrl = getEnv('NEXT_PUBLIC_APP_URL')?.trim()
 
-  // Fallback to settings table in D1 DB if env vars are not set
+  let dbApiKey = ''
+  let dbSenderEmail = ''
+  let dbSenderName = ''
+  let dbAppUrl = ''
+
+  // Query settings table in D1 DB as backup / primary admin config
   try {
     const rows = await executeQuery(
       "SELECT key, value FROM settings WHERE key IN ('brevo_api_key', 'brevo_sender_email', 'brevo_sender_name', 'app_url')"
@@ -27,21 +32,36 @@ export async function getBrevoSettings() {
 
     if (Array.isArray(rows)) {
       for (const r of rows) {
-        if (r.key === 'brevo_api_key' && !apiKey) apiKey = r.value
-        if (r.key === 'brevo_sender_email' && !senderEmail) senderEmail = r.value
-        if (r.key === 'brevo_sender_name' && !senderName) senderName = r.value
-        if (r.key === 'app_url' && !appUrl) appUrl = r.value
+        if (r.key === 'brevo_api_key') dbApiKey = r.value?.trim() || ''
+        if (r.key === 'brevo_sender_email') dbSenderEmail = r.value?.trim() || ''
+        if (r.key === 'brevo_sender_name') dbSenderName = r.value?.trim() || ''
+        if (r.key === 'app_url') dbAppUrl = r.value?.trim() || ''
       }
     }
   } catch (e) {
     console.warn('[Brevo] Could not fetch settings from DB:', e)
   }
 
+  // Precedence: ENV variable > Database Setting > Default
+  const apiKey = envApiKey || dbApiKey || ''
+  const senderEmail = envSenderEmail || dbSenderEmail || ''
+  const senderName = envSenderName || dbSenderName || 'Grabnext'
+  const appUrl = envAppUrl || dbAppUrl || 'https://grabnext.in'
+
+  const source = envApiKey
+    ? 'env'
+    : dbApiKey
+    ? 'database'
+    : 'none'
+
   return {
-    apiKey: apiKey?.trim(),
-    senderEmail: senderEmail?.trim(),
-    senderName: senderName?.trim() || 'Grabnext',
-    appUrl: appUrl?.replace(/\/$/, '') || 'https://grabnext.in',
+    apiKey,
+    senderEmail,
+    senderName,
+    appUrl: appUrl.replace(/\/$/, ''),
+    source,
+    isEnvConfigured: Boolean(envApiKey && envSenderEmail),
+    isDbConfigured: Boolean(dbApiKey && dbSenderEmail),
   }
 }
 
@@ -438,11 +458,12 @@ export async function sendOrderFailedEmail(orderId: string, reason?: string) {
  * Sends a test email to test Brevo configuration
  */
 export async function sendTestBrevoEmail(toEmail: string) {
-  const { senderName } = await getBrevoSettings()
+  const { senderName, source } = await getBrevoSettings()
   const htmlContent = `
     <div style="font-family: sans-serif; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
       <h2 style="color: #2563eb;">✅ Brevo Email Integration Working!</h2>
       <p>This is a test email sent from <strong>${senderName}</strong> using Brevo Transactional Email Service.</p>
+      <p style="font-size: 12px; color: #64748b;">Credentials Source: <strong>${source.toUpperCase()}</strong></p>
       <p style="font-size: 12px; color: #64748b;">Timestamp: ${new Date().toISOString()}</p>
     </div>
   `
