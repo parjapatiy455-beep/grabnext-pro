@@ -115,7 +115,11 @@ export async function sendBrevoEmail({
     const data = await response.json()
     if (!response.ok) {
       console.error('[Brevo API Error]', data)
-      return { success: false, error: data.message || JSON.stringify(data) }
+      let errMsg = data.message || JSON.stringify(data)
+      if (errMsg.toLowerCase().includes('key not found') || data.code === 'unauthorized') {
+        errMsg = "Brevo API Key Invalid (Key not found). Please generate a new key on Brevo.com -> Profile -> 'SMTP & API' -> 'API Keys' tab."
+      }
+      return { success: false, error: errMsg }
     }
 
     console.log(`[Brevo Email Sent] Message ID: ${data.messageId} to ${toEmail}`)
