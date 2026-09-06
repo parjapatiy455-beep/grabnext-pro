@@ -1,3 +1,4 @@
+export const runtime = 'edge'
 "use client"
 
 import { Minus, Plus, ShoppingCart, Trash2 } from "lucide-react"

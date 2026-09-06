@@ -1,3 +1,4 @@
+export const runtime = 'edge'
 import { StoreHeader } from "@/components/store-header"
 import { Footer } from "@/components/footer"
 import { CheckCircle2, XCircle, Clock, AlertTriangle } from "lucide-react"
