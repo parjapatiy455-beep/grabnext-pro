@@ -95,9 +95,9 @@ export async function POST(request: NextRequest) {
     }
 
     if (initialStatus === 'paid') {
-      sendOrderSuccessEmail(id).catch(err => console.error('[Brevo Email Error]', err))
+      await sendOrderSuccessEmail(id).catch(err => console.error('[Brevo Email Error]', err))
     } else if (initialStatus === 'failed') {
-      sendOrderFailedEmail(id).catch(err => console.error('[Brevo Email Error]', err))
+      await sendOrderFailedEmail(id).catch(err => console.error('[Brevo Email Error]', err))
     }
 
     return NextResponse.json({ success: true, id }, { status: 201 })
@@ -124,11 +124,11 @@ export async function PATCH(request: NextRequest) {
       WHERE id = ?
     `, [newStatus, paymentId || null, now, id])
 
-    // Trigger Brevo transactional emails asynchronously
+    // Trigger Brevo transactional emails (await to guarantee execution on Cloudflare Edge)
     if (newStatus === 'paid') {
-      sendOrderSuccessEmail(id).catch(err => console.error('[Brevo Success Email Error]', err))
+      await sendOrderSuccessEmail(id).catch(err => console.error('[Brevo Success Email Error]', err))
     } else if (newStatus === 'failed') {
-      sendOrderFailedEmail(id, reason).catch(err => console.error('[Brevo Failure Email Error]', err))
+      await sendOrderFailedEmail(id, reason).catch(err => console.error('[Brevo Failure Email Error]', err))
     }
 
     return NextResponse.json({ success: true })

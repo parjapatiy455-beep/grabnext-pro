@@ -137,15 +137,28 @@ export async function sendOrderSuccessEmail(orderId: string) {
   try {
     const { appUrl, senderName } = await getBrevoSettings()
 
-    // 1. Fetch order details from DB
-    const orderRows = await executeQuery('SELECT * FROM orders WHERE id = ? LIMIT 1', [orderId])
+    // 1. Fetch order details from DB with JOIN to users table as fallback
+    let orderRows = await executeQuery(`
+      SELECT 
+        o.*,
+        u.displayName AS u_name,
+        u.email AS u_email
+      FROM orders o
+      LEFT JOIN users u ON o.userId = u.uid
+      WHERE o.id = ? LIMIT 1
+    `, [orderId]).catch(() => [])
+
+    if (!Array.isArray(orderRows) || orderRows.length === 0) {
+      orderRows = await executeQuery('SELECT * FROM orders WHERE id = ? LIMIT 1', [orderId])
+    }
+
     if (!Array.isArray(orderRows) || orderRows.length === 0) {
       console.warn(`[Brevo] Order ${orderId} not found`)
       return { success: false, error: 'Order not found' }
     }
     const order = orderRows[0] as any
-    const recipientEmail = order.userEmail
-    const recipientName = order.userName || recipientEmail?.split('@')[0] || 'Valued Customer'
+    const recipientEmail = order.userEmail || order.u_email || (order.userId && order.userId.includes('@') ? order.userId : null)
+    const recipientName = order.userName || order.u_name || (recipientEmail ? recipientEmail.split('@')[0] : 'Valued Customer')
 
     if (!recipientEmail) {
       console.warn(`[Brevo] Order ${orderId} does not have a userEmail`)
@@ -355,18 +368,31 @@ export async function sendOrderFailedEmail(orderId: string, reason?: string) {
   try {
     const { appUrl, senderName } = await getBrevoSettings()
 
-    // Fetch order details from DB
-    const orderRows = await executeQuery('SELECT * FROM orders WHERE id = ? LIMIT 1', [orderId])
+    // Fetch order details from DB with JOIN to users table as fallback
+    let orderRows = await executeQuery(`
+      SELECT 
+        o.*,
+        u.displayName AS u_name,
+        u.email AS u_email
+      FROM orders o
+      LEFT JOIN users u ON o.userId = u.uid
+      WHERE o.id = ? LIMIT 1
+    `, [orderId]).catch(() => [])
+
+    if (!Array.isArray(orderRows) || orderRows.length === 0) {
+      orderRows = await executeQuery('SELECT * FROM orders WHERE id = ? LIMIT 1', [orderId])
+    }
+
     if (!Array.isArray(orderRows) || orderRows.length === 0) {
       console.warn(`[Brevo] Order ${orderId} not found`)
       return { success: false, error: 'Order not found' }
     }
     const order = orderRows[0] as any
-    const recipientEmail = order.userEmail
-    const recipientName = order.userName || recipientEmail?.split('@')[0] || 'Valued Customer'
+    const recipientEmail = order.userEmail || order.u_email || (order.userId && order.userId.includes('@') ? order.userId : null)
+    const recipientName = order.userName || order.u_name || (recipientEmail ? recipientEmail.split('@')[0] : 'Valued Customer')
 
     if (!recipientEmail) {
-      console.warn(`[Brevo] Order ${orderId} does not have a userEmail`)
+      console.warn(`[Brevo] Order ${orderId} does not have a valid userEmail`)
       return { success: false, error: 'User email missing on order' }
     }
 
