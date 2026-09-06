@@ -80,6 +80,7 @@ export async function POST(request: NextRequest) {
       productIds = [],
       ctaText = '⚡ Claim Offer Now',
       ctaUrl = '',
+      isPrimaryMode = true,
     } = await request.json()
 
     const { apiKey, senderEmail, senderName, appUrl, whatsappNumber } = await getBrevoSettings()
@@ -120,6 +121,7 @@ export async function POST(request: NextRequest) {
         senderName,
         appUrl,
         whatsappNumber,
+        isPrimaryMode,
       })
 
       const testResult = await sendBrevoEmail({
@@ -192,6 +194,7 @@ export async function POST(request: NextRequest) {
         senderName,
         appUrl,
         whatsappNumber,
+        isPrimaryMode,
       })
 
       const res = await sendBrevoEmail({

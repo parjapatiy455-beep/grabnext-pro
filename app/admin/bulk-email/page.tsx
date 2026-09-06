@@ -74,6 +74,7 @@ export default function BulkEmailAdminPage() {
 
   // Form State
   const [targetAudience, setTargetAudience] = useState<string>("all")
+  const [isPrimaryMode, setIsPrimaryMode] = useState<boolean>(true)
   const [subject, setSubject] = useState(PRESETS[0].subject)
   const [headline, setHeadline] = useState(PRESETS[0].headline)
   const [subheading, setSubheading] = useState(PRESETS[0].subheading)
@@ -155,6 +156,7 @@ export default function BulkEmailAdminPage() {
         body: JSON.stringify({
           isTestMode: true,
           testEmail: testEmail.trim(),
+          isPrimaryMode,
           subject,
           headline,
           subheading,
@@ -196,7 +198,7 @@ export default function BulkEmailAdminPage() {
 
     if (
       !confirm(
-        `🚨 Are you sure you want to send this bulk offer email to ALL ${targetedCount} users?\n\nSubject: "${subject}"`
+        `🚨 Are you sure you want to send this bulk offer email to ALL ${targetedCount} users?\n\nMode: ${isPrimaryMode ? "Primary Inbox (High Priority)" : "Promotional"}\nSubject: "${subject}"`
       )
     ) {
       return
@@ -210,6 +212,7 @@ export default function BulkEmailAdminPage() {
         body: JSON.stringify({
           isTestMode: false,
           targetAudience,
+          isPrimaryMode,
           subject,
           headline,
           subheading,
@@ -329,6 +332,59 @@ export default function BulkEmailAdminPage() {
           <p className="text-[11px] text-slate-500 mt-1">Users created automatically via guest checkout</p>
         </div>
       </div>
+
+      {/* Deliverability Mode Selector */}
+      <Card className="border shadow-sm bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base font-extrabold flex items-center justify-between text-white">
+            <span className="flex items-center gap-2">
+              <Mail className="h-5 w-5 text-emerald-400" />
+              Gmail Inbox Placement Optimization
+            </span>
+            <Badge className={isPrimaryMode ? "bg-emerald-500 text-white font-bold" : "bg-amber-500 text-white font-bold"}>
+              {isPrimaryMode ? "🎯 Primary Inbox Mode Active" : "🎨 Rich Promotional Mode Active"}
+            </Badge>
+          </CardTitle>
+          <CardDescription className="text-xs text-indigo-200">
+            Control how Gmail classifies your email (Primary Inbox with Notifications vs Promotions Tab).
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div
+            onClick={() => setIsPrimaryMode(true)}
+            className={`p-3.5 rounded-xl border cursor-pointer transition-all ${
+              isPrimaryMode
+                ? "bg-white text-slate-900 border-emerald-400 shadow-md ring-2 ring-emerald-400"
+                : "bg-slate-800/80 text-slate-300 border-slate-700 hover:bg-slate-800"
+            }`}
+          >
+            <div className="flex items-center justify-between font-bold text-xs">
+              <span className="text-emerald-700">🎯 Primary Inbox Mode (Recommended)</span>
+              {isPrimaryMode && <Check className="h-4 w-4 text-emerald-600" />}
+            </div>
+            <p className="text-[11px] mt-1 leading-snug opacity-90 text-slate-600">
+              Sends clean conversational update letter. <strong>Highest Primary Inbox placement + Mobile Notifications!</strong>
+            </p>
+          </div>
+
+          <div
+            onClick={() => setIsPrimaryMode(false)}
+            className={`p-3.5 rounded-xl border cursor-pointer transition-all ${
+              !isPrimaryMode
+                ? "bg-white text-slate-900 border-amber-400 shadow-md ring-2 ring-amber-400"
+                : "bg-slate-800/80 text-slate-300 border-slate-700 hover:bg-slate-800"
+            }`}
+          >
+            <div className="flex items-center justify-between font-bold text-xs">
+              <span className="text-amber-700">🎨 Rich Graphical Banner</span>
+              {!isPrimaryMode && <Check className="h-4 w-4 text-amber-600" />}
+            </div>
+            <p className="text-[11px] mt-1 leading-snug opacity-90 text-slate-600">
+              Rich dark gradient banner design. Looks graphic-heavy but Gmail usually routes it to <strong>Promotions Tab</strong>.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Main Form & Live Preview Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -561,84 +617,153 @@ export default function BulkEmailAdminPage() {
             <div className="bg-slate-100 p-3 rounded-2xl border shadow-inner overflow-hidden">
               <div className="bg-white rounded-xl overflow-hidden shadow border text-slate-900 text-xs">
                 {/* Accent Line */}
-                <div className="h-1 bg-gradient-to-r from-amber-500 via-red-500 to-indigo-600" />
+                <div className={`h-1 ${isPrimaryMode ? "bg-blue-600" : "bg-gradient-to-r from-amber-500 via-red-500 to-indigo-600"}`} />
 
                 {/* Header with Logo */}
-                <div className="bg-white p-3 text-center border-b border-slate-200">
+                <div className="bg-white p-3 border-b border-slate-200 flex items-center justify-between">
                   <div className="font-black text-lg text-slate-900 italic tracking-tight">Grabnext</div>
-                  <div className="text-[10px] text-slate-400 font-medium">Official Special Offer & Promotion</div>
+                  <Badge variant={isPrimaryMode ? "default" : "secondary"} className="text-[9px]">
+                    {isPrimaryMode ? "🎯 Gmail Primary Mode" : "🎨 Promotional Mode"}
+                  </Badge>
                 </div>
 
                 {/* Content Box */}
                 <div className="p-4 space-y-3">
-                  {/* Hero Banner Box */}
-                  <div className="bg-gradient-to-br from-slate-900 to-indigo-950 p-4 rounded-xl text-center text-white space-y-1.5 shadow-sm">
-                    {discountBadge && (
-                      <span className="bg-gradient-to-r from-amber-500 to-amber-600 text-white text-[10px] font-extrabold px-2.5 py-0.5 rounded-full inline-block uppercase tracking-wider">
-                        🔥 {discountBadge}
-                      </span>
-                    )}
-                    <div className="font-black text-sm md:text-base leading-tight text-white">{headline || "HEADER TITLE"}</div>
-                    {subheading && <div className="text-[11px] text-indigo-200 leading-snug">{subheading}</div>}
-                  </div>
+                  {isPrimaryMode ? (
+                    <>
+                      {/* Primary Inbox Mode Layout */}
+                      <p className="text-slate-900 text-xs font-semibold">
+                        Hi <strong>Valued Customer</strong>,
+                      </p>
 
-                  <p className="text-slate-600 text-[11px] leading-relaxed">
-                    Hi <strong>Valued Customer</strong>,<br />
-                    We have an exclusive offer just for you! Explore our best-selling digital products & tools.
-                  </p>
+                      <p className="text-slate-800 text-[11px] leading-relaxed font-medium">
+                        {headline || "EXCLUSIVE ANNOUNCEMENT"}
+                      </p>
 
-                  {/* Coupon Box */}
-                  {couponCode && (
-                    <div className="bg-amber-50 border-2 border-dashed border-amber-400 p-3 rounded-xl text-center space-y-1">
-                      <span className="bg-amber-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-full uppercase">
-                        🎟️ Exclusive Coupon
-                      </span>
-                      <div className="font-mono text-lg font-black text-amber-800 tracking-widest">{couponCode.toUpperCase()}</div>
-                      <p className="text-[10px] text-amber-700 font-medium">Apply code at checkout for discount!</p>
-                    </div>
-                  )}
+                      {subheading && (
+                        <p className="text-slate-600 text-[11px] leading-relaxed">
+                          {subheading}
+                        </p>
+                      )}
 
-                  {/* Featured Products */}
-                  {featuredProductsObjects.length > 0 && (
-                    <div className="space-y-2 pt-2 border-t">
-                      <div className="font-bold text-[11px] text-slate-800">🔥 Featured Offer Products:</div>
-                      {featuredProductsObjects.map((prod) => (
-                        <div key={prod.id} className="bg-slate-50 border p-2 rounded-lg flex items-center justify-between gap-2">
-                          <img
-                            src={prod.imageUrl || "/logo.png"}
-                            alt={prod.title}
-                            className="w-10 h-10 object-cover rounded border bg-white shrink-0"
-                          />
-                          <div className="flex-1 min-w-0">
-                            <div className="font-bold text-[11px] truncate">{prod.title}</div>
-                            <div className="font-extrabold text-blue-600 text-[11px]">₹{prod.price}</div>
+                      {/* Clean Access Code Box */}
+                      {couponCode && (
+                        <div className="bg-blue-50 border-l-4 border-blue-600 p-2.5 rounded text-xs space-y-0.5">
+                          <span className="text-[10px] text-blue-900 font-medium">🔑 Your Access Code:</span>
+                          <div className="font-mono font-bold text-slate-900 bg-white px-2 py-0.5 rounded w-fit text-xs border">
+                            {couponCode.toUpperCase()}
                           </div>
-                          <span className="bg-blue-600 text-white text-[10px] font-bold px-2 py-1 rounded shrink-0">🛒 Buy</span>
                         </div>
-                      ))}
-                    </div>
+                      )}
+
+                      {/* Featured Products List */}
+                      {featuredProductsObjects.length > 0 && (
+                        <div className="bg-slate-50 border p-2.5 rounded-lg space-y-1.5">
+                          <div className="font-bold text-[11px] text-slate-900">Featured Products for You:</div>
+                          <ul className="list-disc pl-4 text-[11px] text-slate-700 space-y-1">
+                            {featuredProductsObjects.map((prod) => (
+                              <li key={prod.id}>
+                                <strong>{prod.title}</strong> — <span className="text-blue-600 font-bold">₹{prod.price}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {/* Clean Blue CTA Button */}
+                      <div className="pt-1">
+                        <div className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-2 px-4 rounded-lg inline-block shadow-sm">
+                          {ctaText || "⚡ Claim Offer Now"}
+                        </div>
+                      </div>
+
+                      {/* WhatsApp Support Box */}
+                      <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-2 text-center space-y-0.5">
+                        <div className="text-[10px] font-bold text-emerald-800">💬 Need Help? Contact us on WhatsApp!</div>
+                        <div className="bg-emerald-600 text-white font-bold text-[10px] py-0.5 px-2.5 rounded-full inline-block">
+                          🟢 WhatsApp Support (+91 7500167987)
+                        </div>
+                      </div>
+
+                      <div className="text-[10px] text-slate-500 pt-2 border-t">
+                        Best regards,<br />
+                        <strong>Support Team @ Grabnext</strong>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      {/* Promotional Mode Layout */}
+                      <div className="bg-gradient-to-br from-slate-900 to-indigo-950 p-4 rounded-xl text-center text-white space-y-1.5 shadow-sm">
+                        {discountBadge && (
+                          <span className="bg-gradient-to-r from-amber-500 to-amber-600 text-white text-[10px] font-extrabold px-2.5 py-0.5 rounded-full inline-block uppercase tracking-wider">
+                            🔥 {discountBadge}
+                          </span>
+                        )}
+                        <div className="font-black text-sm md:text-base leading-tight text-white">{headline || "HEADER TITLE"}</div>
+                        {subheading && <div className="text-[11px] text-indigo-200 leading-snug">{subheading}</div>}
+                      </div>
+
+                      <p className="text-slate-600 text-[11px] leading-relaxed">
+                        Hi <strong>Valued Customer</strong>,<br />
+                        We have an exclusive offer just for you! Explore our best-selling digital products & tools.
+                      </p>
+
+                      {/* Coupon Box */}
+                      {couponCode && (
+                        <div className="bg-amber-50 border-2 border-dashed border-amber-400 p-3 rounded-xl text-center space-y-1">
+                          <span className="bg-amber-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-full uppercase">
+                            🎟️ Exclusive Coupon
+                          </span>
+                          <div className="font-mono text-lg font-black text-amber-800 tracking-widest">{couponCode.toUpperCase()}</div>
+                          <p className="text-[10px] text-amber-700 font-medium">Apply code at checkout for discount!</p>
+                        </div>
+                      )}
+
+                      {/* Featured Products */}
+                      {featuredProductsObjects.length > 0 && (
+                        <div className="space-y-2 pt-2 border-t">
+                          <div className="font-bold text-[11px] text-slate-800">🔥 Featured Offer Products:</div>
+                          {featuredProductsObjects.map((prod) => (
+                            <div key={prod.id} className="bg-slate-50 border p-2 rounded-lg flex items-center justify-between gap-2">
+                              <img
+                                src={prod.imageUrl || "/logo.png"}
+                                alt={prod.title}
+                                className="w-10 h-10 object-cover rounded border bg-white shrink-0"
+                              />
+                              <div className="flex-1 min-w-0">
+                                <div className="font-bold text-[11px] truncate">{prod.title}</div>
+                                <div className="font-extrabold text-blue-600 text-[11px]">₹{prod.price}</div>
+                              </div>
+                              <span className="bg-blue-600 text-white text-[10px] font-bold px-2 py-1 rounded shrink-0">🛒 Buy</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* CTA Button */}
+                      <div className="text-center pt-2">
+                        <div className="bg-gradient-to-r from-amber-500 to-amber-600 text-white text-xs font-black py-2.5 px-4 rounded-lg shadow inline-block">
+                          {ctaText || "⚡ Claim Offer Now"}
+                        </div>
+                      </div>
+
+                      {/* WhatsApp Support Box */}
+                      <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-2.5 text-center space-y-1">
+                        <div className="text-[10px] font-bold text-emerald-800">💬 Need Help? Chat on WhatsApp!</div>
+                        <div className="bg-emerald-500 text-white font-extrabold text-[10px] py-1 px-3 rounded-full inline-block">
+                          🟢 Chat on WhatsApp (+91 7500167987)
+                        </div>
+                      </div>
+                    </>
                   )}
-
-                  {/* CTA Button */}
-                  <div className="text-center pt-2">
-                    <div className="bg-gradient-to-r from-amber-500 to-amber-600 text-white text-xs font-black py-2.5 px-4 rounded-lg shadow inline-block">
-                      {ctaText || "⚡ Claim Offer Now"}
-                    </div>
-                  </div>
-
-                  {/* WhatsApp Support Box */}
-                  <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-2.5 text-center space-y-1">
-                    <div className="text-[10px] font-bold text-emerald-800">💬 Need Help? Chat on WhatsApp!</div>
-                    <div className="bg-emerald-500 text-white font-extrabold text-[10px] py-1 px-3 rounded-full inline-block">
-                      🟢 Chat on WhatsApp (+91 7500167987)
-                    </div>
-                  </div>
                 </div>
 
                 {/* Footer */}
                 <div className="bg-slate-50 p-2.5 text-center border-t text-[10px] text-slate-400 space-y-0.5">
                   <div>© {new Date().getFullYear()} Grabnext. All rights reserved.</div>
-                  <div className="text-[9px] text-slate-300">Registered Promotional Email</div>
+                  <div className="text-[9px] text-slate-300">
+                    {isPrimaryMode ? "Transactional Account Update" : "Registered Promotional Email"}
+                  </div>
                 </div>
               </div>
             </div>

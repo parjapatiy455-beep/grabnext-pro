@@ -91,11 +91,15 @@ export async function sendBrevoEmail({
   toName,
   subject,
   htmlContent,
+  headers,
+  tags,
 }: {
   toEmail: string
   toName?: string
   subject: string
   htmlContent: string
+  headers?: Record<string, string>
+  tags?: string[]
 }) {
   const { apiKey, senderEmail, senderName } = await getBrevoSettings()
 
@@ -107,6 +111,15 @@ export async function sendBrevoEmail({
   if (!senderEmail) {
     console.error('[Brevo Error] BREVO_SENDER_EMAIL is not configured.')
     return { success: false, error: 'BREVO_SENDER_EMAIL is missing' }
+  }
+
+  // Priority headers to signal transactional/urgent deliverability to Gmail Primary Inbox
+  const defaultHeaders = {
+    'X-Mailin-custom': 'transactional',
+    'X-Priority': '1',
+    'Priority': 'urgent',
+    'Importance': 'high',
+    ...headers,
   }
 
   try {
@@ -130,6 +143,8 @@ export async function sendBrevoEmail({
         ],
         subject,
         htmlContent,
+        headers: defaultHeaders,
+        tags: tags || ['transactional'],
       }),
     })
 
@@ -868,6 +883,7 @@ export function generateOfferEmailHtml({
   senderName = 'Grabnext',
   appUrl = 'https://grabnext.in',
   whatsappNumber = '917500167987',
+  isPrimaryMode = false,
 }: {
   headline: string
   subheading?: string
@@ -880,13 +896,84 @@ export function generateOfferEmailHtml({
   senderName?: string
   appUrl?: string
   whatsappNumber?: string
+  isPrimaryMode?: boolean
 }) {
   const cleanAppUrl = (appUrl || 'https://grabnext.in').replace(/\/$/, '')
   const logoUrl = `${cleanAppUrl}/logo.png`
   const targetCtaUrl = ctaUrl && ctaUrl.trim() !== '' ? ctaUrl : `${cleanAppUrl}/products`
   const cleanCtaText = ctaText && ctaText.trim() !== '' ? ctaText : '⚡ Claim Offer Now'
 
-  // Construct Products HTML List / Grid if products are selected
+  // PRIMARY INBOX MODE: Clean 1-on-1 personal letter format (High Primary Inbox Deliverability)
+  if (isPrimaryMode) {
+    let personalProductsText = ''
+    if (featuredProducts && featuredProducts.length > 0) {
+      personalProductsText += `<div style="margin: 18px 0; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px;">`
+      personalProductsText += `<strong style="color: #0f172a; font-size: 14px;">Featured Products for You:</strong><ul style="margin: 8px 0 0 0; padding-left: 20px; font-size: 13px; color: #334155;">`
+      featuredProducts.forEach((p) => {
+        personalProductsText += `<li style="margin-bottom: 6px;"><strong>${p.title}</strong> — <span style="color: #2563eb; font-weight: 700;">₹${p.price}</span></li>`
+      })
+      personalProductsText += `</ul></div>`
+    }
+
+    let couponText = ''
+    if (couponCode && couponCode.trim() !== '') {
+      couponText = `
+        <div style="background-color: #eff6ff; border-left: 4px solid #2563eb; padding: 12px 16px; margin: 16px 0; border-radius: 6px;">
+          <p style="margin: 0; font-size: 13px; color: #1e40af;">
+            🔑 <strong>Your Access Code:</strong> <span style="font-family: monospace; font-weight: 800; background: #ffffff; padding: 2px 8px; border-radius: 4px; color: #0f172a;">${couponCode.trim().toUpperCase()}</span>
+          </p>
+        </div>
+      `
+    }
+
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      </head>
+      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #ffffff; color: #1e293b; margin: 0; padding: 20px; -webkit-text-size-adjust: 100%; line-height: 1.6;">
+        <div style="max-width: 580px; margin: 0 auto;">
+          
+          <div style="margin-bottom: 20px; border-bottom: 1px solid #e2e8f0; padding-bottom: 12px;">
+            <img src="${logoUrl}" alt="${senderName}" style="height: 36px; width: auto; display: block;" />
+          </div>
+
+          <p style="font-size: 15px; color: #0f172a; margin-bottom: 16px;">
+            Hi <strong>${recipientName}</strong>,
+          </p>
+
+          <p style="font-size: 14px; color: #334155; margin-bottom: 14px;">
+            ${headline}
+          </p>
+
+          ${subheading ? `<p style="font-size: 14px; color: #475569; margin-bottom: 14px;">${subheading}</p>` : ''}
+
+          ${couponText}
+
+          ${personalProductsText}
+
+          <div style="margin: 24px 0;">
+            <a href="${targetCtaUrl}" target="_blank" style="background-color: #2563eb; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-size: 14px; font-weight: 700; display: inline-block;">
+              ${cleanCtaText}
+            </a>
+          </div>
+
+          ${getWhatsAppBoxHtml(whatsappNumber, senderName, 'special update')}
+
+          <p style="font-size: 13px; color: #64748b; margin-top: 28px; border-top: 1px solid #e2e8f0; padding-top: 16px;">
+            Best regards,<br>
+            <strong>Support Team @ ${senderName}</strong><br>
+            <span style="font-size: 11px; color: #94a3b8;">${cleanAppUrl}</span>
+          </p>
+        </div>
+      </body>
+      </html>
+    `
+  }
+
+  // Construct Products HTML List / Grid if products are selected (Standard Rich Design)
   let productsHtml = ''
   if (featuredProducts && featuredProducts.length > 0) {
     productsHtml += `
