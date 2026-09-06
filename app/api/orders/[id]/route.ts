@@ -1,6 +1,7 @@
 export const runtime = 'edge'
 import { NextRequest, NextResponse } from 'next/server'
 import { executeQuery } from '@/lib/db'
+import { sendOrderSuccessEmail, sendOrderFailedEmail } from '@/lib/brevo'
 
 export const dynamic = 'force-dynamic'
 
@@ -27,7 +28,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 // PATCH /api/orders/[id] - Update order status
 export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
     try {
-        const { status } = await request.json()
+        const { status, reason } = await request.json()
         if (!status) {
             return NextResponse.json({ error: "Status is required" }, { status: 400 })
         }
@@ -38,9 +39,17 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
             [status, now, params.id]
         )
 
+        // Trigger Brevo transactional emails asynchronously
+        if (status === 'paid') {
+            sendOrderSuccessEmail(params.id).catch(err => console.error('[Brevo Success Email Error]', err))
+        } else if (status === 'failed') {
+            sendOrderFailedEmail(params.id, reason).catch(err => console.error('[Brevo Failure Email Error]', err))
+        }
+
         return NextResponse.json({ success: true, id: params.id, status })
     } catch (error: any) {
         console.error("[Orders PATCH Error]", error)
         return NextResponse.json({ error: error.message }, { status: 500 })
     }
 }
+

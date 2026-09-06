@@ -166,15 +166,16 @@ export default function CheckoutPage() {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) =>
     setFormData({ ...formData, [e.target.name]: e.target.value })
 
-  const updateOrder = useCallback(async (orderId: string, paymentId: string) => {
+  const updateOrder = useCallback(async (orderId: string, status: string = 'paid', paymentId?: string, reason?: string) => {
     try {
       await fetch("/api/orders", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           id: orderId,
-          status: "paid",
-          paymentId,
+          status,
+          paymentId: paymentId || null,
+          reason
         }),
       })
     } catch (err) {
@@ -212,18 +213,23 @@ export default function CheckoutPage() {
       return
     }
     const orderTitle = items.length === 1 ? items[0].product.title : `${items[0].product.title} + ${items.length - 1} more`
+    let paymentSucceeded = false
     const xpay = new window.XPay({
       api_key: "xp_live_wtm5vj64kseuylg9cfmsl9",
       amount: Math.round(finalAmount),
       title: orderTitle,
       onSuccess: async (data: { utr: string }) => {
+        paymentSucceeded = true
         setLoading(false)
-        await updateOrder(orderId, data.utr)
+        await updateOrder(orderId, 'paid', data.utr)
         clearCart()
         router.push(`/checkout/success?utr=${data.utr}`)
       },
-      onClose: () => {
+      onClose: async () => {
         setLoading(false)
+        if (!paymentSucceeded) {
+          await updateOrder(orderId, 'failed', undefined, 'Payment window closed before completion')
+        }
       },
     })
     xpay.open()
@@ -238,16 +244,19 @@ export default function CheckoutPage() {
     const orderData = await orderRes.json()
     if (!orderData.orderId) {
       toast({ title: orderData.error || "Failed to create payment order", variant: "destructive" })
+      await updateOrder(orderId, 'failed', undefined, orderData.error || 'Failed to create payment order')
       setLoading(false)
       return
     }
 
     if (!window.Razorpay) {
       toast({ title: "Payment gateway not loaded", variant: "destructive" })
+      await updateOrder(orderId, 'failed', undefined, 'Payment gateway failed to load')
       setLoading(false)
       return
     }
 
+    let paymentSucceeded = false
     const options = {
       key: orderData.keyId,
       amount: Math.round(finalAmount * 100),
@@ -262,15 +271,19 @@ export default function CheckoutPage() {
       },
       theme: { color: "#f59e0b" },
       handler: async (response: any) => {
+        paymentSucceeded = true
         setLoading(false)
         const paymentId = response.razorpay_payment_id
-        await updateOrder(orderId, paymentId)
+        await updateOrder(orderId, 'paid', paymentId)
         clearCart()
         router.push(`/checkout/success?utr=${paymentId}`)
       },
       modal: {
-        ondismiss: () => {
+        ondismiss: async () => {
           setLoading(false)
+          if (!paymentSucceeded) {
+            await updateOrder(orderId, 'failed', undefined, 'Payment window dismissed by user')
+          }
         },
       },
     }

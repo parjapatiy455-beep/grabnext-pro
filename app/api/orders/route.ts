@@ -1,6 +1,7 @@
 export const runtime = 'edge'
 import { NextRequest, NextResponse } from 'next/server'
 import { executeQuery } from '@/lib/db'
+import { sendOrderSuccessEmail, sendOrderFailedEmail } from '@/lib/brevo'
 
 export const dynamic = 'force-dynamic';
 
@@ -53,6 +54,7 @@ export async function POST(request: NextRequest) {
     const userName = data.userName || data.name || null
     const userEmail = data.userEmail || data.email || null
     const userPhone = data.userPhone || data.phone || null
+    const initialStatus = data.status || 'pending'
 
     try {
       await executeQuery(`
@@ -66,7 +68,7 @@ export async function POST(request: NextRequest) {
         userPhone,
         JSON.stringify(data.items || []),
         data.totalAmount || 0,
-        data.status || 'pending',
+        initialStatus,
         data.paymentId || null,
         data.couponCode || null,
         data.discountAmount || 0,
@@ -83,13 +85,19 @@ export async function POST(request: NextRequest) {
         data.userId || 'guest',
         JSON.stringify(data.items || []),
         data.totalAmount || 0,
-        data.status || 'pending',
+        initialStatus,
         data.paymentId || null,
         data.couponCode || null,
         data.discountAmount || 0,
         now,
         now
       ])
+    }
+
+    if (initialStatus === 'paid') {
+      sendOrderSuccessEmail(id).catch(err => console.error('[Brevo Email Error]', err))
+    } else if (initialStatus === 'failed') {
+      sendOrderFailedEmail(id).catch(err => console.error('[Brevo Email Error]', err))
     }
 
     return NextResponse.json({ success: true, id }, { status: 201 })
@@ -102,18 +110,26 @@ export async function POST(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   try {
     const data = await request.json()
-    const { id, status, paymentId } = data
+    const { id, status, paymentId, reason } = data
 
     if (!id) {
       return NextResponse.json({ error: "Order ID is required" }, { status: 400 })
     }
 
+    const newStatus = status || 'paid'
     const now = Date.now()
     await executeQuery(`
       UPDATE orders 
       SET status = ?, paymentId = ?, updatedAt = ?
       WHERE id = ?
-    `, [status || 'paid', paymentId || null, now, id])
+    `, [newStatus, paymentId || null, now, id])
+
+    // Trigger Brevo transactional emails asynchronously
+    if (newStatus === 'paid') {
+      sendOrderSuccessEmail(id).catch(err => console.error('[Brevo Success Email Error]', err))
+    } else if (newStatus === 'failed') {
+      sendOrderFailedEmail(id, reason).catch(err => console.error('[Brevo Failure Email Error]', err))
+    }
 
     return NextResponse.json({ success: true })
   } catch (error: any) {
@@ -121,4 +137,5 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }
+
 
