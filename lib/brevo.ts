@@ -852,3 +852,190 @@ export async function sendTestBrevoEmail(toEmail: string) {
     htmlContent,
   })
 }
+
+/**
+ * Generates responsive HTML offer email content for marketing campaigns
+ */
+export function generateOfferEmailHtml({
+  headline,
+  subheading,
+  couponCode,
+  discountBadge,
+  featuredProducts = [],
+  ctaText,
+  ctaUrl,
+  recipientName = 'Valued Customer',
+  senderName = 'Grabnext',
+  appUrl = 'https://grabnext.in',
+  whatsappNumber = '917500167987',
+}: {
+  headline: string
+  subheading?: string
+  couponCode?: string
+  discountBadge?: string
+  featuredProducts?: { id?: string; title: string; price: number; originalPrice?: number; imageUrl?: string; slug?: string }[]
+  ctaText?: string
+  ctaUrl?: string
+  recipientName?: string
+  senderName?: string
+  appUrl?: string
+  whatsappNumber?: string
+}) {
+  const cleanAppUrl = (appUrl || 'https://grabnext.in').replace(/\/$/, '')
+  const logoUrl = `${cleanAppUrl}/logo.png`
+  const targetCtaUrl = ctaUrl && ctaUrl.trim() !== '' ? ctaUrl : `${cleanAppUrl}/products`
+  const cleanCtaText = ctaText && ctaText.trim() !== '' ? ctaText : '⚡ Claim Offer Now'
+
+  // Construct Products HTML List / Grid if products are selected
+  let productsHtml = ''
+  if (featuredProducts && featuredProducts.length > 0) {
+    productsHtml += `
+      <div style="margin-top: 24px; border-top: 2px solid #e2e8f0; padding-top: 18px;">
+        <h3 style="margin: 0 0 14px 0; color: #0f172a; font-size: 16px; font-weight: 800;">
+          🔥 Featured Products in this Offer:
+        </h3>
+    `
+    featuredProducts.forEach((prod) => {
+      const prodUrl = `${cleanAppUrl}/products/${prod.slug || prod.id}`
+      const imgUrl = prod.imageUrl || logoUrl
+      const formattedPrice = `₹${prod.price}`
+      const origPriceHtml = prod.originalPrice ? `<span style="font-size: 12px; color: #94a3b8; text-decoration: line-through; margin-left: 6px;">₹${prod.originalPrice}</span>` : ''
+
+      productsHtml += `
+        <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+          <img src="${imgUrl}" alt="${prod.title}" style="width: 56px; height: 56px; object-fit: cover; border-radius: 8px; border: 1px solid #cbd5e1; flex-shrink: 0;" />
+          <div style="flex: 1; min-width: 0; padding: 0 8px;">
+            <h4 style="margin: 0 0 4px 0; color: #0f172a; font-size: 14px; font-weight: 700; line-height: 1.3;">${prod.title}</h4>
+            <div style="font-size: 14px; font-weight: 800; color: #2563eb;">
+              ${formattedPrice} ${origPriceHtml}
+            </div>
+          </div>
+          <a href="${prodUrl}" target="_blank" style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color: #ffffff; text-decoration: none; padding: 8px 14px; border-radius: 8px; font-size: 12px; font-weight: 700; display: inline-block; white-space: nowrap; box-shadow: 0 2px 6px rgba(37,99,235,0.25);">
+            🛒 Buy Now
+          </a>
+        </div>
+      `
+    })
+    productsHtml += `</div>`
+  }
+
+  // Construct Coupon Code Box HTML if couponCode is provided
+  let couponBoxHtml = ''
+  if (couponCode && couponCode.trim() !== '') {
+    couponBoxHtml = `
+      <div style="background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); border: 2px dashed #f59e0b; border-radius: 14px; padding: 18px; text-align: center; margin: 22px 0;">
+        <span style="background-color: #f59e0b; color: #ffffff; font-size: 11px; font-weight: 800; padding: 3px 10px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.5px; display: inline-block;">
+          🎟️ Exclusive Coupon Code
+        </span>
+        <div style="font-family: monospace; font-size: 26px; font-weight: 900; color: #b45309; letter-spacing: 2px; margin: 10px 0 4px 0;">
+          ${couponCode.trim().toUpperCase()}
+        </div>
+        <p style="margin: 0; color: #92400e; font-size: 12px; font-weight: 600;">
+          Copy & apply this code at checkout to claim your discount!
+        </p>
+      </div>
+    `
+  }
+
+  const responsiveStyle = `
+    @keyframes pulseGlow {
+      0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4); }
+      50% { box-shadow: 0 0 16px 4px rgba(245, 158, 11, 0.5); }
+      100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4); }
+    }
+    @keyframes shimmer {
+      0% { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
+    .animated-header-bar {
+      height: 4px;
+      background: linear-gradient(90deg, #f59e0b, #ef4444, #8b5cf6, #2563eb);
+      background-size: 200% 100%;
+      animation: shimmer 3s infinite linear;
+    }
+    .pulse-btn {
+      animation: pulseGlow 2.5s infinite ease-in-out;
+    }
+    @media only screen and (max-width: 600px) {
+      .email-body { padding: 0 !important; background-color: #ffffff !important; }
+      .email-card { width: 100% !important; border-radius: 0px !important; box-shadow: none !important; margin: 0 !important; }
+      .content-box { padding: 20px 14px !important; }
+      .header-box { padding: 16px 14px !important; }
+    }
+  `
+
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>${headline}</title>
+      <style>${responsiveStyle}</style>
+    </head>
+    <body class="email-body" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f1f5f9; margin: 0; padding: 20px 0; -webkit-text-size-adjust: 100%;">
+      <div class="email-card" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08);">
+        
+        <!-- Top Animated Bar -->
+        <div class="animated-header-bar"></div>
+
+        <!-- White Header with Logo -->
+        <div class="header-box" style="background-color: #ffffff; border-bottom: 1px solid #e2e8f0; padding: 16px 20px; text-align: center; color: #0f172a;">
+          <img src="${logoUrl}" alt="${senderName}" style="height: 42px; max-height: 42px; width: auto; display: block; margin: 0 auto; border: 0; outline: none;" />
+          <p style="margin: 6px 0 0 0; color: #64748b; font-size: 12px; font-weight: 500;">Official Special Offer & Promotion</p>
+        </div>
+
+        <!-- Body Content -->
+        <div class="content-box" style="padding: 24px 20px;">
+          
+          <!-- Hero Banner Box -->
+          <div style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); border-radius: 14px; padding: 22px 18px; text-align: center; color: #ffffff; margin-bottom: 22px;">
+            ${
+              discountBadge && discountBadge.trim() !== ''
+                ? `<span style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: #ffffff; font-size: 11px; font-weight: 800; padding: 4px 12px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.5px; display: inline-block; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(245,158,11,0.4);">🔥 ${discountBadge.trim()}</span>`
+                : ''
+            }
+            <h2 style="margin: 0; color: #ffffff; font-size: 20px; font-weight: 900; line-height: 1.2;">
+              ${headline}
+            </h2>
+            ${
+              subheading && subheading.trim() !== ''
+                ? `<p style="margin: 8px 0 0 0; color: #cbd5e1; font-size: 13px; font-weight: 500; line-height: 1.4;">${subheading.trim()}</p>`
+                : ''
+            }
+          </div>
+
+          <p style="font-size: 14px; color: #334155; margin-bottom: 16px; line-height: 1.5;">
+            Hi <strong>${recipientName}</strong>,<br>
+            We have an exclusive offer just for you! Explore our best-selling digital products, source codes, courses, and editing bundles at special discounted rates.
+          </p>
+
+          ${couponBoxHtml}
+
+          ${productsHtml}
+
+          <!-- Main Pulsing CTA Button -->
+          <div style="text-align: center; margin: 28px 0;">
+            <a href="${targetCtaUrl}" target="_blank" class="pulse-btn" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 10px; font-size: 15px; font-weight: 800; display: inline-block; box-shadow: 0 4px 14px rgba(245, 158, 11, 0.4);">
+              ${cleanCtaText}
+            </a>
+          </div>
+
+          ${getWhatsAppBoxHtml(whatsappNumber, senderName, 'special offer & discount inquiry')}
+
+          <p style="font-size: 12px; color: #64748b; text-align: center; margin-top: 24px; line-height: 1.4;">
+            If you have any questions or need help with purchasing, feel free to reply to this email or contact us on WhatsApp.
+          </p>
+        </div>
+
+        <!-- Footer -->
+        <div style="background-color: #f8fafc; padding: 18px 20px; text-align: center; border-top: 1px solid #e2e8f0; font-size: 12px; color: #94a3b8;">
+          <img src="${logoUrl}" alt="${senderName}" style="height: 24px; max-height: 24px; width: auto; opacity: 0.7; margin: 0 auto 6px auto; display: block;" />
+          © ${new Date().getFullYear()} ${senderName}. All rights reserved.<br>
+          <span style="font-size: 11px; color: #cbd5e1;">You received this promotional email because you are a registered user of ${senderName}.</span>
+        </div>
+      </div>
+    </body>
+    </html>
+  `
+}

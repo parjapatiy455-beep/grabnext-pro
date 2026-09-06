@@ -6,7 +6,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { toast } from "@/hooks/use-toast"
-import { Shield, ShieldOff, Trash2, Users, Search, MapPin, Phone, Calendar, Mail, User, Info, FileText } from "lucide-react"
+import Link from "next/link"
+import { Shield, ShieldOff, Trash2, Users, Search, MapPin, Phone, Calendar, Mail, User, Info, FileText, Send } from "lucide-react"
 import { format } from "date-fns"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -129,9 +130,16 @@ export default function UsersAdminPage() {
                     <h1 className="text-3xl font-extrabold tracking-tight">Users Management</h1>
                     <p className="text-sm text-muted-foreground mt-1">View details, search, filter, and manage registered members and guest accounts.</p>
                 </div>
-                <Button onClick={loadUsers} variant="outline" size="sm" className="w-fit self-end">
-                    Refresh List
-                </Button>
+                <div className="flex items-center gap-3">
+                    <Button asChild className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-extrabold shadow gap-2 text-xs">
+                        <Link href="/admin/bulk-email">
+                            <Send className="h-3.5 w-3.5" /> Send Bulk Offer Email
+                        </Link>
+                    </Button>
+                    <Button onClick={loadUsers} variant="outline" size="sm">
+                        Refresh List
+                    </Button>
+                </div>
             </div>
 
             {/* Quick stats grid */}
