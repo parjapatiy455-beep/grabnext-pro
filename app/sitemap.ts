@@ -7,33 +7,33 @@ export const dynamic = 'force-dynamic'
 export const revalidate = 3600 // Cache for 1 hour
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-    const baseUrl = getSiteUrl()
+    const rawUrl = getSiteUrl()
+    const baseUrl = rawUrl.endsWith('/') ? rawUrl.slice(0, -1) : rawUrl
 
-    let productEntries: any[] = []
-    let categoryEntries: any[] = []
+    let productEntries: MetadataRoute.Sitemap = []
+    let categoryEntries: MetadataRoute.Sitemap = []
 
     try {
-        // Fetch active products with image and title for image sitemap
+        // Fetch active products with image and title
         const products = await executeQuery(
             'SELECT slug, id, title, imageUrl, updatedAt FROM products WHERE isActive = 1 ORDER BY updatedAt DESC'
         )
         if (Array.isArray(products)) {
             productEntries = products.map((p: any) => {
-                const entry: any = {
+                const updatedDate = p.updatedAt
+                    ? (typeof p.updatedAt === 'number' ? new Date(p.updatedAt) : new Date(p.updatedAt))
+                    : new Date()
+
+                const entry: MetadataRoute.Sitemap[number] = {
                     url: `${baseUrl}/products/${p.slug || p.id}`,
-                    lastModified: new Date(p.updatedAt || Date.now()),
-                    changeFrequency: 'daily' as const,
+                    lastModified: isNaN(updatedDate.getTime()) ? new Date() : updatedDate,
+                    changeFrequency: 'daily',
                     priority: 0.9,
                 }
-                // Add image data for Google Image Search & AI visual search
+                // Standard Next.js Sitemap expects string[] for images
                 if (p.imageUrl) {
-                    entry.images = [
-                        {
-                            url: p.imageUrl.startsWith('http') ? p.imageUrl : `${baseUrl}${p.imageUrl}`,
-                            title: p.title || '',
-                            caption: `Buy ${p.title || ''} on Grabnext`,
-                        },
-                    ]
+                    const imgUrl = p.imageUrl.startsWith('http') ? p.imageUrl : `${baseUrl}${p.imageUrl}`
+                    entry.images = [imgUrl]
                 }
                 return entry
             })
@@ -44,32 +44,38 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
             'SELECT slug, name, updatedAt FROM categories WHERE isActive = 1'
         )
         if (Array.isArray(categories)) {
-            categoryEntries = categories.map((c: any) => ({
-                url: `${baseUrl}/products?category=${c.slug}`,
-                lastModified: new Date(c.updatedAt || Date.now()),
-                changeFrequency: 'weekly' as const,
-                priority: 0.7,
-            }))
+            categoryEntries = categories.map((c: any) => {
+                const updatedDate = c.updatedAt
+                    ? (typeof c.updatedAt === 'number' ? new Date(c.updatedAt) : new Date(c.updatedAt))
+                    : new Date()
+
+                return {
+                    url: `${baseUrl}/products?category=${c.slug}`,
+                    lastModified: isNaN(updatedDate.getTime()) ? new Date() : updatedDate,
+                    changeFrequency: 'weekly',
+                    priority: 0.7,
+                }
+            })
         }
     } catch (error) {
-        console.error("Sitemap generation error (expected during build if DB is internal):", error)
+        console.error("Sitemap generation error:", error)
     }
 
     // Static pages — always included with priority & keywords alignment
-    const staticPages = [
-        { route: '',           priority: 1.0, freq: 'daily'   },
-        { route: '/products',  priority: 0.9, freq: 'daily'   },
-        { route: '/software',  priority: 0.9, freq: 'weekly'  },
-        { route: '/editing',   priority: 0.9, freq: 'weekly'  },
+    const staticPages: MetadataRoute.Sitemap = [
+        { route: '', priority: 1.0, freq: 'daily' },
+        { route: '/products', priority: 0.9, freq: 'daily' },
+        { route: '/software', priority: 0.9, freq: 'weekly' },
+        { route: '/editing', priority: 0.9, freq: 'weekly' },
         { route: '/masterclass', priority: 0.8, freq: 'weekly' },
         { route: '/claude-skills', priority: 0.8, freq: 'weekly' },
         { route: '/categories', priority: 0.7, freq: 'weekly' },
-        { route: '/about',     priority: 0.5, freq: 'monthly' },
-        { route: '/contact',   priority: 0.5, freq: 'monthly' },
-        { route: '/faq',       priority: 0.6, freq: 'weekly'  },
-        { route: '/privacy',   priority: 0.3, freq: 'monthly' },
-        { route: '/terms',     priority: 0.3, freq: 'monthly' },
-        { route: '/refund',    priority: 0.4, freq: 'monthly' },
+        { route: '/about', priority: 0.5, freq: 'monthly' },
+        { route: '/contact', priority: 0.5, freq: 'monthly' },
+        { route: '/faq', priority: 0.6, freq: 'weekly' },
+        { route: '/privacy', priority: 0.3, freq: 'monthly' },
+        { route: '/terms', priority: 0.3, freq: 'monthly' },
+        { route: '/refund', priority: 0.4, freq: 'monthly' },
     ].map(({ route, priority, freq }) => ({
         url: `${baseUrl}${route}`,
         lastModified: new Date(),
@@ -77,5 +83,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         priority,
     }))
 
-    return [...staticPages, ...productEntries, ...categoryEntries] as MetadataRoute.Sitemap
+    return [...staticPages, ...productEntries, ...categoryEntries]
 }
