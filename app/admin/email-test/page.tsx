@@ -86,7 +86,7 @@ export default function EmailTestPage() {
     }
   }
 
-  const handleSendTestEmail = async (type: "test" | "success" | "failed") => {
+  const handleSendTestEmail = async (type: "test" | "success" | "failed" | "guest") => {
     if (!recipientEmail || !recipientEmail.includes("@")) {
       toast({ title: "Invalid Email Address", description: "Please enter a valid recipient email address.", variant: "destructive" })
       return
@@ -288,7 +288,7 @@ export default function EmailTestPage() {
               <div className="space-y-3">
                 <Label className="text-xs uppercase font-bold text-slate-500 tracking-wider">Select Test Action</Label>
                 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {/* Button 1: Simple Test */}
                   <Button
                     onClick={() => handleSendTestEmail("test")}
@@ -334,6 +334,22 @@ export default function EmailTestPage() {
                     </div>
                     <span className="text-[11px] text-slate-500 font-normal">
                       Failed order alert with Retry Checkout link.
+                    </span>
+                  </Button>
+
+                  {/* Button 4: Guest Account & Password Email */}
+                  <Button
+                    onClick={() => handleSendTestEmail("guest")}
+                    disabled={loadingType !== null}
+                    variant="outline"
+                    className="h-auto py-3 px-4 flex flex-col items-start gap-1 text-left border-purple-200 hover:bg-purple-50"
+                  >
+                    <div className="flex items-center gap-1.5 font-semibold text-purple-700">
+                      {loadingType === "guest" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Key className="h-4 w-4" />}
+                      Guest Account & Password
+                    </div>
+                    <span className="text-[11px] text-slate-500 font-normal">
+                      Account confirmation with Login details.
                     </span>
                   </Button>
                 </div>

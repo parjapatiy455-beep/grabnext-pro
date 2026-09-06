@@ -1,6 +1,6 @@
 export const runtime = 'edge'
 import { NextRequest, NextResponse } from 'next/server'
-import { sendTestBrevoEmail, sendBrevoEmail, getBrevoSettings } from '@/lib/brevo'
+import { sendTestBrevoEmail, sendBrevoEmail, sendGuestAccountEmail, getBrevoSettings } from '@/lib/brevo'
 
 export const dynamic = 'force-dynamic'
 
@@ -13,6 +13,7 @@ export async function GET() {
       senderEmail: settings.senderEmail || null,
       senderName: settings.senderName || 'Grabnext',
       appUrl: settings.appUrl,
+      whatsappNumber: settings.whatsappNumber,
     })
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 })
@@ -46,6 +47,18 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: result.error }, { status: 500 })
       }
       return NextResponse.json({ success: true, message: `Test email sent to ${email}`, messageId: result.messageId })
+    }
+
+    if (type === 'guest') {
+      const result = await sendGuestAccountEmail({
+        toEmail: email,
+        toName: email.split('@')[0],
+        temporaryPassword: 'TempPassword123!',
+      })
+      if (!result.success) {
+        return NextResponse.json({ error: result.error }, { status: 500 })
+      }
+      return NextResponse.json({ success: true, message: `Guest Account email sent to ${email}`, messageId: result.messageId })
     }
 
     if (type === 'success') {

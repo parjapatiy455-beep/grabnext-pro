@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { executeQuery } from '@/lib/db'
 import { encrypt } from '@/lib/session'
 import { cookies } from 'next/headers'
+import { sendGuestAccountEmail } from '@/lib/brevo'
 
 export const dynamic = 'force-dynamic'
 
@@ -102,11 +103,18 @@ export async function POST(request: NextRequest) {
         })
         cookies().set('session', session, { expires, httpOnly: true })
 
+        // Send Account Confirmation & Password Email via Brevo
+        await sendGuestAccountEmail({
+            toEmail: email,
+            toName: name,
+            temporaryPassword,
+        }).catch(err => console.error('[Guest Account Email Error]', err))
+
         return NextResponse.json({
             user: { uid, email, displayName: name, isGuest: true },
             isExisting: false,
             temporaryPassword,
-            message: `Welcome to Grabnext! A guest account has been created for you. Please save your temporary password to access your downloads: ${temporaryPassword}`
+            message: `Welcome to Grabnext! A guest account has been created for you. Account login details have been emailed to ${email}.`
         }, { status: 201 })
     } catch (error: any) {
         console.error('[Guest Register Error]', error)

@@ -15,16 +15,18 @@ export async function getBrevoSettings() {
   const envSenderEmail = getEnv('BREVO_SENDER_EMAIL')?.trim()
   const envSenderName = getEnv('BREVO_SENDER_NAME')?.trim()
   const envAppUrl = getEnv('NEXT_PUBLIC_APP_URL')?.trim()
+  const envWhatsapp = getEnv('WHATSAPP_NUMBER')?.trim()
 
   let dbApiKey = ''
   let dbSenderEmail = ''
   let dbSenderName = ''
   let dbAppUrl = ''
+  let dbWhatsapp = ''
 
   // Query settings table in D1 DB as backup / primary admin config
   try {
     const rows = await executeQuery(
-      "SELECT key, value FROM settings WHERE key IN ('brevo_api_key', 'brevo_sender_email', 'brevo_sender_name', 'app_url')"
+      "SELECT key, value FROM settings WHERE key IN ('brevo_api_key', 'brevo_sender_email', 'brevo_sender_name', 'app_url', 'whatsapp_number')"
     ).catch((err) => {
       console.warn('[Brevo DB Warning]', err)
       return []
@@ -36,6 +38,7 @@ export async function getBrevoSettings() {
         if (r.key === 'brevo_sender_email') dbSenderEmail = r.value?.trim() || ''
         if (r.key === 'brevo_sender_name') dbSenderName = r.value?.trim() || ''
         if (r.key === 'app_url') dbAppUrl = r.value?.trim() || ''
+        if (r.key === 'whatsapp_number') dbWhatsapp = r.value?.trim() || ''
       }
     }
   } catch (e) {
@@ -47,6 +50,7 @@ export async function getBrevoSettings() {
   const senderEmail = envSenderEmail || dbSenderEmail || ''
   const senderName = envSenderName || dbSenderName || 'Grabnext'
   const appUrl = envAppUrl || dbAppUrl || 'https://grabnext.in'
+  const whatsappNumber = (envWhatsapp || dbWhatsapp || '917500167987').replace(/[^0-9]/g, '')
 
   const source = envApiKey
     ? 'env'
@@ -59,10 +63,27 @@ export async function getBrevoSettings() {
     senderEmail,
     senderName,
     appUrl: appUrl.replace(/\/$/, ''),
+    whatsappNumber,
     source,
     isEnvConfigured: Boolean(envApiKey && envSenderEmail),
     isDbConfigured: Boolean(dbApiKey && dbSenderEmail),
   }
+}
+
+export function getWhatsAppBoxHtml(whatsappNumber: string, senderName: string, textContext: string) {
+  const cleanNumber = whatsappNumber || '917500167987'
+  const waUrl = `https://wa.me/${cleanNumber}?text=${encodeURIComponent(`Hi ${senderName}, I need help with ${textContext}`)}`
+  return `
+    <!-- WhatsApp Support Toggle Box -->
+    <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 16px 20px; margin-top: 24px; text-align: center;">
+      <p style="margin: 0 0 10px 0; font-size: 13px; color: #166534; font-weight: 600;">
+        💬 Need Instant Help or Have Questions? Chat with us on WhatsApp!
+      </p>
+      <a href="${waUrl}" target="_blank" style="background-color: #25D366; color: #ffffff; text-decoration: none; padding: 10px 22px; border-radius: 999px; font-size: 13px; font-weight: 700; display: inline-block; box-shadow: 0 4px 12px rgba(37, 211, 102, 0.35);">
+        🟢 Chat on WhatsApp (+${cleanNumber})
+      </a>
+    </div>
+  `
 }
 
 export async function sendBrevoEmail({
@@ -135,7 +156,7 @@ export async function sendBrevoEmail({
  */
 export async function sendOrderSuccessEmail(orderId: string) {
   try {
-    const { appUrl, senderName } = await getBrevoSettings()
+    const { appUrl, senderName, whatsappNumber } = await getBrevoSettings()
 
     // 1. Fetch order details from DB with JOIN to users table as fallback
     let orderRows = await executeQuery(`
@@ -363,6 +384,8 @@ export async function sendOrderSuccessEmail(orderId: string) {
               </a>
             </div>
 
+            ${getWhatsAppBoxHtml(whatsappNumber, senderName, `Order ${order.id}`)}
+
             <p style="font-size: 12px; color: #64748b; text-align: center; margin-top: 28px; line-height: 1.4;">
               If you have any questions or need assistance, simply reply to this email.
             </p>
@@ -395,7 +418,7 @@ export async function sendOrderSuccessEmail(orderId: string) {
  */
 export async function sendOrderFailedEmail(orderId: string, reason?: string) {
   try {
-    const { appUrl, senderName } = await getBrevoSettings()
+    const { appUrl, senderName, whatsappNumber } = await getBrevoSettings()
 
     // Fetch order details from DB with JOIN to users table as fallback
     let orderRows = await executeQuery(`
@@ -515,6 +538,8 @@ export async function sendOrderFailedEmail(orderId: string, reason?: string) {
               </a>
             </div>
 
+            ${getWhatsAppBoxHtml(whatsappNumber, senderName, `Failed Payment Order ${order.id}`)}
+
             <p style="font-size: 12px; color: #64748b; text-align: center; margin-top: 28px;">
               Need help with payment? Reply directly to this email and our support team will assist you.
             </p>
@@ -543,10 +568,142 @@ export async function sendOrderFailedEmail(orderId: string, reason?: string) {
 }
 
 /**
+ * Sends an Account Confirmation & Password Creation email to Guest Checkout Users
+ */
+export async function sendGuestAccountEmail({
+  toEmail,
+  toName,
+  temporaryPassword,
+}: {
+  toEmail: string
+  toName?: string
+  temporaryPassword?: string
+}) {
+  try {
+    const { appUrl, senderName, whatsappNumber } = await getBrevoSettings()
+    const logoUrl = `${appUrl}/logo.png`
+    const loginUrl = `${appUrl}/login`
+    const recipientName = toName || toEmail.split('@')[0] || 'Valued Customer'
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Account Created & Password Set - ${senderName}</title>
+        <style>
+          @keyframes pulseGlow {
+            0% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.4); }
+            50% { box-shadow: 0 0 16px 4px rgba(37, 99, 235, 0.5); }
+            100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.4); }
+          }
+          @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+          }
+          .animated-header-bar {
+            height: 4px;
+            background: linear-gradient(90deg, #2563eb, #8b5cf6, #ec4899, #2563eb);
+            background-size: 200% 100%;
+            animation: shimmer 3s infinite linear;
+          }
+          .pulse-btn {
+            animation: pulseGlow 2.5s infinite ease-in-out;
+          }
+        </style>
+      </head>
+      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f1f5f9; margin: 0; padding: 20px;">
+        <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);">
+          
+          <!-- Animated Accent Top Line -->
+          <div class="animated-header-bar"></div>
+
+          <!-- Header with Brand Logo -->
+          <div style="background-color: #0f172a; padding: 28px 24px; text-align: center; color: #ffffff;">
+            <img src="${logoUrl}" alt="${senderName}" style="max-height: 48px; width: auto; display: block; margin: 0 auto 12px auto; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4)); border: 0;" />
+            <h1 style="margin: 0; font-size: 22px; font-weight: 800; color: #ffffff;">${senderName}</h1>
+            <p style="margin: 6px 0 0 0; color: #94a3b8; font-size: 13px; font-weight: 500;">Account Creation & Password Setup</p>
+          </div>
+
+          <!-- Body Container -->
+          <div style="padding: 28px 24px;">
+            
+            <!-- Welcome Banner -->
+            <div style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border: 1px solid #bbf7d0; border-radius: 12px; padding: 18px; text-align: center; margin-bottom: 24px;">
+              <h2 style="margin: 0; color: #166534; font-size: 19px; font-weight: 800;">🎉 Welcome to ${senderName}!</h2>
+              <p style="margin: 4px 0 0 0; color: #15803d; font-size: 13px; font-weight: 500;">Your account has been created for your checkout purchase.</p>
+            </div>
+
+            <p style="font-size: 14px; color: #334155; margin-bottom: 20px; line-height: 1.5;">
+              Hi <strong>${recipientName}</strong>,<br>
+              An account has been created for you so you can access your purchased downloads anytime from your personal dashboard.
+            </p>
+
+            <!-- Login Details Card -->
+            <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin-bottom: 24px;">
+              <h3 style="margin: 0 0 14px 0; color: #0f172a; font-size: 15px; font-weight: 700; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px;">
+                🔑 Your Login Credentials:
+              </h3>
+              <p style="margin: 8px 0; font-size: 13px; color: #334155;">
+                <strong>Email Address:</strong> <span style="font-family: monospace; color: #2563eb; font-weight: 700;">${toEmail}</span>
+              </p>
+              ${
+                temporaryPassword
+                  ? `
+                    <p style="margin: 8px 0; font-size: 13px; color: #334155;">
+                      <strong>Temporary Password:</strong> <span style="background: #e2e8f0; padding: 4px 10px; border-radius: 6px; font-family: monospace; font-weight: 800; color: #0f172a; letter-spacing: 0.5px;">${temporaryPassword}</span>
+                    </p>
+                  `
+                  : ''
+              }
+            </div>
+
+            <p style="font-size: 13px; color: #475569; margin-bottom: 24px; line-height: 1.5; background-color: #eff6ff; padding: 12px 16px; border-radius: 8px; border-left: 4px solid #2563eb;">
+              💡 <strong>Tip:</strong> You can use these credentials to log in to your dashboard anytime and view all your purchases and download links.
+            </p>
+
+            <!-- Call-to-Action Button -->
+            <div style="text-align: center; margin: 32px 0;">
+              <a href="${loginUrl}" target="_blank" class="pulse-btn" style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 10px; font-size: 15px; font-weight: 700; display: inline-block; box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);">
+                🔐 Log In to Your Account
+              </a>
+            </div>
+
+            ${getWhatsAppBoxHtml(whatsappNumber, senderName, 'account login & password setup')}
+
+            <p style="font-size: 12px; color: #64748b; text-align: center; margin-top: 28px;">
+              If you did not request this account creation, please ignore this email.
+            </p>
+          </div>
+
+          <!-- Footer with Logo -->
+          <div style="background-color: #f8fafc; padding: 20px; text-align: center; border-top: 1px solid #e2e8f0; font-size: 12px; color: #94a3b8;">
+            <img src="${logoUrl}" alt="${senderName}" style="max-height: 24px; width: auto; opacity: 0.6; margin: 0 auto 6px auto; display: block;" />
+            © ${new Date().getFullYear()} ${senderName}. All rights reserved.
+          </div>
+        </div>
+      </body>
+      </html>
+    `
+
+    return await sendBrevoEmail({
+      toEmail,
+      toName: recipientName,
+      subject: `🔑 Welcome! Account Created & Password Info - ${senderName}`,
+      htmlContent,
+    })
+  } catch (error: any) {
+    console.error('[Brevo sendGuestAccountEmail Error]', error)
+    return { success: false, error: error.message || 'Error sending guest account email' }
+  }
+}
+
+/**
  * Sends a test email to test Brevo configuration
  */
 export async function sendTestBrevoEmail(toEmail: string) {
-  const { senderName, source, appUrl } = await getBrevoSettings()
+  const { senderName, source, appUrl, whatsappNumber } = await getBrevoSettings()
   const logoUrl = `${appUrl}/logo.png`
   const htmlContent = `
     <!DOCTYPE html>
@@ -581,6 +738,8 @@ export async function sendTestBrevoEmail(toEmail: string) {
           </div>
           <p style="font-size: 13px; color: #475569; margin: 0 0 12px 0;"><strong>Credentials Source:</strong> <span style="background: #e2e8f0; padding: 2px 8px; border-radius: 4px; font-weight: 700; color: #0f172a;">${source.toUpperCase()}</span></p>
           <p style="font-size: 12px; color: #94a3b8; margin: 0;">Sent at: ${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })} IST</p>
+
+          ${getWhatsAppBoxHtml(whatsappNumber, senderName, 'testing email service')}
         </div>
         <div style="background-color: #f8fafc; padding: 16px; text-align: center; border-top: 1px solid #e2e8f0; font-size: 12px; color: #94a3b8;">
           <img src="${logoUrl}" alt="${senderName}" style="max-height: 20px; width: auto; opacity: 0.6; margin: 0 auto 4px auto; display: block;" />
