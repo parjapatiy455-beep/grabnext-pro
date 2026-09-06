@@ -33,7 +33,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
                 // Standard Next.js Sitemap expects string[] for images
                 if (p.imageUrl) {
                     const imgUrl = p.imageUrl.startsWith('http') ? p.imageUrl : `${baseUrl}${p.imageUrl}`
-                    entry.images = [imgUrl]
+                    ;(entry as any).images = [imgUrl]
                 }
                 return entry
             })
