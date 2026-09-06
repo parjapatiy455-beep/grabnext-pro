@@ -1,5 +1,5 @@
-export const runtime = 'edge'
 "use client"
+export const runtime = 'edge'
 
 import React, { useEffect, useState } from "react"
 import { useCart } from "@/contexts/cart-context"

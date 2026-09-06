@@ -1,5 +1,5 @@
-export const runtime = 'edge'
 "use client"
+export const runtime = 'edge'
 
 import { XCircle, ArrowLeft, ShoppingCart } from "lucide-react"
 import { Button } from "@/components/ui/button"

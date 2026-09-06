@@ -1,5 +1,5 @@
-export const runtime = 'edge'
 "use client"
+export const runtime = 'edge'
 
 import { useSearchParams } from "next/navigation"
 import { CheckCircle, Download, ArrowRight, ExternalLink, Loader2 } from "lucide-react"
