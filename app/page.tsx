@@ -129,25 +129,6 @@ export default function HomePage() {
 
       <StoreHeader />
 
-      {/* Hero Title Section for SEO Keyword Indexing */}
-      <section className="bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 text-white py-6 px-4 border-b border-indigo-500/20">
-        <div className="container mx-auto text-center max-w-4xl">
-          <h1 className="text-xl sm:text-2xl md:text-3xl font-black tracking-tight text-white mb-2">
-            Grabnext — Buy Digital Products, Software, Templates & Masterclasses Online India
-          </h1>
-          <p className="text-xs sm:text-sm text-indigo-200 font-medium max-w-2xl mx-auto">
-            India's #1 trusted store for cheap software source code, video editing assets bundles, Canva templates & digital downloads with instant UPI delivery.
-          </p>
-          <div className="flex flex-wrap items-center justify-center gap-4 mt-3 text-[11px] text-amber-300 font-semibold">
-            <span className="flex items-center gap-1"><Zap className="w-3.5 h-3.5" /> Instant UPI Download</span>
-            <span>•</span>
-            <span className="flex items-center gap-1"><ShieldCheck className="w-3.5 h-3.5" /> 100% Secure Payment</span>
-            <span>•</span>
-            <span className="flex items-center gap-1"><Award className="w-3.5 h-3.5" /> Best Price Guarantee</span>
-          </div>
-        </div>
-      </section>
-
       {/* Category Quick-Nav */}
       {categories.length > 0 && (
         <div className="bg-white dark:bg-slate-900 border-b dark:border-slate-800 shadow-sm transition-colors">
@@ -310,6 +291,25 @@ export default function HomePage() {
         </section>
 
       </main>
+
+      {/* Hero Title Section for SEO Keyword Indexing — Placed at bottom above Footer */}
+      <section className="bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 text-white py-6 px-4 border-t border-indigo-500/20 mt-4">
+        <div className="container mx-auto text-center max-w-4xl">
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-black tracking-tight text-white mb-2">
+            Grabnext — Buy Digital Products, Software, Templates & Masterclasses Online India
+          </h1>
+          <p className="text-xs sm:text-sm text-indigo-200 font-medium max-w-2xl mx-auto">
+            India's #1 trusted store for cheap software source code, video editing assets bundles, Canva templates & digital downloads with instant UPI delivery.
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-4 mt-3 text-[11px] text-amber-300 font-semibold">
+            <span className="flex items-center gap-1"><Zap className="w-3.5 h-3.5" /> Instant UPI Download</span>
+            <span>•</span>
+            <span className="flex items-center gap-1"><ShieldCheck className="w-3.5 h-3.5" /> 100% Secure Payment</span>
+            <span>•</span>
+            <span className="flex items-center gap-1"><Award className="w-3.5 h-3.5" /> Best Price Guarantee</span>
+          </div>
+        </div>
+      </section>
       <Footer />
     </div>
   )
