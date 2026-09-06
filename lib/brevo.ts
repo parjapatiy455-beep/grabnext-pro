@@ -20,7 +20,11 @@ export async function getBrevoSettings() {
   try {
     const rows = await executeQuery(
       "SELECT key, value FROM settings WHERE key IN ('brevo_api_key', 'brevo_sender_email', 'brevo_sender_name', 'app_url')"
-    )
+    ).catch((err) => {
+      console.warn('[Brevo DB Warning]', err)
+      return []
+    })
+
     if (Array.isArray(rows)) {
       for (const r of rows) {
         if (r.key === 'brevo_api_key' && !apiKey) apiKey = r.value
