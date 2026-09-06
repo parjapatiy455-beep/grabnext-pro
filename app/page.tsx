@@ -276,6 +276,23 @@ export default function HomePage() {
 
         {/* Visible FAQ Accordion for Search Crawlers */}
         <section className="bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-2xl p-6 shadow-sm transition-colors">
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{
+              __html: JSON.stringify({
+                "@context": "https://schema.org",
+                "@type": "FAQPage",
+                "mainEntity": FAQ_ITEMS.map((item) => ({
+                  "@type": "Question",
+                  "name": item.q,
+                  "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": item.a
+                  }
+                }))
+              })
+            }}
+          />
           <div className="flex items-center gap-2 mb-4">
             <HelpCircle className="h-5 w-5 text-primary" />
             <h2 className="text-lg font-bold text-slate-900 dark:text-white">Frequently Asked Questions</h2>
