@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { usePathname } from "next/navigation"
+import { useCart } from "@/contexts/cart-context"
 
 interface WhatsAppToggleProps {
   phoneNumber?: string
@@ -13,6 +14,7 @@ export function WhatsAppToggle({
   message = "Hi GrabNext, I need help with products!",
 }: WhatsAppToggleProps) {
   const pathname = usePathname()
+  const { isDrawerOpen } = useCart()
   const [wiggle, setWiggle] = useState(false)
 
   // Trigger subtle wiggle animation every 9 seconds for a calm, non-rushed feel
@@ -38,9 +40,11 @@ export function WhatsAppToggle({
         target="_blank"
         rel="noopener noreferrer"
         aria-label="Need Help? Chat on WhatsApp"
-        className={`group relative flex items-center gap-3 bg-[#25D366] hover:bg-[#20ba59] text-white px-4 py-3 rounded-full shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 active:scale-95 border border-white/30 ${
-          wiggle ? "wa-wiggle" : ""
-        }`}
+        className={`group relative flex items-center bg-[#25D366] hover:bg-[#20ba59] text-white shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 active:scale-95 border border-white/30 ${
+          isDrawerOpen
+            ? "w-12 h-12 p-0 rounded-full justify-center"
+            : "px-4 py-3 rounded-full gap-3"
+        } ${wiggle ? "wa-wiggle" : ""}`}
       >
         {/* Soft Breathing Glow Ring */}
         <span className="absolute -inset-1 rounded-full bg-[#25D366]/30 animate-pulse pointer-events-none opacity-60" />
@@ -54,10 +58,12 @@ export function WhatsAppToggle({
         </div>
 
         {/* Text */}
-        <div className="flex flex-col text-left">
-          <span className="text-xs font-semibold text-white/90 leading-none">Need Help?</span>
-          <span className="text-sm font-extrabold text-white tracking-wide leading-tight">Chat on WhatsApp</span>
-        </div>
+        {!isDrawerOpen && (
+          <div className="flex flex-col text-left">
+            <span className="text-xs font-semibold text-white/90 leading-none">Need Help?</span>
+            <span className="text-sm font-extrabold text-white tracking-wide leading-tight">Chat on WhatsApp</span>
+          </div>
+        )}
       </a>
 
       <style jsx global>{`

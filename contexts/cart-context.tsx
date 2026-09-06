@@ -65,18 +65,10 @@ export const CartProvider = ({ children }: CartProviderProps) => {
       const existingItem = prevItems.find((item) => item.productId === product.id)
 
       if (existingItem) {
-        toast({
-          title: "Updated cart",
-          description: `${product.title} quantity updated`,
-        })
         return prevItems.map((item) =>
           item.productId === product.id ? { ...item, quantity: item.quantity + quantity } : item,
         )
       } else {
-        toast({
-          title: "Added to cart",
-          description: `${product.title} has been added to your cart`,
-        })
         return [...prevItems, { productId: product.id, product, quantity }]
       }
     })

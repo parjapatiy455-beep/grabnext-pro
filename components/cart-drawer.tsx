@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { Badge } from "@/components/ui/badge"
 import { useCart } from "@/contexts/cart-context"
+import { usePathname } from "next/navigation"
 import Link from "next/link"
 
 interface CartDrawerProps {
@@ -15,6 +16,12 @@ interface CartDrawerProps {
 
 export function CartDrawer({ children }: CartDrawerProps) {
   const { items, totalItems, totalAmount, updateQuantity, removeFromCart, isDrawerOpen, setDrawerOpen } = useCart()
+  const pathname = usePathname()
+
+  // Automatically close cart drawer whenever page route changes (e.g. going to /checkout)
+  React.useEffect(() => {
+    setDrawerOpen(false)
+  }, [pathname, setDrawerOpen])
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("en-IN", {
@@ -49,7 +56,7 @@ export function CartDrawer({ children }: CartDrawerProps) {
                   <p className="text-muted-foreground">Add some products to get started</p>
                 </div>
                 <Button asChild className="bg-gradient-primary hover:bg-gradient-secondary transition-all duration-300 hover:scale-105">
-                  <Link href="/products">
+                  <Link href="/products" onClick={() => setDrawerOpen(false)}>
                     Browse Products
                   </Link>
                 </Button>
@@ -124,7 +131,7 @@ export function CartDrawer({ children }: CartDrawerProps) {
                     className="w-full bg-gradient-primary hover:bg-gradient-secondary transition-all duration-300 hover:scale-105 hover:shadow-lg"
                     size="lg"
                   >
-                    <Link href="/checkout">
+                    <Link href="/checkout" onClick={() => setDrawerOpen(false)}>
                       Proceed to Checkout
                     </Link>
                   </Button>
@@ -133,7 +140,7 @@ export function CartDrawer({ children }: CartDrawerProps) {
                     variant="outline"
                     className="w-full bg-transparent transition-all duration-300 hover:scale-105"
                   >
-                    <Link href="/cart">
+                    <Link href="/cart" onClick={() => setDrawerOpen(false)}>
                       View Cart
                     </Link>
                   </Button>
