@@ -93,9 +93,9 @@ export async function POST(request: NextRequest) {
         <body class="email-body" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f1f5f9; margin: 0; padding: 20px 0; -webkit-text-size-adjust: 100%;">
           <div class="email-card" style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.08);">
             <div class="animated-header-bar"></div>
-            <div class="header-box" style="background-color: #0f172a; padding: 26px 20px; text-align: center; color: #ffffff;">
-              <img src="${logoUrl}" alt="${senderName}" style="height: 52px; max-height: 52px; width: auto; margin: 0 auto; display: block; border: 0;" />
-              <p style="margin: 8px 0 0 0; color: #94a3b8; font-size: 13px;">Sample Purchase Confirmation (Test)</p>
+            <div class="header-box" style="background-color: #ffffff; border-bottom: 1px solid #e2e8f0; padding: 16px 20px; text-align: center; color: #0f172a;">
+              <img src="${logoUrl}" alt="${senderName}" style="height: 42px; max-height: 42px; width: auto; margin: 0 auto; display: block; border: 0;" />
+              <p style="margin: 6px 0 0 0; color: #64748b; font-size: 12px;">Sample Purchase Confirmation (Test)</p>
             </div>
             <div class="content-box" style="padding: 24px 20px;">
               <div style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border: 1px solid #bbf7d0; border-radius: 12px; padding: 16px; text-align: center; margin-bottom: 22px;">
@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
               <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 18px; margin-bottom: 22px;">
                 <h3 style="margin: 0 0 10px 0; color: #0f172a; font-size: 15px;">📦 Premium Video Editing FX Bundle (Sample Product)</h3>
                 <a href="${appUrl}/dashboard" target="_blank" style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color: #ffffff; text-decoration: none; padding: 10px 20px; border-radius: 8px; font-weight: 700; font-size: 13px; display: inline-block; box-shadow: 0 4px 12px rgba(37,99,235,0.3);">
-                  📥 Access / Download Asset
+                  📥 Download
                 </a>
               </div>
               <p style="font-size: 12px; color: #64748b; text-align: center;">This is a test notification email demonstrating purchase confirmation with product download links.</p>
@@ -146,7 +146,7 @@ export async function POST(request: NextRequest) {
             }
             .animated-header-bar-failed {
               height: 4px;
-              background: linear-gradient(90deg, #f97316, #ef4444, #f59e0b, #f97316);
+              background: linear-gradient(90deg, #f59e0b, #d97706, #3b82f6, #f59e0b);
               background-size: 200% 100%;
               animation: shimmer 3s infinite linear;
             }
@@ -161,18 +161,18 @@ export async function POST(request: NextRequest) {
         <body class="email-body" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f1f5f9; margin: 0; padding: 20px 0; -webkit-text-size-adjust: 100%;">
           <div class="email-card" style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.08);">
             <div class="animated-header-bar-failed"></div>
-            <div class="header-box" style="background-color: #0f172a; padding: 26px 20px; text-align: center; color: #ffffff;">
-              <img src="${logoUrl}" alt="${senderName}" style="height: 52px; max-height: 52px; width: auto; margin: 0 auto; display: block; border: 0;" />
-              <p style="margin: 8px 0 0 0; color: #94a3b8; font-size: 13px;">Sample Payment Alert (Test)</p>
+            <div class="header-box" style="background-color: #ffffff; border-bottom: 1px solid #e2e8f0; padding: 16px 20px; text-align: center; color: #0f172a;">
+              <img src="${logoUrl}" alt="${senderName}" style="height: 42px; max-height: 42px; width: auto; margin: 0 auto; display: block; border: 0;" />
+              <p style="margin: 6px 0 0 0; color: #64748b; font-size: 12px;">Sample Payment Alert (Test)</p>
             </div>
             <div class="content-box" style="padding: 24px 20px;">
-              <div style="background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); border: 1px solid #fecaca; border-radius: 12px; padding: 16px; text-align: center; margin-bottom: 22px;">
-                <h2 style="margin: 0; color: #991b1b; font-size: 18px; font-weight: 800;">⚠️ Sample Payment Unsuccessful</h2>
-                <p style="margin: 4px 0 0 0; color: #dc2626; font-size: 13px;">Order: <strong>ORD-TEST-1234</strong> | Total: <strong>₹499</strong></p>
+              <div style="background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); border: 1px solid #fde68a; border-radius: 12px; padding: 16px; text-align: center; margin-bottom: 22px;">
+                <h2 style="margin: 0; color: #92400e; font-size: 18px; font-weight: 800;">⚡ Sample Payment Incomplete</h2>
+                <p style="margin: 4px 0 0 0; color: #b45309; font-size: 13px;">Order: <strong>ORD-TEST-1234</strong> | Total: <strong>₹499</strong></p>
               </div>
               <div style="text-align: center; margin: 26px 0;">
-                <a href="${appUrl}/checkout" target="_blank" style="background: linear-gradient(135deg, #ea580c 0%, #c2410c 100%); color: #ffffff; text-decoration: none; padding: 12px 26px; border-radius: 10px; font-weight: 700; font-size: 14px; display: inline-block; box-shadow: 0 4px 14px rgba(234,88,12,0.35);">
-                  🔄 Retry Checkout
+                <a href="${appUrl}/checkout" target="_blank" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: #ffffff; text-decoration: none; padding: 12px 26px; border-radius: 10px; font-weight: 700; font-size: 14px; display: inline-block; box-shadow: 0 4px 14px rgba(245,158,11,0.35);">
+                  ⚡ Complete Payment
                 </a>
               </div>
               <p style="font-size: 12px; color: #64748b; text-align: center;">This is a test notification email demonstrating payment failure alerts.</p>

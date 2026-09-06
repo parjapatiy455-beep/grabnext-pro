@@ -261,7 +261,7 @@ export async function sendOrderSuccessEmail(orderId: string) {
             <div style="margin-top: 8px; display: flex; align-items: center; justify-content: space-between;">
               <span style="font-size: 13px; color: #475569; font-weight: 500;">🔹 ${asset.name || 'Download File'}</span>
               <a href="${downloadUrl}" target="_blank" style="background-color: #2563eb; color: #ffffff; text-decoration: none; padding: 8px 14px; border-radius: 6px; font-size: 12px; font-weight: 600; display: inline-block;">
-                📥 Access / Download
+                📥 Download
               </a>
             </div>
           `
@@ -355,9 +355,9 @@ export async function sendOrderSuccessEmail(orderId: string) {
           <div class="animated-header-bar"></div>
 
           <!-- Header with Clean Brand Logo (No Duplicate H1) -->
-          <div class="header-box" style="background-color: #0f172a; padding: 26px 20px; text-align: center; color: #ffffff;">
-            <img src="${logoUrl}" alt="${senderName}" style="height: 52px; max-height: 52px; width: auto; display: block; margin: 0 auto; border: 0; outline: none;" />
-            <p style="margin: 8px 0 0 0; color: #94a3b8; font-size: 13px; font-weight: 500;">Order & Instant Download Confirmation</p>
+          <div class="header-box" style="background-color: #ffffff; border-bottom: 1px solid #e2e8f0; padding: 16px 20px; text-align: center; color: #0f172a;">
+            <img src="${logoUrl}" alt="${senderName}" style="height: 42px; max-height: 42px; width: auto; display: block; margin: 0 auto; border: 0; outline: none;" />
+            <p style="margin: 6px 0 0 0; color: #64748b; font-size: 12px; font-weight: 500;">Order & Instant Download Confirmation</p>
           </div>
 
           <!-- Body Container -->
@@ -498,9 +498,9 @@ export async function sendOrderFailedEmail(orderId: string, reason?: string) {
 
     const responsiveStyle = `
       @keyframes pulseFailed {
-        0% { box-shadow: 0 0 0 0 rgba(234, 88, 12, 0.4); }
-        50% { box-shadow: 0 0 16px 4px rgba(234, 88, 12, 0.5); }
-        100% { box-shadow: 0 0 0 0 rgba(234, 88, 12, 0.4); }
+        0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4); }
+        50% { box-shadow: 0 0 16px 4px rgba(245, 158, 11, 0.5); }
+        100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4); }
       }
       @keyframes shimmer {
         0% { background-position: -200% 0; }
@@ -508,7 +508,7 @@ export async function sendOrderFailedEmail(orderId: string, reason?: string) {
       }
       .animated-header-bar-failed {
         height: 4px;
-        background: linear-gradient(90deg, #f97316, #ef4444, #f59e0b, #f97316);
+        background: linear-gradient(90deg, #f59e0b, #d97706, #3b82f6, #f59e0b);
         background-size: 200% 100%;
         animation: shimmer 3s infinite linear;
       }
@@ -552,18 +552,18 @@ export async function sendOrderFailedEmail(orderId: string, reason?: string) {
           <div class="animated-header-bar-failed"></div>
 
           <!-- Header with Clean Brand Logo (No Duplicate H1) -->
-          <div class="header-box" style="background-color: #0f172a; padding: 26px 20px; text-align: center; color: #ffffff;">
-            <img src="${logoUrl}" alt="${senderName}" style="height: 52px; max-height: 52px; width: auto; display: block; margin: 0 auto; border: 0; outline: none;" />
-            <p style="margin: 8px 0 0 0; color: #94a3b8; font-size: 13px; font-weight: 500;">Payment Status Alert</p>
+          <div class="header-box" style="background-color: #ffffff; border-bottom: 1px solid #e2e8f0; padding: 16px 20px; text-align: center; color: #0f172a;">
+            <img src="${logoUrl}" alt="${senderName}" style="height: 42px; max-height: 42px; width: auto; display: block; margin: 0 auto; border: 0; outline: none;" />
+            <p style="margin: 6px 0 0 0; color: #64748b; font-size: 12px; font-weight: 500;">Payment Status Alert</p>
           </div>
 
           <!-- Body Container -->
           <div class="content-box" style="padding: 24px 20px;">
             
             <!-- Failed Banner -->
-            <div style="background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); border: 1px solid #fecaca; border-radius: 12px; padding: 16px; text-align: center; margin-bottom: 22px;">
-              <h2 style="margin: 0; color: #991b1b; font-size: 18px; font-weight: 800;">⚠️ Payment Unsuccessful</h2>
-              <p style="margin: 4px 0 0 0; color: #dc2626; font-size: 13px; font-weight: 500;">Your payment for Order #${order.id} was not completed.</p>
+            <div style="background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); border: 1px solid #fde68a; border-radius: 12px; padding: 16px; text-align: center; margin-bottom: 22px;">
+              <h2 style="margin: 0; color: #92400e; font-size: 18px; font-weight: 800;">⚡ Action Required: Complete Your Order</h2>
+              <p style="margin: 4px 0 0 0; color: #b45309; font-size: 13px; font-weight: 500;">Your payment for Order #${order.id} was incomplete.</p>
             </div>
 
             <p style="font-size: 14px; color: #334155; margin-bottom: 20px; line-height: 1.5;">
@@ -582,14 +582,14 @@ export async function sendOrderFailedEmail(orderId: string, reason?: string) {
               ${itemsListHtml}
             </ul>
 
-            <p style="font-size: 13px; color: #475569; margin-bottom: 22px; line-height: 1.5; background-color: #f8fafc; padding: 12px 16px; border-radius: 8px; border-left: 4px solid #f97316;">
-              💡 <strong>Need to try again?</strong> If any amount was debited by your bank, it will be automatically refunded within 3-5 business days. You can complete your purchase using the retry link below.
+            <p style="font-size: 13px; color: #475569; margin-bottom: 22px; line-height: 1.5; background-color: #f8fafc; padding: 12px 16px; border-radius: 8px; border-left: 4px solid #f59e0b;">
+              💡 <strong>Need to try again?</strong> If any amount was debited by your bank, it will be automatically refunded within 3-5 business days. You can complete your purchase using the payment link below.
             </p>
 
-            <!-- Animated Retry Button -->
+            <!-- Animated Complete Payment Button -->
             <div style="text-align: center; margin: 28px 0;">
-              <a href="${retryCheckoutUrl}" target="_blank" class="pulse-btn-failed" style="background: linear-gradient(135deg, #ea580c 0%, #c2410c 100%); color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 10px; font-size: 15px; font-weight: 700; display: inline-block; box-shadow: 0 4px 14px rgba(234, 88, 12, 0.35);">
-                🔄 Retry Checkout / Complete Payment
+              <a href="${retryCheckoutUrl}" target="_blank" class="pulse-btn-failed" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 10px; font-size: 15px; font-weight: 700; display: inline-block; box-shadow: 0 4px 14px rgba(245, 158, 11, 0.35);">
+                ⚡ Complete Payment
               </a>
             </div>
 
@@ -637,7 +637,7 @@ export async function sendGuestAccountEmail({
   try {
     const { appUrl, senderName, whatsappNumber } = await getBrevoSettings()
     const logoUrl = `${appUrl}/logo.png`
-    const loginUrl = `${appUrl}/login`
+    const loginUrl = `${appUrl}/auth/login`
     const recipientName = toName || toEmail.split('@')[0] || 'Valued Customer'
 
     const responsiveStyle = `
@@ -696,9 +696,9 @@ export async function sendGuestAccountEmail({
           <div class="animated-header-bar"></div>
 
           <!-- Header with Clean Brand Logo (No Duplicate H1) -->
-          <div class="header-box" style="background-color: #0f172a; padding: 26px 20px; text-align: center; color: #ffffff;">
-            <img src="${logoUrl}" alt="${senderName}" style="height: 52px; max-height: 52px; width: auto; display: block; margin: 0 auto; border: 0; outline: none;" />
-            <p style="margin: 8px 0 0 0; color: #94a3b8; font-size: 13px; font-weight: 500;">Account Creation & Password Setup</p>
+          <div class="header-box" style="background-color: #ffffff; border-bottom: 1px solid #e2e8f0; padding: 16px 20px; text-align: center; color: #0f172a;">
+            <img src="${logoUrl}" alt="${senderName}" style="height: 42px; max-height: 42px; width: auto; display: block; margin: 0 auto; border: 0; outline: none;" />
+            <p style="margin: 6px 0 0 0; color: #64748b; font-size: 12px; font-weight: 500;">Account Creation & Password Setup</p>
           </div>
 
           <!-- Body Container -->
@@ -824,9 +824,9 @@ export async function sendTestBrevoEmail(toEmail: string) {
     <body class="email-body" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f1f5f9; padding: 20px 0; margin: 0;">
       <div class="email-card" style="max-width: 550px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.08);">
         <div class="animated-header-bar"></div>
-        <div class="header-box" style="background-color: #0f172a; padding: 24px 20px; text-align: center; color: #ffffff;">
-          <img src="${logoUrl}" alt="${senderName}" style="height: 48px; max-height: 48px; width: auto; margin: 0 auto; display: block; border: 0;" />
-          <p style="margin: 6px 0 0 0; color: #94a3b8; font-size: 13px;">Email Service Verification Test</p>
+        <div class="header-box" style="background-color: #ffffff; border-bottom: 1px solid #e2e8f0; padding: 16px 20px; text-align: center; color: #0f172a;">
+          <img src="${logoUrl}" alt="${senderName}" style="height: 42px; max-height: 42px; width: auto; margin: 0 auto; display: block; border: 0;" />
+          <p style="margin: 6px 0 0 0; color: #64748b; font-size: 12px;">Email Service Verification Test</p>
         </div>
         <div class="content-box" style="padding: 22px 20px;">
           <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 16px; text-align: center; margin-bottom: 20px;">
