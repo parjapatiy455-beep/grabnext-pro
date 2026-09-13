@@ -128,6 +128,37 @@ export async function sendBrevoEmail({
   }
 
   try {
+    // 1. Check if key is a Resend.com API Key (starts with 're_')
+    if (apiKey.startsWith('re_')) {
+      const resendSender = senderEmail && !senderEmail.endsWith('@gmail.com')
+        ? `${senderName} <${senderEmail}>`
+        : `${senderName} <onboarding@resend.dev>`
+
+      const response = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          from: resendSender,
+          to: [toEmail.trim()],
+          subject,
+          html: htmlContent,
+        }),
+      })
+
+      const data = await response.json()
+      if (!response.ok) {
+        console.error('[Resend API Error Response]', data)
+        return { success: false, error: data.message || data.name || JSON.stringify(data) }
+      }
+
+      console.log(`[Resend Email Sent] Message ID: ${data.id} to ${toEmail}`)
+      return { success: true, messageId: data.id }
+    }
+
+    // 2. Standard Brevo API Call
     const response = await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST',
       headers: {
@@ -160,7 +191,7 @@ export async function sendBrevoEmail({
       const lower = errMsg.toLowerCase()
 
       if (lower.includes('key not found') || data.code === 'unauthorized' || response.status === 401) {
-        errMsg = "Brevo API Key Invalid (Key not found). Generate a new v3 key on Brevo.com -> Profile -> 'SMTP & API' -> 'API Keys'."
+        errMsg = "Brevo API Key Invalid or Account Suspended. Check Brevo account status or switch to Resend.com key."
       } else if (lower.includes('sender') || lower.includes('unauthorized sender')) {
         errMsg = `Sender Email (${senderEmail}) is not verified on Brevo. Verify this email on Brevo.com -> Senders & IPs -> Senders.`
       } else if (lower.includes('quota') || lower.includes('limit')) {
@@ -173,7 +204,7 @@ export async function sendBrevoEmail({
     console.log(`[Brevo Email Sent] Message ID: ${data.messageId} to ${toEmail}`)
     return { success: true, messageId: data.messageId }
   } catch (err: any) {
-    console.error('[Brevo Exception]', err)
+    console.error('[Email Dispatch Exception]', err)
     return { success: false, error: err.message || 'Failed to send email due to network exception' }
   }
 }
