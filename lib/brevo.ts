@@ -145,6 +145,7 @@ export async function sendBrevoEmail({
           to: [toEmail.trim()],
           subject,
           html: htmlContent,
+          headers: defaultHeaders,
         }),
       })
 
