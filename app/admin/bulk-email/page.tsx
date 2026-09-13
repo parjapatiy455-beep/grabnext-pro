@@ -9,7 +9,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { toast } from "@/hooks/use-toast"
-import { Mail, Send, Sparkles, Check, AlertCircle, Loader2, Tag, ShoppingBag, Eye, Users, RefreshCw, Smartphone, Laptop } from "lucide-react"
+import Link from "next/link"
+import { Mail, Send, Sparkles, Check, AlertCircle, Loader2, Tag, ShoppingBag, Eye, Users, RefreshCw, Smartphone, Laptop, Key } from "lucide-react"
 
 // Pre-defined campaign templates
 const PRESETS = [
@@ -271,13 +272,22 @@ export default function BulkEmailAdminPage() {
 
       {/* Warning if Brevo not configured */}
       {!stats.isBrevoConfigured && (
-        <div className="bg-red-50 border border-red-200 text-red-800 p-4 rounded-xl flex items-start gap-3">
-          <AlertCircle className="h-5 w-5 text-red-600 mt-0.5 shrink-0" />
-          <div>
-            <h4 className="font-bold text-sm">Brevo Email API Key Missing</h4>
-            <p className="text-xs mt-0.5 text-red-700">
-              Please set <code className="bg-red-100 px-1 py-0.5 rounded font-mono">BREVO_API_KEY</code> and <code className="bg-red-100 px-1 py-0.5 rounded font-mono">BREVO_SENDER_EMAIL</code> in Payment/API settings or <code className="bg-red-100 px-1 py-0.5 rounded font-mono">.env</code> file before dispatching bulk emails.
-            </p>
+        <div className="bg-red-50 border border-red-200 text-red-800 p-4 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 text-red-600 mt-0.5 shrink-0" />
+            <div>
+              <h4 className="font-bold text-sm text-red-900">Brevo Email API Key or Sender Email Missing</h4>
+              <p className="text-xs mt-0.5 text-red-700">
+                Emails cannot be delivered until <code className="bg-red-100 px-1 py-0.5 rounded font-mono">BREVO_API_KEY</code> and <code className="bg-red-100 px-1 py-0.5 rounded font-mono">BREVO_SENDER_EMAIL</code> are configured in database settings or environment.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <Link href="/admin/email-test">
+              <Button size="sm" className="bg-red-600 hover:bg-red-700 text-white font-bold gap-1 text-xs">
+                <Key className="h-3.5 w-3.5" /> Configure Credentials
+              </Button>
+            </Link>
           </div>
         </div>
       )}

@@ -94,13 +94,25 @@ export async function POST(request: NextRequest) {
       ])
     }
 
+    let emailRes: { success: boolean; error?: string; messageId?: string } | null = null
     if (initialStatus === 'paid') {
-      await sendOrderSuccessEmail(id).catch(err => console.error('[Brevo Email Error]', err))
+      emailRes = await sendOrderSuccessEmail(id)
+      if (!emailRes.success) {
+        console.error(`[Order Success Email Failure] Order ${id}:`, emailRes.error)
+      }
     } else if (initialStatus === 'failed') {
-      await sendOrderFailedEmail(id).catch(err => console.error('[Brevo Email Error]', err))
+      emailRes = await sendOrderFailedEmail(id)
+      if (!emailRes.success) {
+        console.error(`[Order Failed Email Failure] Order ${id}:`, emailRes.error)
+      }
     }
 
-    return NextResponse.json({ success: true, id }, { status: 201 })
+    return NextResponse.json({
+      success: true,
+      id,
+      emailSent: emailRes ? emailRes.success : null,
+      emailError: emailRes && !emailRes.success ? emailRes.error : null
+    }, { status: 201 })
   } catch (error: any) {
     console.error("[v0] Create Order Error:", error)
     return NextResponse.json({ error: error.message }, { status: 500 })
@@ -125,13 +137,24 @@ export async function PATCH(request: NextRequest) {
     `, [newStatus, paymentId || null, now, id])
 
     // Trigger Brevo transactional emails (await to guarantee execution on Cloudflare Edge)
+    let emailRes: { success: boolean; error?: string; messageId?: string } | null = null
     if (newStatus === 'paid') {
-      await sendOrderSuccessEmail(id).catch(err => console.error('[Brevo Success Email Error]', err))
+      emailRes = await sendOrderSuccessEmail(id)
+      if (!emailRes.success) {
+        console.error(`[Order Success Email Failure] Order ${id}:`, emailRes.error)
+      }
     } else if (newStatus === 'failed') {
-      await sendOrderFailedEmail(id, reason).catch(err => console.error('[Brevo Failure Email Error]', err))
+      emailRes = await sendOrderFailedEmail(id, reason)
+      if (!emailRes.success) {
+        console.error(`[Order Failure Email Failure] Order ${id}:`, emailRes.error)
+      }
     }
 
-    return NextResponse.json({ success: true })
+    return NextResponse.json({
+      success: true,
+      emailSent: emailRes ? emailRes.success : null,
+      emailError: emailRes && !emailRes.success ? emailRes.error : null
+    })
   } catch (error: any) {
     console.error("[v0] Update Order Error:", error)
     return NextResponse.json({ error: error.message }, { status: 500 })

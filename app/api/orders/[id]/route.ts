@@ -40,13 +40,26 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
         )
 
         // Trigger Brevo transactional emails (await to guarantee execution on Cloudflare Edge)
+        let emailRes: { success: boolean; error?: string; messageId?: string } | null = null
         if (status === 'paid') {
-            await sendOrderSuccessEmail(params.id).catch(err => console.error('[Brevo Success Email Error]', err))
+            emailRes = await sendOrderSuccessEmail(params.id)
+            if (!emailRes.success) {
+                console.error(`[Order Success Email Failure] Order ${params.id}:`, emailRes.error)
+            }
         } else if (status === 'failed') {
-            await sendOrderFailedEmail(params.id, reason).catch(err => console.error('[Brevo Failure Email Error]', err))
+            emailRes = await sendOrderFailedEmail(params.id, reason)
+            if (!emailRes.success) {
+                console.error(`[Order Failure Email Failure] Order ${params.id}:`, emailRes.error)
+            }
         }
 
-        return NextResponse.json({ success: true, id: params.id, status })
+        return NextResponse.json({
+            success: true,
+            id: params.id,
+            status,
+            emailSent: emailRes ? emailRes.success : null,
+            emailError: emailRes && !emailRes.success ? emailRes.error : null
+        })
     } catch (error: any) {
         console.error("[Orders PATCH Error]", error)
         return NextResponse.json({ error: error.message }, { status: 500 })

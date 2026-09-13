@@ -181,6 +181,7 @@ export async function POST(request: NextRequest) {
     const failedEmails: string[] = []
 
     // Send emails sequentially or in small batches to avoid rate limits
+    let lastError = ''
     for (const recipient of recipients) {
       const htmlContent = generateOfferEmailHtml({
         headline,
@@ -209,7 +210,21 @@ export async function POST(request: NextRequest) {
       } else {
         failedCount++
         failedEmails.push(recipient.email)
+        if (!lastError) lastError = res.error || 'Unknown Brevo API error'
       }
+    }
+
+    if (sentCount === 0 && recipients.length > 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: `❌ Email Delivery Failed (0 of ${recipients.length} delivered). Reason: ${lastError}`,
+          sentCount: 0,
+          failedCount,
+          failedEmails,
+        },
+        { status: 400 }
+      )
     }
 
     return NextResponse.json({
@@ -218,7 +233,7 @@ export async function POST(request: NextRequest) {
       sentCount,
       failedCount,
       failedEmails,
-      message: `🎉 Bulk Offer Email Campaign sent! Delivered to ${sentCount} of ${recipients.length} users.`,
+      message: `🎉 Bulk Offer Email Campaign processed! Delivered to ${sentCount} of ${recipients.length} users. ${failedCount > 0 ? `(${failedCount} failed: ${lastError})` : ''}`,
     })
   } catch (error: any) {
     console.error('[Bulk Email API POST Error]', error)

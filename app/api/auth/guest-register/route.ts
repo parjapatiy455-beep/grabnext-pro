@@ -104,17 +104,29 @@ export async function POST(request: NextRequest) {
         cookies().set('session', session, { expires, httpOnly: true })
 
         // Send Account Confirmation & Password Email via Brevo
-        await sendGuestAccountEmail({
+        const emailRes = await sendGuestAccountEmail({
             toEmail: email,
             toName: name,
             temporaryPassword,
-        }).catch(err => console.error('[Guest Account Email Error]', err))
+        })
+
+        if (!emailRes.success) {
+            console.error(`[Guest Account Email Failure] to ${email}:`, emailRes.error)
+        } else {
+            console.log(`[Guest Account Email Sent] Message ID: ${emailRes.messageId} to ${email}`)
+        }
+
+        const emailNotice = emailRes.success
+            ? `Account login details have been emailed to ${email}.`
+            : `(Note: Email delivery failed: ${emailRes.error || 'Check Brevo settings'}). Please save your password.`
 
         return NextResponse.json({
             user: { uid, email, displayName: name, isGuest: true },
             isExisting: false,
             temporaryPassword,
-            message: `Welcome to Grabnext! A guest account has been created for you. Account login details have been emailed to ${email}.`
+            emailSent: emailRes.success,
+            emailError: emailRes.success ? null : emailRes.error,
+            message: `Welcome to Grabnext! A guest account has been created for you. ${emailNotice}`
         }, { status: 201 })
     } catch (error: any) {
         console.error('[Guest Register Error]', error)

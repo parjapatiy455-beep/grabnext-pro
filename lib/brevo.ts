@@ -105,12 +105,17 @@ export async function sendBrevoEmail({
 
   if (!apiKey) {
     console.error('[Brevo Error] BREVO_API_KEY is not configured.')
-    return { success: false, error: 'BREVO_API_KEY is missing' }
+    return { success: false, error: 'Brevo API Key missing. Please set BREVO_API_KEY in Admin Payment/Email Settings or .env file.' }
   }
 
   if (!senderEmail) {
     console.error('[Brevo Error] BREVO_SENDER_EMAIL is not configured.')
-    return { success: false, error: 'BREVO_SENDER_EMAIL is missing' }
+    return { success: false, error: 'Brevo Sender Email missing. Please set BREVO_SENDER_EMAIL in Admin Payment/Email Settings or .env file.' }
+  }
+
+  if (!toEmail || !toEmail.includes('@')) {
+    console.error('[Brevo Error] Invalid recipient email address:', toEmail)
+    return { success: false, error: `Invalid recipient email address: ${toEmail}` }
   }
 
   // Priority headers to signal transactional/urgent deliverability to Gmail Primary Inbox
@@ -150,11 +155,18 @@ export async function sendBrevoEmail({
 
     const data = await response.json()
     if (!response.ok) {
-      console.error('[Brevo API Error]', data)
+      console.error('[Brevo API Error Response]', data)
       let errMsg = data.message || JSON.stringify(data)
-      if (errMsg.toLowerCase().includes('key not found') || data.code === 'unauthorized') {
-        errMsg = "Brevo API Key Invalid (Key not found). Please generate a new key on Brevo.com -> Profile -> 'SMTP & API' -> 'API Keys' tab."
+      const lower = errMsg.toLowerCase()
+
+      if (lower.includes('key not found') || data.code === 'unauthorized' || response.status === 401) {
+        errMsg = "Brevo API Key Invalid (Key not found). Generate a new v3 key on Brevo.com -> Profile -> 'SMTP & API' -> 'API Keys'."
+      } else if (lower.includes('sender') || lower.includes('unauthorized sender')) {
+        errMsg = `Sender Email (${senderEmail}) is not verified on Brevo. Verify this email on Brevo.com -> Senders & IPs -> Senders.`
+      } else if (lower.includes('quota') || lower.includes('limit')) {
+        errMsg = "Brevo email sending limit/quota reached for your account."
       }
+
       return { success: false, error: errMsg }
     }
 
@@ -162,7 +174,7 @@ export async function sendBrevoEmail({
     return { success: true, messageId: data.messageId }
   } catch (err: any) {
     console.error('[Brevo Exception]', err)
-    return { success: false, error: err.message || 'Failed to send email' }
+    return { success: false, error: err.message || 'Failed to send email due to network exception' }
   }
 }
 
