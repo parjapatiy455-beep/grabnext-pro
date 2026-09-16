@@ -13,10 +13,11 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { fetchProducts, createD1Product, updateD1Product, deleteD1Product, fetchCategories, reorderD1Products } from "@/lib/d1-client"
-import { Plus, Search, Trash2, Edit, Loader2, Upload, ImageIcon, FileText, Video, Link as LinkIcon, File, X, ArrowUp, ArrowDown, ArrowUpDown, Save, Check } from "lucide-react"
+import { Plus, Search, Trash2, Edit, Loader2, Upload, ImageIcon, FileText, Video, Link as LinkIcon, File as FileIcon, X, ArrowUp, ArrowDown, ArrowUpDown, Save, Check, Zap } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 import type { Product, DigitalAsset } from "@/lib/types"
 import Image from "next/image"
+import { convertToWebP } from "@/lib/image-optimizer"
 
 const EMPTY_FORM = {
   title: "",
@@ -253,7 +254,7 @@ function ProductForm({
                   {asset.type === 'pdf' ? <FileText className="h-4 w-4 text-red-500" /> :
                     asset.type === 'video' ? <Video className="h-4 w-4 text-blue-500" /> :
                       asset.type === 'link' ? <LinkIcon className="h-4 w-4 text-green-500" /> :
-                        <File className="h-4 w-4 text-gray-500" />}
+                        <FileIcon className="h-4 w-4 text-gray-500" />}
                   <span className="text-sm font-medium line-clamp-1 max-w-[120px]">{asset.name}</span>
                   <span className="text-[10px] bg-slate-100 px-1.5 py-0.5 rounded text-slate-500 uppercase">{asset.provider}</span>
                 </div>
@@ -479,6 +480,48 @@ export default function ProductsPage() {
     }
     : EMPTY_FORM as FormData
 
+  const [optimizing, setOptimizing] = useState(false)
+
+  const handleBatchOptimize = async () => {
+    const nonWebp = products.filter(p => p.imageUrl && !p.imageUrl.endsWith('.webp'))
+    if (nonWebp.length === 0) {
+      toast({ title: "✅ All product images are already in WebP format!" })
+      return
+    }
+    if (!confirm(`Found ${nonWebp.length} product(s) with non-WebP images. Convert them now to make your website faster?`)) return
+
+    setOptimizing(true)
+    let count = 0
+    try {
+      for (const p of nonWebp) {
+        try {
+          const res = await fetch(p.imageUrl)
+          const blob = await res.blob()
+          const file = new File([blob], `product-${p.id.slice(0, 8)}.png`, { type: blob.type || 'image/png' })
+          const webpFile = await convertToWebP(file, { maxWidth: 1200, maxHeight: 1200, quality: 0.85 })
+
+          const fd = new FormData(); fd.append("file", webpFile)
+          const upRes = await fetch("/api/upload", { method: "POST", body: fd })
+          const upData = await upRes.json()
+          if (!upRes.ok) throw new Error(upData.error)
+
+          await updateD1Product(p.id, {
+            ...p,
+            imageUrl: upData.url,
+            images: [upData.url]
+          })
+          count++
+        } catch (e: any) {
+          console.error("Failed to convert product:", p.title, e)
+        }
+      }
+      toast({ title: `✅ Converted ${count} product image(s) to WebP!` })
+      loadData()
+    } finally {
+      setOptimizing(false)
+    }
+  }
+
   return (
     <div className="p-8 space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -489,6 +532,18 @@ export default function ProductsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button 
+            variant="outline" 
+            onClick={handleBatchOptimize} 
+            disabled={optimizing || loading}
+            className="border-emerald-500 text-emerald-600 hover:bg-emerald-50"
+          >
+            {optimizing ? (
+              <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Converting...</>
+            ) : (
+              <><Zap className="mr-2 h-4 w-4 fill-emerald-600" />Convert Existing to WebP</>
+            )}
+          </Button>
           {isOrderChanged && (
             <Button onClick={saveOrder} disabled={savingOrder} className="bg-emerald-600 hover:bg-emerald-700 text-white animate-pulse">
               {savingOrder ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}

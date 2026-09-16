@@ -36,7 +36,7 @@ export async function generateMetadata(): Promise<Metadata> {
         "India's trusted digital store. Software, courses, Canva templates, video editing bundles & more at the best prices with instant delivery and secure UPI payment.",
       images: [
         {
-          url: `${siteUrl}/logo.png`,
+          url: `${siteUrl}/logo.webp`,
           width: 512,
           height: 512,
           alt: "Grabnext - Digital Marketplace India",
@@ -50,7 +50,7 @@ export async function generateMetadata(): Promise<Metadata> {
       title: "Grabnext - Buy Digital Products & Software Online India",
       description:
         "India's trusted digital store. Buy software, courses, design templates & video bundles with instant delivery.",
-      images: [`${siteUrl}/logo.png`],
+      images: [`${siteUrl}/logo.webp`],
     },
     robots: {
       index: true,
@@ -67,9 +67,12 @@ export async function generateMetadata(): Promise<Metadata> {
       google: "a6IFtvu-QdswT63axIr-jp_-vPxu2OYz5dpN6y8CZmk",
     },
     icons: {
-      icon: "/favicon.png",
-      shortcut: "/favicon.png",
-      apple: "/favicon.png",
+      icon: [
+        { url: "/favicon.webp", type: "image/webp" },
+        { url: "/favicon.ico", sizes: "any" }
+      ],
+      shortcut: "/favicon.webp",
+      apple: "/icon.webp",
     },
     alternates: {
       canonical: siteUrl,
@@ -159,7 +162,7 @@ html {
                 "@type": "OnlineStore",
                 "name": "Grabnext",
                 "url": siteUrl,
-                "logo": `${siteUrl}/logo.png`,
+                "logo": `${siteUrl}/logo.webp`,
                 "description": DEFAULT_SITE_DESCRIPTION,
                 "currenciesAccepted": "INR",
                 "paymentAccepted": "UPI, Google Pay, PhonePe, Paytm",

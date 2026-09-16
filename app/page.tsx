@@ -176,6 +176,7 @@ export default function HomePage() {
                       alt={b.title || "Banner"} 
                       fetchPriority={i === 0 ? "high" : "low"}
                       loading={i === 0 ? "eager" : "lazy"}
+                      decoding="async"
                       className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 hover:scale-[1.01]" 
                     />
                   )}

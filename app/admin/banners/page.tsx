@@ -9,7 +9,8 @@ import { Switch } from "@/components/ui/switch"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { toast } from "@/hooks/use-toast"
-import { Plus, Trash2, Edit, Upload, Loader2, ImageIcon, GripVertical } from "lucide-react"
+import { Plus, Trash2, Edit, Upload, Loader2, ImageIcon, GripVertical, Zap } from "lucide-react"
+import { convertToWebP } from "@/lib/image-optimizer"
 
 const EMPTY = { title: "", subtitle: "", imageUrl: "", linkUrl: "/products", buttonText: "Shop Now", bgColor: "#1e40af", isActive: true, sortOrder: 0 }
 
@@ -21,14 +22,17 @@ function BannerForm({ initial, onSubmit, submitting, mode }: { initial: any; onS
     useEffect(() => setForm(initial), [initial])
 
     const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0]; if (!file) return
+        const rawFile = e.target.files?.[0]; if (!rawFile) return
         setUploading(true)
         try {
+            // Automatically convert banner PNG/JPEG to WebP for maximum speed and tiny size
+            const file = await convertToWebP(rawFile, { maxWidth: 1920, maxHeight: 800, quality: 0.85 })
             const fd = new FormData(); fd.append("file", file)
             const res = await fetch("/api/upload", { method: "POST", body: fd })
             const data = await res.json()
             if (!res.ok) throw new Error(data.error)
             setForm({ ...form, imageUrl: data.url })
+            toast({ title: "✅ Banner uploaded", description: `Optimized as WebP (${Math.round(file.size / 1024)} KB)` })
         } catch (err: any) {
             toast({ title: "Upload failed", description: err.message, variant: "destructive" })
         } finally { setUploading(false) }
@@ -161,22 +165,78 @@ export default function BannersPage() {
         } catch { toast({ title: "Failed to toggle", variant: "destructive" }) }
     }
 
+    const [optimizing, setOptimizing] = useState(false)
+
+    const handleBatchOptimize = async () => {
+        const nonWebp = banners.filter(b => b.imageUrl && !b.imageUrl.endsWith('.webp'))
+        if (nonWebp.length === 0) {
+            toast({ title: "✅ All banners are already in WebP format!" })
+            return
+        }
+        if (!confirm(`Found ${nonWebp.length} banner(s) not in WebP format. Convert them now to make your website faster?`)) return
+
+        setOptimizing(true)
+        let count = 0
+        try {
+            for (const b of nonWebp) {
+                try {
+                    const res = await fetch(b.imageUrl)
+                    const blob = await res.blob()
+                    const file = new File([blob], `banner-${b.id}.png`, { type: blob.type || 'image/png' })
+                    const webpFile = await convertToWebP(file, { maxWidth: 1920, maxHeight: 800, quality: 0.85 })
+
+                    const fd = new FormData(); fd.append("file", webpFile)
+                    const upRes = await fetch("/api/upload", { method: "POST", body: fd })
+                    const upData = await upRes.json()
+                    if (!upRes.ok) throw new Error(upData.error)
+
+                    await fetch(`/api/banners/${b.id}`, {
+                        method: "PUT",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ ...b, imageUrl: upData.url })
+                    })
+                    count++
+                } catch (e: any) {
+                    console.error("Failed to convert banner:", b.title, e)
+                }
+            }
+            toast({ title: `✅ Converted ${count} banner(s) to WebP!` })
+            load()
+        } finally {
+            setOptimizing(false)
+        }
+    }
+
     return (
         <div className="p-8 space-y-6">
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
                     <h1 className="text-3xl font-bold">Banners</h1>
                     <p className="text-sm text-muted-foreground mt-1">Manage homepage promotional banners</p>
                 </div>
-                <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-                    <DialogTrigger asChild>
-                        <Button><Plus className="mr-2 h-4 w-4" />Add Banner</Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-                        <DialogHeader><DialogTitle>Create Banner</DialogTitle></DialogHeader>
-                        <BannerForm initial={{ ...EMPTY }} onSubmit={handleCreate} submitting={submitting} mode="create" />
-                    </DialogContent>
-                </Dialog>
+                <div className="flex items-center gap-2">
+                    <Button 
+                        variant="outline" 
+                        onClick={handleBatchOptimize} 
+                        disabled={optimizing || loading}
+                        className="border-emerald-500 text-emerald-600 hover:bg-emerald-50"
+                    >
+                        {optimizing ? (
+                            <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Converting...</>
+                        ) : (
+                            <><Zap className="mr-2 h-4 w-4 fill-emerald-600" />Convert Existing to WebP</>
+                        )}
+                    </Button>
+                    <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+                        <DialogTrigger asChild>
+                            <Button><Plus className="mr-2 h-4 w-4" />Add Banner</Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+                            <DialogHeader><DialogTitle>Create Banner</DialogTitle></DialogHeader>
+                            <BannerForm initial={{ ...EMPTY }} onSubmit={handleCreate} submitting={submitting} mode="create" />
+                        </DialogContent>
+                    </Dialog>
+                </div>
             </div>
 
             <Dialog open={!!editBanner} onOpenChange={(o) => { if (!o) setEditBanner(null) }}>

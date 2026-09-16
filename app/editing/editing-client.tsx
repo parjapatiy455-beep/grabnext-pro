@@ -798,8 +798,11 @@ export function EditingLandingPageClient() {
           <div className="flex flex-col items-center space-y-3">
             <div className="relative">
               <img 
-                src="/logo.png" 
+                src="/logo.webp" 
                 alt="GrabNext Logo" 
+                width={150}
+                height={40}
+                decoding="async"
                 className="h-10 w-auto object-contain dark:brightness-110" 
               />
             </div>

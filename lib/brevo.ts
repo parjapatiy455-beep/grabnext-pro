@@ -339,7 +339,7 @@ export async function sendOrderSuccessEmail(orderId: string) {
       downloadLinksHtml += `</div>`
     })
 
-    const logoUrl = `${appUrl}/logo.png`
+    const logoUrl = `${appUrl}/logo.webp`
     const viewAccessUrl = `${appUrl}/checkout/success?utr=${order.paymentId || order.id}`
 
     // Common mobile responsive style block
@@ -544,7 +544,7 @@ export async function sendOrderFailedEmail(orderId: string, reason?: string) {
 
     const items: any[] = order.items ? JSON.parse(order.items) : []
     const retryCheckoutUrl = `${appUrl}/checkout`
-    const logoUrl = `${appUrl}/logo.png`
+    const logoUrl = `${appUrl}/logo.webp`
 
     let itemsListHtml = ''
     items.forEach((item: any) => {
@@ -695,7 +695,7 @@ export async function sendGuestAccountEmail({
 }) {
   try {
     const { appUrl, senderName, whatsappNumber } = await getBrevoSettings()
-    const logoUrl = `${appUrl}/logo.png`
+    const logoUrl = `${appUrl}/logo.webp`
     const loginUrl = `${appUrl}/auth/login`
     const recipientName = toName || toEmail.split('@')[0] || 'Valued Customer'
 
@@ -838,7 +838,7 @@ export async function sendGuestAccountEmail({
  */
 export async function sendTestBrevoEmail(toEmail: string) {
   const { senderName, source, appUrl, whatsappNumber } = await getBrevoSettings()
-  const logoUrl = `${appUrl}/logo.png`
+  const logoUrl = `${appUrl}/logo.webp`
 
   const responsiveStyle = `
     @keyframes shimmer {
@@ -943,7 +943,7 @@ export function generateOfferEmailHtml({
   isPrimaryMode?: boolean
 }) {
   const cleanAppUrl = (appUrl || 'https://grabnext.in').replace(/\/$/, '')
-  const logoUrl = `${cleanAppUrl}/logo.png`
+  const logoUrl = `${cleanAppUrl}/logo.webp`
   const targetCtaUrl = ctaUrl && ctaUrl.trim() !== '' ? ctaUrl : `${cleanAppUrl}/products`
   const cleanCtaText = ctaText && ctaText.trim() !== '' ? ctaText : '⚡ Claim Offer Now'
 

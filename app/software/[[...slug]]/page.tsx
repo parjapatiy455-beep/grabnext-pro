@@ -541,7 +541,7 @@ export default function SoftwareFunnelPage({ params }: { params?: { slug?: strin
       title: "Adobe All Premium Software Bundle 2026",
       price: 249,
       category: "software",
-      imageUrl: "/hero-bundle.png",
+      imageUrl: "/hero-bundle.webp",
       downloadUrl: "[]",
       isActive: true,
       tags: ["adobe", "bundle", "lifetime"]
@@ -571,7 +571,7 @@ export default function SoftwareFunnelPage({ params }: { params?: { slug?: strin
       title: "Adobe All Premium Software Bundle 2026",
       price: 249,
       category: "software",
-      imageUrl: "/hero-bundle.png",
+      imageUrl: "/hero-bundle.webp",
       downloadUrl: "[]",
       isActive: true,
       tags: ["adobe", "bundle", "lifetime"]
@@ -644,10 +644,13 @@ export default function SoftwareFunnelPage({ params }: { params?: { slug?: strin
             {/* Adobe Bundle Image */}
             <div className="mx-auto mb-10 rounded-2xl overflow-hidden shadow-2xl" style={{ maxWidth: 1000 }}>
                <img 
-                 src="/hero-bundle.png" 
+                 src="/hero-bundle.webp" 
                  alt="All Adobe Software Bundle" 
+                 width={1000}
+                 height={458}
                  fetchPriority="high" 
                  loading="eager" 
+                 decoding="async"
                  className="w-full h-auto" 
                />
             </div>
@@ -875,7 +878,13 @@ export default function SoftwareFunnelPage({ params }: { params?: { slug?: strin
                   <div className="relative group max-w-[310px] w-full">
                     <div className="absolute -inset-1.5 bg-gradient-to-r from-blue-500 to-blue-600 rounded-2xl blur opacity-15 group-hover:opacity-25 transition duration-500"></div>
                     <div className="relative bg-white rounded-2xl overflow-hidden shadow-md border border-slate-200">
-                      <img src="/images/graphic-bundle-675gb.png" alt="800+ GB Graphic Bundle Box Mockup" className="w-full h-auto object-cover transform hover:scale-102 transition-transform duration-300" />
+                      <img 
+                        src="/images/graphic-bundle-675gb.webp" 
+                        alt="800+ GB Graphic Bundle Box Mockup" 
+                        loading="lazy"
+                        decoding="async"
+                        className="w-full h-auto object-cover transform hover:scale-102 transition-transform duration-300" 
+                      />
                     </div>
                   </div>
                   <span className="text-xs text-slate-500 mt-3 font-extrabold uppercase tracking-wider text-center">

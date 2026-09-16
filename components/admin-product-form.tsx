@@ -13,6 +13,7 @@ import { toast } from "@/hooks/use-toast"
 import { ArrowLeft, Upload, Loader2, X, ImageIcon, Plus, GripVertical, FileText, Video, Link as LinkIcon, File } from "lucide-react"
 import { fetchCategories } from "@/lib/d1-client"
 import { DigitalAsset } from "@/lib/types"
+import { convertToWebP } from "@/lib/image-optimizer"
 
 interface ProductFormProps {
     mode: "create" | "edit"
@@ -77,8 +78,10 @@ export function AdminProductForm({ mode, productId }: ProductFormProps) {
         if (!files || files.length === 0) return
         setUploading(true)
         const uploaded: string[] = []
-        for (const file of Array.from(files)) {
+        for (const rawFile of Array.from(files)) {
             try {
+                // Automatically convert PNG/JPG to WebP for fast website load
+                const file = await convertToWebP(rawFile, { maxWidth: 1200, maxHeight: 1200, quality: 0.85 })
                 const fd = new FormData(); fd.append("file", file)
                 const endpoint = imageStorageProvider === "vercel" ? "/api/upload" : "/api/upload-tdrive"
                 const res = await fetch(endpoint, { method: "POST", body: fd })
@@ -87,12 +90,12 @@ export function AdminProductForm({ mode, productId }: ProductFormProps) {
                 const imageUrl = imageStorageProvider === "vercel" ? data.url : data.preview_url
                 uploaded.push(imageUrl)
             } catch (err: any) {
-                toast({ title: `Upload failed: ${file.name}`, description: err.message, variant: "destructive" })
+                toast({ title: `Upload failed: ${rawFile.name}`, description: err.message, variant: "destructive" })
             }
         }
         setForm(f => ({ ...f, images: [...f.images, ...uploaded] }))
         setUploading(false)
-        toast({ title: `✅ ${uploaded.length} image(s) uploaded!` })
+        toast({ title: `✅ ${uploaded.length} image(s) optimized & uploaded as WebP!` })
     }
 
     const handleDigitalUpload = async (files: FileList | null) => {

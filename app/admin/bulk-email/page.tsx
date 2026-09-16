@@ -736,7 +736,7 @@ export default function BulkEmailAdminPage() {
                           {featuredProductsObjects.map((prod) => (
                             <div key={prod.id} className="bg-slate-50 border p-2 rounded-lg flex items-center justify-between gap-2">
                               <img
-                                src={prod.imageUrl || "/logo.png"}
+                                src={prod.imageUrl || "/logo.webp"}
                                 alt={prod.title}
                                 className="w-10 h-10 object-cover rounded border bg-white shrink-0"
                               />

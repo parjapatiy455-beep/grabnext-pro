@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
     if (type === 'success') {
       const appUrl = settings.appUrl
       const senderName = settings.senderName
-      const logoUrl = `${appUrl}/logo.png`
+      const logoUrl = `${appUrl}/logo.webp`
       const sampleHtml = `
         <!DOCTYPE html>
         <html>
@@ -132,7 +132,7 @@ export async function POST(request: NextRequest) {
     if (type === 'failed') {
       const appUrl = settings.appUrl
       const senderName = settings.senderName
-      const logoUrl = `${appUrl}/logo.png`
+      const logoUrl = `${appUrl}/logo.webp`
       const sampleHtml = `
         <!DOCTYPE html>
         <html>

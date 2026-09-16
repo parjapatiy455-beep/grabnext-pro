@@ -12,6 +12,7 @@ import { Switch } from "@/components/ui/switch"
 import { fetchCategories, createD1Category } from "@/lib/d1-client"
 import { Plus, Loader2, Trash2, Edit, Upload, ImageIcon } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
+import { convertToWebP } from "@/lib/image-optimizer"
 
 const EMPTY = { name: "", description: "", imageUrl: "", isActive: true }
 
@@ -25,15 +26,16 @@ function CategoryForm({ initial, onSubmit, submitting, mode }: {
   useEffect(() => setForm(initial), [initial])
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]; if (!file) return
+    const rawFile = e.target.files?.[0]; if (!rawFile) return
     setUploading(true)
     try {
+      const file = await convertToWebP(rawFile, { maxWidth: 800, maxHeight: 800, quality: 0.85 })
       const fd = new FormData(); fd.append("file", file)
       const res = await fetch("/api/upload", { method: "POST", body: fd })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || "Upload failed")
       setForm({ ...form, imageUrl: data.url })
-      toast({ title: "✅ Image uploaded!" })
+      toast({ title: "✅ Image optimized & uploaded as WebP!" })
     } catch (err: any) {
       toast({ title: "Upload failed", description: err.message, variant: "destructive" })
     } finally { setUploading(false) }
