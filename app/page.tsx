@@ -6,6 +6,8 @@ import Link from "next/link"
 import { StoreHeader } from "@/components/store-header"
 import { Footer } from "@/components/footer"
 import { ProductCard } from "@/components/product-card"
+import { ProductGridSkeleton } from "@/components/product-card-skeleton"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Button } from "@/components/ui/button"
 import { fetchProducts, fetchCategories } from "@/lib/d1-client"
 import type { Product } from "@/lib/types"
@@ -147,7 +149,7 @@ export default function HomePage() {
       <StoreHeader />
 
       {/* Category Quick-Nav */}
-      {categories.length > 0 && (
+      {categories.length > 0 ? (
         <div className="bg-white dark:bg-slate-900 border-b dark:border-slate-800 shadow-sm transition-colors">
           <div className="container mx-auto px-4 py-2 overflow-x-auto scrollbar-hide">
             <div className="flex gap-5 min-w-max">
@@ -171,7 +173,20 @@ export default function HomePage() {
             </div>
           </div>
         </div>
-      )}
+      ) : loading ? (
+        <div className="bg-white dark:bg-slate-900 border-b dark:border-slate-800 shadow-sm">
+          <div className="container mx-auto px-4 py-2 overflow-x-auto scrollbar-hide">
+            <div className="flex gap-5 min-w-max">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className="flex flex-col items-center gap-1.5 min-w-[56px]">
+                  <Skeleton className="h-11 w-11 rounded-full" />
+                  <Skeleton className="h-2.5 w-12 rounded" />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       <main className="flex-1 container mx-auto px-3 md:px-4 py-4 space-y-6">
 
@@ -232,9 +247,7 @@ export default function HomePage() {
             </Button>
           </div>
           {loading ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-              {Array.from({ length: 8 }).map((_, i) => <div key={i} className="rounded-xl bg-gray-100 dark:bg-slate-800 animate-pulse h-60" />)}
-            </div>
+            <ProductGridSkeleton count={8} />
           ) : featured.length === 0 ? (
             <div className="text-center py-10">
               <p className="text-slate-400 text-sm">No products yet.</p>

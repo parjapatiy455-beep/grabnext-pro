@@ -323,15 +323,19 @@ export default function DashboardPage() {
     })
     const [savingProfile, setSavingProfile] = useState(false)
     const [activeGateway, setActiveGateway] = useState<string>("xpay")
+    const [xpayApiKey, setXpayApiKey] = useState<string>("xp_live_wtm5vj64kseuylg9cfmsl9")
     const [completingPayment, setCompletingPayment] = useState<boolean>(false)
     // Guard: fire DashboardView custom conversion only once per session
     const hasFiredDashboardView = useRef(false)
 
-    // Load active payment gateway from settings
+    // Load active payment gateway and XPay key from settings
     useEffect(() => {
         fetch("/api/settings")
             .then((r) => r.json())
-            .then((data) => setActiveGateway(data.payment_gateway || "xpay"))
+            .then((data) => {
+                if (data.payment_gateway) setActiveGateway(data.payment_gateway)
+                if (data.xpay_api_key) setXpayApiKey(data.xpay_api_key)
+            })
             .catch(() => setActiveGateway("xpay"))
     }, [])
 
@@ -448,7 +452,7 @@ export default function DashboardPage() {
                 return
             }
             const xpay = new window.XPay({
-                api_key: "xp_live_wtm5vj64kseuylg9cfmsl9",
+                api_key: xpayApiKey || "xp_live_wtm5vj64kseuylg9cfmsl9",
                 amount: Math.round(order.totalAmount),
                 title: `Order ${orderId}`,
                 onSuccess: async (data: { utr: string }) => {

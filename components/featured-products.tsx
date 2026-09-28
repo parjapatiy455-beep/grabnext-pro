@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { ProductCard } from "./product-card"
+import { ProductGridSkeleton } from "@/components/product-card-skeleton"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { fetchProducts } from "@/lib/d1-client"
@@ -44,16 +45,7 @@ export function FeaturedProducts() {
             <Skeleton className="h-8 w-64 mx-auto" />
             <Skeleton className="h-4 w-96 mx-auto" />
           </div>
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {[...Array(4)].map((_, i) => (
-              <div key={i} className="space-y-4">
-                <Skeleton className="h-48 w-full rounded-lg" />
-                <Skeleton className="h-4 w-3/4" />
-                <Skeleton className="h-4 w-1/2" />
-                <Skeleton className="h-10 w-full" />
-              </div>
-            ))}
-          </div>
+          <ProductGridSkeleton count={4} className="grid md:grid-cols-2 lg:grid-cols-4 gap-6" />
         </div>
       </section>
     )

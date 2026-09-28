@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { toast } from "@/hooks/use-toast"
-import { Loader2, CreditCard, Zap, CheckCircle2, Settings, Mail, Key, ShieldCheck } from "lucide-react"
+import { Loader2, CreditCard, Zap, CheckCircle2, Settings, Mail, Key, ShieldCheck, Eye, EyeOff, Copy, Check } from "lucide-react"
 
 const GATEWAYS = [
     {
@@ -18,7 +18,7 @@ const GATEWAYS = [
         logo: "⚡",
         color: "from-blue-500 to-cyan-500",
         features: ["UPI Payments", "Instant Settlement", "Low Fees"],
-        envKeys: ["Already configured in code"],
+        envKeys: ["Configurable below in Admin Panel", "XPAY_API_KEY"],
     },
     {
         id: "razorpay",
@@ -37,6 +37,12 @@ export default function PaymentSettingsPage() {
     const [saving, setSaving] = useState(false)
     const [pendingGateway, setPendingGateway] = useState<string | null>(null)
 
+    // XPay Gateway Settings States
+    const [xpayApiKey, setXpayApiKey] = useState("")
+    const [savingXPay, setSavingXPay] = useState(false)
+    const [showXPayKey, setShowXPayKey] = useState(false)
+    const [copiedXPay, setCopiedXPay] = useState(false)
+
     // Brevo Email Settings States
     const [brevoApiKey, setBrevoApiKey] = useState("")
     const [brevoSenderEmail, setBrevoSenderEmail] = useState("")
@@ -48,6 +54,7 @@ export default function PaymentSettingsPage() {
             .then((r) => r.json())
             .then((data) => {
                 setActiveGateway(data.payment_gateway || "xpay")
+                if (data.xpay_api_key) setXpayApiKey(data.xpay_api_key)
                 if (data.brevo_api_key) setBrevoApiKey(data.brevo_api_key)
                 if (data.brevo_sender_email) setBrevoSenderEmail(data.brevo_sender_email)
                 if (data.brevo_sender_name) setBrevoSenderName(data.brevo_sender_name)
@@ -74,6 +81,41 @@ export default function PaymentSettingsPage() {
             setSaving(false)
             setPendingGateway(null)
         }
+    }
+
+    const handleSaveXPay = async (e: React.FormEvent) => {
+        e.preventDefault()
+        setSavingXPay(true)
+        try {
+            const res = await fetch("/api/settings", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    xpay_api_key: xpayApiKey.trim(),
+                }),
+            })
+            if (!res.ok) throw new Error("Failed to save XPay API key")
+            toast({
+                title: "🎉 XPay API Key Saved!",
+                description: "Payment gateway API key updated successfully in database settings.",
+            })
+        } catch (err: any) {
+            toast({
+                title: "Failed to save XPay API key",
+                description: err.message,
+                variant: "destructive",
+            })
+        } finally {
+            setSavingXPay(false)
+        }
+    }
+
+    const handleCopyKey = () => {
+        if (!xpayApiKey) return
+        navigator.clipboard.writeText(xpayApiKey)
+        setCopiedXPay(true)
+        setTimeout(() => setCopiedXPay(false), 2000)
+        toast({ title: "Copied to clipboard!" })
     }
 
     const handleSaveBrevo = async (e: React.FormEvent) => {
@@ -198,6 +240,97 @@ export default function PaymentSettingsPage() {
                         })}
                     </div>
                 )}
+
+                {/* XPay Payment Gateway Configuration Card */}
+                <Card className="border-cyan-200/80 shadow-sm bg-gradient-to-br from-white to-cyan-50/20">
+                    <CardHeader>
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                            <CardTitle className="text-xl flex items-center gap-2 text-slate-900">
+                                <Zap className="h-5 w-5 text-cyan-500 fill-cyan-500" />
+                                XPay Payment Gateway Configuration
+                            </CardTitle>
+                            <Badge
+                                variant="outline"
+                                className={
+                                    xpayApiKey
+                                        ? "bg-cyan-50 text-cyan-700 border-cyan-300 font-mono text-xs"
+                                        : "bg-gray-100 text-gray-600 border-gray-300 font-mono text-xs"
+                                }
+                            >
+                                {xpayApiKey ? "● Key Configured" : "Default / Unset"}
+                            </Badge>
+                        </div>
+                        <CardDescription>
+                            Configure your live XPay API Key for UPI payments. Any update saved here will immediately apply across checkout and customer dashboard.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <form onSubmit={handleSaveXPay} className="space-y-4">
+                            <div className="space-y-1.5">
+                                <div className="flex items-center justify-between">
+                                    <Label htmlFor="xpayKey" className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+                                        <Key className="h-3.5 w-3.5 text-cyan-600" />
+                                        XPay Merchant API Key
+                                    </Label>
+                                    <span className="text-xs text-slate-500 font-mono">
+                                        e.g. xp_live_...
+                                    </span>
+                                </div>
+                                <div className="relative flex items-center">
+                                    <Input
+                                        id="xpayKey"
+                                        type={showXPayKey ? "text" : "password"}
+                                        placeholder="xp_live_xxxxxxxxxxxxxxxxxxxxxxxx"
+                                        value={xpayApiKey}
+                                        onChange={(e) => setXpayApiKey(e.target.value)}
+                                        className="pr-20 font-mono text-sm border-slate-300 focus-visible:ring-cyan-500"
+                                        required
+                                    />
+                                    <div className="absolute right-2 flex items-center gap-1 text-slate-400">
+                                        {xpayApiKey && (
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="sm"
+                                                className="h-7 w-7 p-0 hover:text-slate-700"
+                                                onClick={handleCopyKey}
+                                                title="Copy API key"
+                                            >
+                                                {copiedXPay ? <Check className="h-3.5 w-3.5 text-green-600" /> : <Copy className="h-3.5 w-3.5" />}
+                                            </Button>
+                                        )}
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="sm"
+                                            className="h-7 w-7 p-0 hover:text-slate-700"
+                                            onClick={() => setShowXPayKey(!showXPayKey)}
+                                            title={showXPayKey ? "Hide API key" : "Show API key"}
+                                        >
+                                            {showXPayKey ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                                        </Button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pt-2">
+                                <span className="text-xs text-slate-500 flex items-center gap-1.5">
+                                    <ShieldCheck className="h-4 w-4 text-green-600 shrink-0" />
+                                    Database mein save hote hi website checkout par bina redeploy kiye nayi key lag jayegi.
+                                </span>
+                                <Button
+                                    type="submit"
+                                    disabled={savingXPay}
+                                    size="sm"
+                                    className="gap-2 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white shadow-sm"
+                                >
+                                    {savingXPay && <Loader2 className="h-4 w-4 animate-spin" />}
+                                    Save XPay API Key
+                                </Button>
+                            </div>
+                        </form>
+                    </CardContent>
+                </Card>
 
                 {/* Brevo Email Configuration Card (Admin Panel Backup Settings) */}
                 <Card className="border-blue-200 shadow-sm">

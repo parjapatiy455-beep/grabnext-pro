@@ -16,6 +16,7 @@ export function ProductCard({ product }: ProductCardProps) {
   const [added, setAdded] = useState(false)
   const [imgIdx, setImgIdx] = useState(0)
   const [fade, setFade] = useState(true)
+  const [isOpening, setIsOpening] = useState(false)
   const timerRef = useRef<NodeJS.Timeout | null>(null)
 
   const formatPrice = (price: number) =>
@@ -68,6 +69,11 @@ export function ProductCard({ product }: ProductCardProps) {
 
   useEffect(() => () => { if (timerRef.current) clearInterval(timerRef.current) }, [])
 
+  const handleCardClick = () => {
+    setIsOpening(true)
+    setTimeout(() => setIsOpening(false), 3500)
+  }
+
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault(); e.stopPropagation()
     addToCart(product)
@@ -84,12 +90,22 @@ export function ProductCard({ product }: ProductCardProps) {
   const href = `/products/${p.slug || product.id}`
 
   return (
-    <Link href={href} className="block h-full">
+    <Link href={href} className="block h-full select-none" onClick={handleCardClick}>
       <Card
-        className="group relative bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 hover:border-blue-200 dark:hover:border-blue-500 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden h-full flex flex-col cursor-pointer"
+        className="group relative bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 hover:border-blue-300 dark:hover:border-blue-500 shadow-sm hover:shadow-md product-card-interactive transition-all duration-200 overflow-hidden h-full flex flex-col cursor-pointer"
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
       >
+        {/* Instant click & loading feedback indicator */}
+        {isOpening && (
+          <div className="absolute inset-0 bg-white/75 dark:bg-slate-950/75 backdrop-blur-[1px] z-30 flex flex-col items-center justify-center gap-2 animate-in fade-in duration-100">
+            <div className="h-5 w-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+            <span className="text-[11px] font-semibold text-slate-800 dark:text-slate-100 bg-white dark:bg-slate-900 px-2.5 py-0.5 rounded-full shadow-sm border border-slate-200 dark:border-slate-800">
+              Opening...
+            </span>
+          </div>
+        )}
+
         {/* Badges */}
         {discount > 0 && (
           <div className="absolute top-2 left-2 z-10 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">-{discount}%</div>

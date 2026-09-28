@@ -2,7 +2,18 @@ export const runtime = 'edge'
 import { NextRequest, NextResponse } from 'next/server'
 import { executeQuery } from '@/lib/db'
 
+import { getRequestContext } from '@cloudflare/next-on-pages'
+
 export const dynamic = 'force-dynamic'
+
+function getEnv(key: string): string | undefined {
+    try {
+        const ctx = getRequestContext()
+        return (ctx?.env as any)?.[key] ?? process.env[key]
+    } catch {
+        return process.env[key]
+    }
+}
 
 // Ensure settings table exists
 async function ensureTable() {
@@ -25,6 +36,9 @@ export async function GET() {
         }
         // Defaults
         if (!settings.payment_gateway) settings.payment_gateway = 'xpay'
+        if (!settings.xpay_api_key) {
+            settings.xpay_api_key = getEnv('XPAY_API_KEY') || getEnv('NEXT_PUBLIC_XPAY_API_KEY') || 'xp_live_wtm5vj64kseuylg9cfmsl9'
+        }
         return NextResponse.json(settings, {
             headers: { 'Cache-Control': 'no-store' }
         })

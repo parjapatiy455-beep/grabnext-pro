@@ -23,6 +23,7 @@ export default function CheckoutPage() {
   const { user, refreshUser } = useAuth()
   const [loading, setLoading] = useState(false)
   const [activeGateway, setActiveGateway] = useState<string>("xpay")
+  const [xpayApiKey, setXpayApiKey] = useState<string>("xp_live_wtm5vj64kseuylg9cfmsl9")
   const hasFiredCheckout = useRef(false)
   const [showOrderSummaryMobile, setShowOrderSummaryMobile] = useState(false)
 
@@ -38,11 +39,14 @@ export default function CheckoutPage() {
     phone: "",
   })
 
-  // Load gateway setting
+  // Load gateway and XPay setting
   useEffect(() => {
     fetch("/api/settings")
       .then((r) => r.json())
-      .then((data) => setActiveGateway(data.payment_gateway || "xpay"))
+      .then((data) => {
+        if (data.payment_gateway) setActiveGateway(data.payment_gateway)
+        if (data.xpay_api_key) setXpayApiKey(data.xpay_api_key)
+      })
       .catch(() => setActiveGateway("xpay"))
   }, [])
 
@@ -216,7 +220,7 @@ export default function CheckoutPage() {
     const orderTitle = items.length === 1 ? items[0].product.title : `${items[0].product.title} + ${items.length - 1} more`
     let paymentSucceeded = false
     const xpay = new window.XPay({
-      api_key: "xp_live_wtm5vj64kseuylg9cfmsl9",
+      api_key: xpayApiKey || "xp_live_wtm5vj64kseuylg9cfmsl9",
       amount: Math.round(finalAmount),
       title: orderTitle,
       onSuccess: async (data: { utr: string }) => {

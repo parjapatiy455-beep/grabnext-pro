@@ -7,6 +7,7 @@ import { useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { StoreHeader } from "@/components/store-header"
 import { ProductCard } from "@/components/product-card"
+import { ProductGridSkeleton } from "@/components/product-card-skeleton"
 import { Footer } from "@/components/footer"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -175,9 +176,10 @@ export function ProductsContent() {
 
                 {/* Grid */}
                 {loading ? (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                        {[...Array(10)].map((_, i) => <div key={i} className="h-72 bg-white rounded-xl animate-pulse" />)}
-                    </div>
+                    <ProductGridSkeleton
+                        count={10}
+                        className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4"
+                    />
                 ) : filtered.length === 0 ? (
                     <div className="text-center py-20 bg-white rounded-2xl">
                         <div className="text-5xl mb-4">🔍</div>

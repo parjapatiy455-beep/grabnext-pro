@@ -7,6 +7,7 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/toaster"
 import { CartDrawer } from "@/components/cart-drawer"
 import { WhatsAppToggle } from "@/components/whatsapp-toggle"
+import { TopProgressBar } from "@/components/top-progress-bar"
 import { FacebookPixelScript, FacebookPixelRouteTracker } from "@/components/facebook-pixel"
 import { GoogleAnalyticsRouteTracker } from "@/components/google-analytics"
 import { getSiteUrl, DEFAULT_SITE_TITLE, DEFAULT_SITE_DESCRIPTION, DEFAULT_SEO_KEYWORDS } from "@/lib/site"
@@ -196,6 +197,7 @@ html {
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
           <AuthProvider>
             <CartProvider>
+              <TopProgressBar />
               {/* Tracks PageView on every SPA route change */}
               <FacebookPixelRouteTracker />
               {/* Tracks GA4 PageView on every SPA route change */}
