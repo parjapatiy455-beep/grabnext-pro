@@ -50,6 +50,19 @@ const getInitialCats = (): any[] => {
   return []
 }
 
+const getInitialBanners = (): any[] => {
+  if (typeof window !== 'undefined') {
+    try {
+      const s = sessionStorage.getItem('gn_banners_cache')
+      if (s) {
+        const arr = JSON.parse(s)
+        if (Array.isArray(arr)) return arr
+      }
+    } catch {}
+  }
+  return []
+}
+
 const FAQ_ITEMS = [
   {
     q: "Grabnext par digital products buy kaise karein?",
@@ -68,9 +81,10 @@ const FAQ_ITEMS = [
 export default function HomePage() {
   const initialProds = getInitialProds()
   const initialCats = getInitialCats()
+  const initialBanners = getInitialBanners()
   const [products, setProducts] = useState<Product[]>(initialProds)
   const [categories, setCategories] = useState<any[]>(initialCats)
-  const [banners, setBanners] = useState<any[]>([])   // empty = no carousel shown
+  const [banners, setBanners] = useState<any[]>(initialBanners)   // 0ms cached banners
   const [loading, setLoading] = useState(initialProds.length === 0)
 
   const { idx, next, prev, setIdx } = useBannerCarousel(banners.length)
@@ -80,12 +94,15 @@ export default function HomePage() {
       const [prods, cats] = await Promise.all([fetchProducts(), fetchCategories()])
       setProducts(Array.isArray(prods) ? (prods as Product[]).filter((p) => p.isActive) : [])
       setCategories(Array.isArray(cats) ? cats.filter((c) => c.isActive !== 0) : [])
-      // Banners — only real ones from admin, no fallback dummies
+      // Banners — background revalidation with edge cache
       try {
-        const res = await fetch("/api/banners", { cache: 'no-store' })
+        const res = await fetch("/api/banners")
         if (res.ok) {
           const data = await res.json()
-          if (Array.isArray(data) && data.length > 0) setBanners(data)
+          if (Array.isArray(data)) {
+            setBanners(data)
+            try { sessionStorage.setItem('gn_banners_cache', JSON.stringify(data)) } catch {}
+          }
         }
       } catch { /* banners optional */ }
     } catch (e) {
