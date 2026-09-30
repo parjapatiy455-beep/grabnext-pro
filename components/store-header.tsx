@@ -185,6 +185,15 @@ export function StoreHeader() {
               </Button>
             )}
 
+            {/* Blog Link */}
+            <Link
+              href="/blog"
+              className="hidden lg:flex items-center gap-1.5 text-slate-700 dark:text-slate-300 hover:text-purple-600 dark:hover:text-purple-400 font-medium text-sm px-2.5 py-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+            >
+              <BookOpen className="h-4 w-4 text-purple-600" />
+              <span>Blog</span>
+            </Link>
+
             {/* Cart */}
             <CartDrawer>
               <Button variant="ghost" className="flex items-center gap-2 text-slate-700 dark:text-slate-300 hover:bg-black/5 dark:hover:bg-white/10">
@@ -255,6 +264,13 @@ export function StoreHeader() {
                         {cat.name}
                       </Link>
                     ))}
+                    <Link
+                      href="/blog"
+                      className="flex items-center gap-3 text-purple-600 dark:text-purple-400 font-semibold transition-colors"
+                    >
+                      <BookOpen className="h-4 w-4" />
+                      Digital Products Blog & Guides
+                    </Link>
                   </div>
                   <div className="space-y-2">
                     <h3 className="font-semibold text-lg border-b pb-2">Account</h3>

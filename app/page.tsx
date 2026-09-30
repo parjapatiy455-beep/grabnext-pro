@@ -11,7 +11,8 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Button } from "@/components/ui/button"
 import { fetchProducts, fetchCategories } from "@/lib/d1-client"
 import type { Product } from "@/lib/types"
-import { ArrowRight, ChevronLeft, ChevronRight, ShieldCheck, Zap, Download, Award, HelpCircle } from "lucide-react"
+import { ArrowRight, ChevronLeft, ChevronRight, ShieldCheck, Zap, Download, Award, HelpCircle, BookOpen } from "lucide-react"
+import { BLOG_POSTS } from "@/lib/blog-data"
 
 // ─── Carousel ───────────────────────────────────────────────────────────────
 function useBannerCarousel(total: number) {
@@ -280,6 +281,49 @@ export default function HomePage() {
             </div>
           </section>
         )}
+
+        {/* Latest Digital Products Guides & SEO Blog Section */}
+        <section className="bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-2xl p-5 shadow-sm transition-colors space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="flex items-center gap-1.5 text-xs font-bold text-purple-600 dark:text-purple-400">
+                <BookOpen className="h-3.5 w-3.5" />
+                <span>Knowledge & Guides</span>
+              </div>
+              <h2 className="text-lg font-bold text-slate-900 dark:text-white mt-0.5">
+                Digital Products, Software & Growth Guides
+              </h2>
+            </div>
+            <Button asChild variant="outline" size="sm" className="text-xs h-8">
+              <Link href="/blog">View All Guides <ArrowRight className="ml-1 h-3 w-3" /></Link>
+            </Button>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {BLOG_POSTS.slice(0, 3).map((post) => (
+              <Link
+                key={post.slug}
+                href={`/blog/${post.slug}`}
+                className="group flex flex-col rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 p-4 hover:border-purple-300 dark:hover:border-purple-600 transition-all shadow-2xs hover:shadow-sm"
+              >
+                <div className="flex items-center justify-between text-[11px] text-slate-400 mb-2">
+                  <span className="font-semibold text-purple-600 dark:text-purple-400">{post.category}</span>
+                  <span>{post.readTime}</span>
+                </div>
+                <h3 className="font-bold text-slate-800 dark:text-slate-100 text-sm leading-snug group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors line-clamp-2">
+                  {post.title}
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 mt-1.5 leading-relaxed">
+                  {post.excerpt}
+                </p>
+                <div className="mt-auto pt-3 flex items-center text-xs font-semibold text-purple-600 dark:text-purple-400 gap-1 group-hover:underline">
+                  <span>Read Guide</span>
+                  <ArrowRight className="h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
 
         {/* Dedicated SEO Keyword Content Block for Googlebot Indexing */}
         <section className="bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-2xl p-6 shadow-sm transition-colors space-y-4">

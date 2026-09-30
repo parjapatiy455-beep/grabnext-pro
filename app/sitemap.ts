@@ -1,6 +1,7 @@
 import { MetadataRoute } from 'next'
 import { executeQuery } from '@/lib/db'
 import { getSiteUrl } from '@/lib/site'
+import { BLOG_POSTS } from '@/lib/blog-data'
 
 export const runtime = 'edge'
 export const dynamic = 'force-dynamic'
@@ -65,6 +66,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const staticPages: MetadataRoute.Sitemap = [
         { route: '', priority: 1.0, freq: 'daily' },
         { route: '/products', priority: 0.9, freq: 'daily' },
+        { route: '/blog', priority: 0.9, freq: 'daily' },
         { route: '/software', priority: 0.9, freq: 'weekly' },
         { route: '/editing', priority: 0.9, freq: 'weekly' },
         { route: '/masterclass', priority: 0.8, freq: 'weekly' },
@@ -83,5 +85,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         priority,
     }))
 
-    return [...staticPages, ...productEntries, ...categoryEntries]
+    // Dynamic Blog Post entries for search crawler discovery
+    const blogEntries: MetadataRoute.Sitemap = BLOG_POSTS.map((post) => ({
+        url: `${baseUrl}/blog/${post.slug}`,
+        lastModified: new Date(post.updatedAt || post.publishedAt),
+        changeFrequency: 'weekly' as const,
+        priority: 0.85,
+    }))
+
+    return [...staticPages, ...productEntries, ...categoryEntries, ...blogEntries]
 }
