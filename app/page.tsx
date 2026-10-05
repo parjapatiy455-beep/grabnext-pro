@@ -13,6 +13,7 @@ import { fetchProducts, fetchCategories } from "@/lib/d1-client"
 import type { Product } from "@/lib/types"
 import { ArrowRight, ChevronLeft, ChevronRight, ShieldCheck, Zap, Download, Award, HelpCircle, BookOpen } from "lucide-react"
 import { BLOG_POSTS } from "@/lib/blog-data"
+import { HeroSection } from "@/components/hero-section"
 
 // ─── Carousel ───────────────────────────────────────────────────────────────
 function useBannerCarousel(total: number) {
@@ -149,10 +150,13 @@ export default function HomePage() {
 
       <StoreHeader />
 
+      {/* SEO & Conversion Hero Section (DigiGrowPro Style) */}
+      <HeroSection />
+
       {/* Category Quick-Nav */}
       {categories.length > 0 ? (
         <div className="bg-white dark:bg-slate-900 border-b dark:border-slate-800 shadow-sm transition-colors">
-          <div className="w-full px-3 py-2 overflow-x-auto scrollbar-hide">
+          <div className="container mx-auto px-4 py-2 overflow-x-auto scrollbar-hide">
             <div className="flex gap-5 min-w-max">
               {categories.slice(0, 12).map((cat) => (
                 <Link
@@ -176,7 +180,7 @@ export default function HomePage() {
         </div>
       ) : loading ? (
         <div className="bg-white dark:bg-slate-900 border-b dark:border-slate-800 shadow-sm">
-          <div className="w-full px-3 py-2 overflow-x-auto scrollbar-hide">
+          <div className="container mx-auto px-4 py-2 overflow-x-auto scrollbar-hide">
             <div className="flex gap-5 min-w-max">
               {Array.from({ length: 8 }).map((_, i) => (
                 <div key={i} className="flex flex-col items-center gap-1.5 min-w-[56px]">
@@ -189,16 +193,11 @@ export default function HomePage() {
         </div>
       ) : null}
 
-      <main className="flex-1 w-full px-0 sm:px-2 py-2 sm:py-3 space-y-2 sm:space-y-3">
-
-        {/* Banner skeleton while first load (no cache yet) */}
-        {banners.length === 0 && loading && (
-          <Skeleton className="w-full aspect-[2/1] md:max-h-[512px] rounded-none sm:rounded-xl" />
-        )}
+      <main className="flex-1 container mx-auto px-3 md:px-4 py-4 space-y-6">
 
         {/* Banner Carousel — only if admin added banners */}
         {banners.length > 0 && (
-          <div className="relative rounded-none sm:rounded-xl overflow-hidden w-full aspect-[2/1] md:max-h-[512px] shadow-md group">
+          <div className="relative rounded-2xl overflow-hidden w-full aspect-[2/1] md:max-h-[512px] shadow-md group">
             {banners.map((b, i) => {
               const isHex = b.bgColor?.startsWith("#")
               return (
@@ -242,7 +241,7 @@ export default function HomePage() {
         )}
 
         {/* All Products */}
-        <section className="bg-white dark:bg-slate-900 border-y sm:border dark:border-slate-800 rounded-none sm:rounded-xl p-3 sm:p-4 shadow-sm transition-colors">
+        <section className="bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-2xl p-5 shadow-sm transition-colors">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h2 className="text-lg font-bold text-slate-900 dark:text-white">All Digital Products & Software</h2>
@@ -256,11 +255,13 @@ export default function HomePage() {
             <ProductGridSkeleton count={8} />
           ) : featured.length === 0 ? (
             <div className="text-center py-10">
-              <p className="text-slate-400 text-sm">No products yet.</p>
-              <Button asChild variant="outline" className="mt-3" size="sm"><Link href="/admin/products">Add Products →</Link></Button>
+              <p className="text-slate-400 text-sm">Products loading or updating soon.</p>
+              <Button asChild variant="outline" className="mt-3" size="sm">
+                <Link href="/products">Browse All Collections →</Link>
+              </Button>
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
               {featured.map((p) => <ProductCard key={p.id} product={p} />)}
             </div>
           )}
@@ -268,7 +269,7 @@ export default function HomePage() {
 
         {/* Category Cards */}
         {categories.length > 0 && (
-          <section className="bg-white dark:bg-slate-900 border-y sm:border dark:border-slate-800 rounded-none sm:rounded-xl p-3 sm:p-4 shadow-sm transition-colors">
+          <section className="bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-2xl p-5 shadow-sm transition-colors">
             <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-4">Shop by Category</h2>
             <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
               {categories.slice(0, 12).map((cat) => (
@@ -288,7 +289,7 @@ export default function HomePage() {
         )}
 
         {/* Latest Digital Products Guides & SEO Blog Section */}
-        <section className="bg-white dark:bg-slate-900 border-y sm:border dark:border-slate-800 rounded-none sm:rounded-xl p-3 sm:p-4 shadow-sm transition-colors space-y-4">
+        <section className="bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-2xl p-5 shadow-sm transition-colors space-y-4">
           <div className="flex items-center justify-between">
             <div>
               <div className="flex items-center gap-1.5 text-xs font-bold text-purple-600 dark:text-purple-400">
@@ -331,7 +332,7 @@ export default function HomePage() {
         </section>
 
         {/* Dedicated SEO Keyword Content Block for Googlebot Indexing */}
-        <section className="bg-white dark:bg-slate-900 border-y sm:border dark:border-slate-800 rounded-none sm:rounded-xl p-3 sm:p-4 shadow-sm transition-colors space-y-4">
+        <section className="bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-2xl p-6 shadow-sm transition-colors space-y-4">
           <h2 className="text-xl font-extrabold text-slate-900 dark:text-white">
             Why Choose Grabnext for Buying Digital Products in India?
           </h2>
@@ -355,24 +356,7 @@ export default function HomePage() {
         </section>
 
         {/* Visible FAQ Accordion for Search Crawlers */}
-        <section className="bg-white dark:bg-slate-900 border-y sm:border dark:border-slate-800 rounded-none sm:rounded-xl p-3 sm:p-4 shadow-sm transition-colors">
-          <script
-            type="application/ld+json"
-            dangerouslySetInnerHTML={{
-              __html: JSON.stringify({
-                "@context": "https://schema.org",
-                "@type": "FAQPage",
-                "mainEntity": FAQ_ITEMS.map((item) => ({
-                  "@type": "Question",
-                  "name": item.q,
-                  "acceptedAnswer": {
-                    "@type": "Answer",
-                    "text": item.a
-                  }
-                }))
-              })
-            }}
-          />
+        <section className="bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-2xl p-6 shadow-sm transition-colors">
           <div className="flex items-center gap-2 mb-4">
             <HelpCircle className="h-5 w-5 text-primary" />
             <h2 className="text-lg font-bold text-slate-900 dark:text-white">Frequently Asked Questions</h2>
@@ -389,14 +373,14 @@ export default function HomePage() {
 
       </main>
 
-      {/* Hero Title Section for SEO Keyword Indexing — Placed at bottom above Footer */}
+      {/* Trust & Guarantee Banner */}
       <section className="bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 text-white py-6 px-4 border-t border-indigo-500/20 mt-4">
         <div className="container mx-auto text-center max-w-4xl">
-          <h1 className="text-xl sm:text-2xl md:text-3xl font-black tracking-tight text-white mb-2">
-            Grabnext — Buy Digital Products, Software, Templates & Masterclasses Online India
-          </h1>
+          <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-white mb-2">
+            Grabnext — Verified Digital Products, Templates &amp; Masterclasses
+          </h2>
           <p className="text-xs sm:text-sm text-indigo-200 font-medium max-w-2xl mx-auto">
-            India's #1 trusted store for cheap software source code, video editing assets bundles, Canva templates & digital downloads with instant UPI delivery.
+            India&#39;s trusted marketplace for high-converting design templates, video editing bundles, AI prompts &amp; creator resources with instant delivery.
           </p>
           <div className="flex flex-wrap items-center justify-center gap-4 mt-3 text-[11px] text-amber-300 font-semibold">
             <span className="flex items-center gap-1"><Zap className="w-3.5 h-3.5" /> Instant UPI Download</span>

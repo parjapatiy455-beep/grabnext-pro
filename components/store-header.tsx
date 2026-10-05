@@ -95,8 +95,18 @@ export function StoreHeader() {
             </form>
           </div>
 
-          {/* Right Actions */}
+          {/* Mobile Search Toggle & Right Actions */}
           <div className="flex items-center space-x-2 md:space-x-6 shrink-0">
+            {/* Mobile Search Toggle Button */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="md:hidden text-slate-700 dark:text-slate-300"
+              onClick={() => setIsSearchOpen(!isSearchOpen)}
+              aria-label="Toggle search"
+            >
+              <Search className="h-5 w-5" />
+            </Button>
 
             {/* User Account Dropdown */}
             {mounted && user ? (
@@ -305,6 +315,34 @@ export function StoreHeader() {
           </div>
         </div>
       </header>
+
+      {/* Expandable Mobile Search Bar */}
+      {isSearchOpen && (
+        <div className="md:hidden bg-[#fdfaf6] dark:bg-slate-900 border-b border-orange-100/50 dark:border-slate-800 p-2.5 transition-all">
+          <form
+            className="relative w-full flex shadow-sm"
+            onSubmit={(e) => {
+              e.preventDefault()
+              const q = (e.currentTarget.querySelector('input') as HTMLInputElement)?.value?.trim()
+              if (q) window.location.href = `/products?q=${encodeURIComponent(q)}`
+              else window.location.href = '/products'
+            }}
+          >
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Search className="h-4 w-4 text-gray-400" />
+            </div>
+            <Input
+              autoFocus
+              name="q"
+              placeholder="Search products, templates, bundles..."
+              className="pl-10 rounded-r-none bg-white dark:bg-slate-950 text-gray-900 dark:text-gray-100 border-r-0 dark:border-slate-800 focus-visible:ring-0 placeholder:text-gray-500 h-10 text-sm"
+            />
+            <Button type="submit" className="rounded-l-none bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-semibold px-4 h-10">
+              Search
+            </Button>
+          </form>
+        </div>
+      )}
     </div>
   )
 }
