@@ -40,7 +40,7 @@ export function HeroSection({ customBanner }: HeroSectionProps) {
     "BUY 1, GET 15+ PRO PACKS FREE! Get 900+ Canva Ad Templates, Premiere Pro & After Effects VFX, Cinematic LUTs, Sound FX Presets, Reels Growth Kit & Extra Marketing Tools."
   const heroLink = customBanner?.linkUrl || "/products"
   const heroButton = customBanner?.buttonText || "Grab the Deal →"
-  const heroImg = customBanner?.imageUrl || "/images/featured-bundle.jpg"
+  const heroImg = customBanner?.imageUrl || "/images/hero-3d-bundle.png"
 
   return (
     <section className="relative overflow-hidden bg-gradient-to-b from-[#fdfaf6] via-[#faf6f0] to-slate-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 border-b border-orange-150/70 dark:border-slate-800 py-4 sm:py-6 px-3 sm:px-6">
@@ -129,13 +129,13 @@ export function HeroSection({ customBanner }: HeroSectionProps) {
             </div>
           </div>
 
-          {/* Right Column: Fast Loading Image without any artificial background (DigiGrowPro style) */}
-          <div className="md:col-span-5 flex justify-center items-center py-2 sm:py-0">
+          {/* Right Column: Transparent 3D Floating Mockup (No Black Box, Pure 3D Pop Effect) */}
+          <div className="md:col-span-5 flex justify-center items-center">
             <Link
               href={heroLink}
-              className="block relative group w-full max-w-[280px] sm:max-w-[340px] md:max-w-[420px] animate-bounce-in-right"
+              className="block relative group max-w-[340px] sm:max-w-[420px] w-full animate-bounce-in-right"
             >
-              <div className="relative transition-transform duration-500 group-hover:scale-[1.03] flex items-center justify-center">
+              <div className="relative transition-transform duration-500 group-hover:scale-[1.03]">
                 <img
                   src={heroImg}
                   alt={heroTitle}
@@ -144,7 +144,7 @@ export function HeroSection({ customBanner }: HeroSectionProps) {
                   fetchPriority="high"
                   loading="eager"
                   decoding="async"
-                  className="w-full h-auto max-h-[340px] sm:max-h-[420px] object-contain block drop-shadow-xl animate-hero-float"
+                  className="w-full h-auto object-contain block drop-shadow-2xl animate-hero-float"
                 />
               </div>
             </Link>
