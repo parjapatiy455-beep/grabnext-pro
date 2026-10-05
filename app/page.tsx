@@ -151,7 +151,7 @@ export default function HomePage() {
       <StoreHeader />
 
       {/* SEO & Conversion Hero Section (DigiGrowPro Style) */}
-      <HeroSection />
+      <HeroSection customBanner={banners && banners.length > 0 ? banners[0] : null} />
 
       {/* Category Quick-Nav */}
       {categories.length > 0 ? (

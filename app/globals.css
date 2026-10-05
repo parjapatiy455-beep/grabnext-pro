@@ -500,3 +500,55 @@ table {
 .product-card-interactive:active {
   transform: scale(0.975);
 }
+
+/* DigiGrowPro-style Entrance & Float Animations */
+@keyframes bounceInRight {
+  0% {
+    opacity: 0;
+    transform: translate3d(60px, 0, 0) scale(0.95);
+  }
+  60% {
+    opacity: 1;
+    transform: translate3d(-8px, 0, 0) scale(1.02);
+  }
+  80% {
+    transform: translate3d(4px, 0, 0) scale(0.99);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes fadeInLeft {
+  0% {
+    opacity: 0;
+    transform: translate3d(-30px, 0, 0);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes heroFloat {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+.animate-bounce-in-right {
+  animation: bounceInRight 0.8s cubic-bezier(0.215, 0.61, 0.355, 1) both;
+}
+
+.animate-fade-in-left {
+  animation: fadeInLeft 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+}
+
+.animate-hero-float {
+  animation: heroFloat 4.5s ease-in-out infinite;
+}
+
