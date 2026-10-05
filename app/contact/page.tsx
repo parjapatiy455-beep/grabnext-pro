@@ -69,10 +69,10 @@ export default function ContactPage() {
                                     </div>
                                     <div>
                                         <p className="font-medium text-sm">Phone / WhatsApp</p>
-                                        <a href="tel:+919999999999" className="text-sm text-primary hover:underline">
-                                            +91 99999 99999
+                                        <a href="https://wa.me/917500167987" target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline">
+                                            +91 75001 67987
                                         </a>
-                                        <p className="text-xs text-muted-foreground mt-0.5">Mon–Sat, 10am–7pm IST</p>
+                                        <p className="text-xs text-muted-foreground mt-0.5">Mon–Sat, 10am–7pm IST (Instant WhatsApp Support)</p>
                                     </div>
                                 </div>
                                 <div className="flex gap-4 items-start">

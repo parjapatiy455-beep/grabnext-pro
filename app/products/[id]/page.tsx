@@ -18,11 +18,31 @@ function tryParse(str: string) { try { return JSON.parse(str) } catch { return [
 
 async function getProduct(id: string): Promise<Product | null> {
     try {
-        // Try by slug first, then by id
+        // 1. Try by exact slug
         let results = await executeQuery('SELECT * FROM products WHERE slug = ? LIMIT 1', [id])
+        
+        // 2. Try by exact id
         if (!results || results.length === 0) {
             results = await executeQuery('SELECT * FROM products WHERE id = ? LIMIT 1', [id])
         }
+
+        // 3. Fallback: extract 6-character hex suffix from slug (e.g. video-editing-assets-bundle-68ab54 -> 68ab54)
+        if (!results || results.length === 0) {
+            const parts = id.split('-')
+            const lastPart = parts[parts.length - 1]
+            if (lastPart && lastPart.length >= 6) {
+                results = await executeQuery('SELECT * FROM products WHERE id LIKE ? LIMIT 1', [lastPart + '%'])
+            }
+        }
+
+        // 4. Fallback: match by partial slug or cleaned title keywords
+        if (!results || results.length === 0) {
+            const cleanTitle = id.replace(/-[a-f0-9]{6,}$/i, '').replace(/-/g, ' ').trim()
+            if (cleanTitle.length >= 3) {
+                results = await executeQuery('SELECT * FROM products WHERE title LIKE ? LIMIT 1', [`%${cleanTitle}%`])
+            }
+        }
+
         if (!results || results.length === 0) return null
 
         const row = results[0]

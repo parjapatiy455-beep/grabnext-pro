@@ -18,6 +18,19 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     if (!results || results.length === 0) {
       results = await executeQuery('SELECT * FROM products WHERE id = ? LIMIT 1', [p])
     }
+    if (!results || results.length === 0) {
+      const parts = p.split('-')
+      const lastPart = parts[parts.length - 1]
+      if (lastPart && lastPart.length >= 6) {
+        results = await executeQuery('SELECT * FROM products WHERE id LIKE ? LIMIT 1', [lastPart + '%'])
+      }
+    }
+    if (!results || results.length === 0) {
+      const cleanTitle = p.replace(/-[a-f0-9]{6,}$/i, '').replace(/-/g, ' ').trim()
+      if (cleanTitle.length >= 3) {
+        results = await executeQuery('SELECT * FROM products WHERE title LIKE ? LIMIT 1', [`%${cleanTitle}%`])
+      }
+    }
     if (!results || results.length === 0) return NextResponse.json({ error: 'Product not found' }, { status: 404 })
 
     const row = results[0]
