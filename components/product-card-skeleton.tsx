@@ -7,7 +7,7 @@ export function ProductCardSkeleton({ className = "" }: { className?: string }) 
       className={`relative bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden h-full flex flex-col ${className}`}
     >
       {/* Image Area Skeleton */}
-      <div className="relative h-44 w-full bg-slate-100 dark:bg-slate-950 flex items-center justify-center p-4">
+      <div className="relative h-36 sm:h-44 w-full bg-slate-100 dark:bg-slate-950 flex items-center justify-center p-4">
         {/* Simulating badge placeholder */}
         <Skeleton className="absolute top-2 left-2 h-4 w-10 rounded" />
         <Skeleton className="h-32 w-32 rounded-lg" />
@@ -45,7 +45,7 @@ export function ProductCardSkeleton({ className = "" }: { className?: string }) 
 
 export function ProductGridSkeleton({
   count = 8,
-  className = "grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4",
+  className = "grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3",
 }: {
   count?: number
   className?: string

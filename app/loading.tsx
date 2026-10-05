@@ -10,7 +10,7 @@ export default function RootLoading() {
 
       {/* Category Quick-Nav Skeleton */}
       <div className="bg-white dark:bg-slate-900 border-b dark:border-slate-800 shadow-sm">
-        <div className="container mx-auto px-4 py-2 overflow-x-auto">
+        <div className="w-full px-3 py-2 overflow-x-auto">
           <div className="flex gap-5 min-w-max">
             {Array.from({ length: 8 }).map((_, i) => (
               <div key={i} className="flex flex-col items-center gap-1 min-w-[56px]">
@@ -22,14 +22,14 @@ export default function RootLoading() {
         </div>
       </div>
 
-      <main className="flex-1 container mx-auto px-3 md:px-4 py-4 space-y-6">
+      <main className="flex-1 w-full px-0 sm:px-2 py-2 sm:py-3 space-y-2 sm:space-y-3">
         {/* Banner Skeleton */}
-        <div className="relative rounded-2xl overflow-hidden w-full aspect-[2/1] md:max-h-[360px] shadow-sm">
-          <Skeleton className="w-full h-full rounded-2xl" />
+        <div className="relative rounded-none sm:rounded-xl overflow-hidden w-full aspect-[2/1] md:max-h-[512px] shadow-sm">
+          <Skeleton className="w-full h-full rounded-none" />
         </div>
 
         {/* All Products Section Skeleton */}
-        <section className="bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-2xl p-5 shadow-sm space-y-4">
+        <section className="bg-white dark:bg-slate-900 border-y sm:border dark:border-slate-800 rounded-none sm:rounded-xl p-3 sm:p-4 shadow-sm space-y-4">
           <div className="flex items-center justify-between">
             <div className="space-y-1">
               <Skeleton className="h-6 w-52 rounded" />

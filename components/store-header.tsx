@@ -65,7 +65,7 @@ export function StoreHeader() {
 
       {/* Top Bar - Warm White Elegant Brand */}
       <header className="bg-[#fdfaf6] dark:bg-slate-950 text-slate-900 dark:text-slate-100 border-b border-orange-100/50 dark:border-slate-800 shadow-sm transition-colors">
-        <div className="container mx-auto px-4 h-16 flex items-center justify-between gap-4">
+        <div className="w-full px-3 sm:px-4 h-16 flex items-center justify-between gap-4">
 
           {/* Logo */}
           <Logo />
