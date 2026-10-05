@@ -129,13 +129,13 @@ export function HeroSection({ customBanner }: HeroSectionProps) {
             </div>
           </div>
 
-          {/* Right Column: Fast Loading Image with bounceInRight animation (DigiGrowPro style) */}
-          <div className="md:col-span-5 flex justify-center items-center">
+          {/* Right Column: Fast Loading Image without any artificial background (DigiGrowPro style) */}
+          <div className="md:col-span-5 flex justify-center items-center py-2 sm:py-0">
             <Link
               href={heroLink}
-              className="block relative group max-w-[340px] sm:max-w-[400px] w-full animate-bounce-in-right"
+              className="block relative group w-full max-w-[280px] sm:max-w-[340px] md:max-w-[420px] animate-bounce-in-right"
             >
-              <div className="relative rounded-2xl overflow-hidden shadow-2xl transition-transform duration-500 group-hover:scale-[1.02] bg-slate-900 border-2 border-slate-800">
+              <div className="relative transition-transform duration-500 group-hover:scale-[1.03] flex items-center justify-center">
                 <img
                   src={heroImg}
                   alt={heroTitle}
@@ -144,7 +144,7 @@ export function HeroSection({ customBanner }: HeroSectionProps) {
                   fetchPriority="high"
                   loading="eager"
                   decoding="async"
-                  className="w-full h-auto object-cover block animate-hero-float"
+                  className="w-full h-auto max-h-[340px] sm:max-h-[420px] object-contain block drop-shadow-xl animate-hero-float"
                 />
               </div>
             </Link>
