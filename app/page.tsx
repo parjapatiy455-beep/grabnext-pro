@@ -203,7 +203,7 @@ export default function HomePage() {
               return (
                 <Link
                   key={b.id}
-                  href={b.linkUrl && b.linkUrl.trim() !== "" ? b.linkUrl.trim() : "/products"}
+                  href={b.linkUrl && b.linkUrl.trim() !== "" ? b.linkUrl.trim() : "/software"}
                   className={`block absolute inset-0 transition-opacity duration-700 cursor-pointer ${i === idx ? "opacity-100 z-10" : "opacity-0 z-0"} ${!isHex ? `bg-gradient-to-r ${b.bgColor || "from-blue-600 to-indigo-700"}` : ""}`}
                   style={isHex ? { background: b.bgColor } : {}}
                 >
