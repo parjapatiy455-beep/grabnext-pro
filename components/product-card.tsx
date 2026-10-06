@@ -9,15 +9,17 @@ import type { Product } from "@/lib/types"
 import { useState, useEffect, useRef } from "react"
 import { trackAddToCart } from "@/lib/pixel"
 
-interface ProductCardProps { product: Product }
+interface ProductCardProps { 
+  product: Product
+  priority?: boolean
+}
 
-export function ProductCard({ product }: ProductCardProps) {
+export function ProductCard({ product, priority = false }: ProductCardProps) {
   const { addToCart } = useCart()
   const [added, setAdded] = useState(false)
   const [imgIdx, setImgIdx] = useState(0)
   const [fade, setFade] = useState(true)
   const [isOpening, setIsOpening] = useState(false)
-  const [imgLoaded, setImgLoaded] = useState(false)
   const timerRef = useRef<NodeJS.Timeout | null>(null)
 
   const formatPrice = (price: number) =>
@@ -116,21 +118,16 @@ export function ProductCard({ product }: ProductCardProps) {
         )}
 
         {/* Image with smooth crossfade */}
-        <div className="relative h-36 sm:h-44 w-full bg-gray-50 dark:bg-slate-950 overflow-hidden flex items-center justify-center p-1 transition-colors">
-          {!imgLoaded && (
-            <div className="absolute inset-0 skeleton-shimmer bg-slate-200/80 dark:bg-slate-800/80" />
-          )}
+        <div className="relative h-44 w-full bg-gray-50 dark:bg-slate-950 overflow-hidden flex items-center justify-center p-1 transition-colors">
           <img
             src={currentImg}
             alt={product?.title || "product"}
             decoding="async"
-            loading="lazy"
-            onLoad={() => setImgLoaded(true)}
-            onError={() => setImgLoaded(true)}
-            ref={(el) => { if (el && el.complete && !imgLoaded) setImgLoaded(true) }}
+            loading={priority ? "eager" : "lazy"}
+            fetchPriority={priority ? "high" : "auto"}
             className="h-full w-full object-contain transition-transform duration-300 group-hover:scale-105"
             style={{
-              opacity: fade && imgLoaded ? 1 : 0,
+              opacity: fade ? 1 : 0,
               transition: "opacity 0.18s ease-in-out, transform 0.3s ease",
             }}
           />
