@@ -1,12 +1,40 @@
 export const runtime = 'edge'
 import { NextRequest, NextResponse } from 'next/server'
 import { getRequestContext } from '@cloudflare/next-on-pages'
+import { executeQuery } from '@/lib/db'
 
 export const dynamic = 'force-dynamic'
 
 export async function POST(request: NextRequest) {
     try {
-        const { amount, currency = 'INR', receipt } = await request.json()
+        const body = await request.json()
+        const orderId = body.orderId || body.receipt
+
+        if (!orderId) {
+            return NextResponse.json({ error: 'orderId is required' }, { status: 400 })
+        }
+
+        // TAMPER PROTECTION: Always load order amount directly from database
+        const orders: any[] = await executeQuery(
+            'SELECT id, totalAmount, status, userName, userEmail FROM orders WHERE id = ? LIMIT 1',
+            [orderId]
+        )
+
+        if (!orders || orders.length === 0) {
+            return NextResponse.json({ error: 'Order not found' }, { status: 404 })
+        }
+
+        const dbOrder = orders[0]
+        if (dbOrder.status === 'paid' || dbOrder.status === 'completed') {
+            return NextResponse.json({ error: 'Order is already paid' }, { status: 400 })
+        }
+
+        const serverAmount = Number(dbOrder.totalAmount)
+        if (isNaN(serverAmount) || serverAmount <= 0) {
+            return NextResponse.json({ error: 'Order amount is 0, no payment required' }, { status: 400 })
+        }
+
+        const amountInPaise = Math.round(serverAmount * 100)
 
         let keyId: string | undefined
         let keySecret: string | undefined
@@ -22,7 +50,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Razorpay keys not configured' }, { status: 500 })
         }
 
-        // Create Razorpay order via their API
+        // Create Razorpay order via official API
         const auth = btoa(`${keyId}:${keySecret}`)
         const res = await fetch('https://api.razorpay.com/v1/orders', {
             method: 'POST',
@@ -31,20 +59,31 @@ export async function POST(request: NextRequest) {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                amount: Math.round(amount * 100), // Razorpay needs paise
-                currency,
-                receipt: receipt || `rcpt_${Date.now()}`,
+                amount: amountInPaise,
+                currency: 'INR',
+                receipt: orderId,
+                notes: {
+                    orderId: dbOrder.id,
+                    userEmail: dbOrder.userEmail || ''
+                }
             }),
         })
 
         if (!res.ok) {
             const err = await res.text()
+            console.error('[Razorpay Order Creation Failed]:', err)
             return NextResponse.json({ error: `Razorpay error: ${err}` }, { status: 500 })
         }
 
-        const order = await res.json()
-        return NextResponse.json({ orderId: order.id, keyId })
+        const rzpOrder = await res.json()
+        return NextResponse.json({
+            orderId: rzpOrder.id,
+            keyId,
+            amount: amountInPaise,
+            currency: 'INR'
+        })
     } catch (error: any) {
+        console.error('[Razorpay create-order Exception]:', error)
         return NextResponse.json({ error: error.message }, { status: 500 })
     }
 }

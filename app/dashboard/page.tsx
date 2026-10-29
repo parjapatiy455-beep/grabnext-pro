@@ -398,7 +398,7 @@ export default function DashboardPage() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     id: orderId,
-                    status: "paid",
+                    status: "failed",
                     paymentId,
                 }),
             })
@@ -417,7 +417,7 @@ export default function DashboardPage() {
             const orderRes = await fetch("/api/razorpay/create-order", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ amount: order.totalAmount, currency: "INR" }),
+                body: JSON.stringify({ orderId }),
             })
             const orderData = await orderRes.json()
             if (!orderData.orderId || !window.Razorpay) {
@@ -428,7 +428,7 @@ export default function DashboardPage() {
 
             const options = {
                 key: orderData.keyId,
-                amount: Math.round(order.totalAmount * 100),
+                amount: orderData.amount,
                 currency: "INR",
                 name: "Grabnext",
                 order_id: orderData.orderId,
@@ -438,7 +438,26 @@ export default function DashboardPage() {
                     contact: order.userPhone || "",
                 },
                 handler: async (response: any) => {
-                    await updateOrder(orderId, response.razorpay_payment_id)
+                    try {
+                        const verifyRes = await fetch("/api/razorpay/verify", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                                orderId,
+                                razorpay_order_id: response.razorpay_order_id,
+                                razorpay_payment_id: response.razorpay_payment_id,
+                                razorpay_signature: response.razorpay_signature,
+                            }),
+                        })
+                        const verifyData = await verifyRes.json()
+                        if (!verifyRes.ok || !verifyData.success) {
+                            throw new Error(verifyData.error || "Payment verification failed")
+                        }
+                        toast({ title: "🎉 Payment Verified & Successful!" })
+                        loadOrders()
+                    } catch (vErr: any) {
+                        toast({ title: "Verification Failed", description: vErr.message, variant: "destructive" })
+                    }
                     setCompletingPayment(false)
                 },
                 modal: { ondismiss: () => setCompletingPayment(false) }

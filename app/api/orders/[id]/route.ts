@@ -2,8 +2,26 @@ export const runtime = 'edge'
 import { NextRequest, NextResponse } from 'next/server'
 import { executeQuery } from '@/lib/db'
 import { sendOrderSuccessEmail, sendOrderFailedEmail } from '@/lib/brevo'
+import { getSession } from '@/lib/session'
 
 export const dynamic = 'force-dynamic'
+
+async function isAdminSession(): Promise<boolean> {
+    try {
+        const session = await getSession()
+        if (!session?.uid) return false
+        const rows = await executeQuery('SELECT role, email FROM users WHERE uid = ? LIMIT 1', [session.uid]) as any[]
+        if (rows && rows.length > 0 && rows[0].role === 'admin') {
+            return true
+        }
+        if (session.role === 'admin' || session.email === 'yk8292238@gmail.com') {
+            return true
+        }
+    } catch (err) {
+        console.error("[Orders ID API] Admin check failed:", err)
+    }
+    return false
+}
 
 // GET /api/orders/[id] - Get a single order
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
@@ -31,6 +49,16 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
         const { status, reason } = await request.json()
         if (!status) {
             return NextResponse.json({ error: "Status is required" }, { status: 400 })
+        }
+
+        // TAMPER PROTECTION: Only admin can mark orders as 'paid' or 'completed' directly
+        if (status === 'paid' || status === 'completed') {
+            const isAdmin = await isAdminSession()
+            if (!isAdmin) {
+                return NextResponse.json({
+                    error: "Unauthorized: Admin authorization required to manually set order status to paid."
+                }, { status: 403 })
+            }
         }
 
         const now = Date.now()
@@ -65,4 +93,3 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
         return NextResponse.json({ error: error.message }, { status: 500 })
     }
 }
-

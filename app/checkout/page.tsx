@@ -171,7 +171,7 @@ export default function CheckoutPage() {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) =>
     setFormData({ ...formData, [e.target.name]: e.target.value })
 
-  const updateOrder = useCallback(async (orderId: string, status: string = 'paid', paymentId?: string, reason?: string) => {
+  const updateOrder = useCallback(async (orderId: string, status: string = 'failed', paymentId?: string, reason?: string) => {
     try {
       await fetch("/api/orders", {
         method: "PATCH",
@@ -211,7 +211,7 @@ export default function CheckoutPage() {
     return "guest"
   }
 
-  const launchXPay = (orderId: string) => {
+  const launchXPay = (orderId: string, verifiedAmount: number) => {
     if (!window.XPay) {
       toast({ title: "Payment system loading, please retry", variant: "destructive" })
       setLoading(false)
@@ -221,7 +221,7 @@ export default function CheckoutPage() {
     let paymentSucceeded = false
     const xpay = new window.XPay({
       api_key: xpayApiKey || "xp_live_wtm5vj64kseuylg9cfmsl9",
-      amount: Math.round(finalAmount),
+      amount: Math.round(verifiedAmount),
       title: orderTitle,
       onSuccess: async (data: { utr: string }) => {
         paymentSucceeded = true
@@ -241,10 +241,11 @@ export default function CheckoutPage() {
   }
 
   const launchRazorpay = async (orderId: string) => {
+    // TAMPER PROTECTION: Request gateway order using orderId; server looks up verified price
     const orderRes = await fetch("/api/razorpay/create-order", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ amount: finalAmount, currency: "INR" }),
+      body: JSON.stringify({ orderId }),
     })
     const orderData = await orderRes.json()
     if (!orderData.orderId) {
@@ -264,7 +265,7 @@ export default function CheckoutPage() {
     let paymentSucceeded = false
     const options = {
       key: orderData.keyId,
-      amount: Math.round(finalAmount * 100),
+      amount: orderData.amount, // Server verified amount in paise
       currency: "INR",
       name: "Grabnext",
       description: items.length === 1 ? items[0].product.title : `${items.length} items`,
@@ -277,11 +278,34 @@ export default function CheckoutPage() {
       theme: { color: "#f59e0b" },
       handler: async (response: any) => {
         paymentSucceeded = true
-        setLoading(false)
-        const paymentId = response.razorpay_payment_id
-        await updateOrder(orderId, 'paid', paymentId)
-        clearCart()
-        router.push(`/checkout/success?utr=${paymentId}`)
+        setLoading(true)
+        try {
+          // TAMPER PROTECTION: Cryptographically verify signature and amount on backend
+          const verifyRes = await fetch("/api/razorpay/verify", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              orderId,
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+            }),
+          })
+          const verifyData = await verifyRes.json()
+          if (!verifyRes.ok || !verifyData.success) {
+            throw new Error(verifyData.error || "Payment verification failed")
+          }
+          clearCart()
+          router.push(`/checkout/success?utr=${response.razorpay_payment_id}`)
+        } catch (err: any) {
+          toast({
+            title: "Payment Verification Failed",
+            description: err.message || "Could not verify transaction with payment gateway",
+            variant: "destructive",
+          })
+        } finally {
+          setLoading(false)
+        }
       },
       modal: {
         ondismiss: async () => {
@@ -318,26 +342,21 @@ export default function CheckoutPage() {
           userPhone: formData.phone.trim(),
           items: items.map((i) => ({
             productId: i.productId,
-            title: i.product.title,
-            price: i.product.price,
-            quantity: i.quantity,
-            imageUrl: i.product.imageUrl,
-            downloadUrl: i.product.downloadUrl
+            quantity: i.quantity || 1,
           })),
-          totalAmount: finalAmount,
           couponCode: appliedCoupon?.code || null,
-          discountAmount: appliedCoupon?.discountAmount || 0,
-          status: "pending",
         }),
       })
 
       const orderData = await orderRes.json()
-      if (!orderData.id) throw new Error("Failed to initialize order")
+      if (!orderData.id) throw new Error(orderData.error || "Failed to initialize order")
+
+      const verifiedOrderTotal = orderData.totalAmount !== undefined ? orderData.totalAmount : finalAmount
 
       // Track Pixel payment info
       trackAddPaymentInfo(
         {
-          value: finalAmount,
+          value: verifiedOrderTotal,
           num_items: items.length,
           content_ids: items.map((i) => i.productId),
           contents: items.map((i) => ({
@@ -353,11 +372,18 @@ export default function CheckoutPage() {
         }
       )
 
+      // If order is completely free (e.g. 100% coupon)
+      if (orderData.totalAmount === 0 || orderData.status === 'paid') {
+        clearCart()
+        router.push(`/checkout/success?utr=${orderData.id}`)
+        return
+      }
+
       // Open Gateway immediately
       if (activeGateway === "razorpay") {
         await launchRazorpay(orderData.id)
       } else {
-        launchXPay(orderData.id)
+        launchXPay(orderData.id, verifiedOrderTotal)
       }
     } catch (err: any) {
       setLoading(false)

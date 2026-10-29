@@ -40,14 +40,14 @@ export interface RazorpayOptions {
   }
 }
 
-export const createRazorpayOrder = async (amount: number, currency = "INR") => {
+export const createRazorpayOrder = async (orderId: string) => {
   try {
-    const response = await fetch("/api/payments/razorpay/create-order", {
+    const response = await fetch("/api/razorpay/create-order", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ amount, currency }),
+      body: JSON.stringify({ orderId }),
     })
 
     if (!response.ok) {
@@ -62,12 +62,13 @@ export const createRazorpayOrder = async (amount: number, currency = "INR") => {
 }
 
 export const verifyRazorpayPayment = async (paymentData: {
+  orderId: string
   razorpay_order_id: string
   razorpay_payment_id: string
   razorpay_signature: string
 }) => {
   try {
-    const response = await fetch("/api/payments/razorpay/verify", {
+    const response = await fetch("/api/razorpay/verify", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

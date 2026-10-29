@@ -11,14 +11,14 @@ export async function GET(
     try {
         const { paymentId } = params
 
-        // Query by paymentId (UTR)
+        // Query by paymentId (UTR) - TAMPER PROTECTION: strictly allow only confirmed paid orders
         const results = await executeQuery(
-            "SELECT * FROM orders WHERE paymentId = ? LIMIT 1",
+            "SELECT * FROM orders WHERE paymentId = ? AND (status = 'paid' OR status = 'completed') LIMIT 1",
             [paymentId]
         )
 
         if (!Array.isArray(results) || results.length === 0) {
-            return NextResponse.json({ error: "Order not found" }, { status: 404 })
+            return NextResponse.json({ error: "Order not found or payment not completed" }, { status: 404 })
         }
 
         const o = results[0] as any
