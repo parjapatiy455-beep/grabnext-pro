@@ -67,6 +67,9 @@ export interface Product {
   category: string
   tags: string[]
   imageUrl: string
+  images?: string[]
+  videoUrl?: string
+  proofImages?: string[]
   downloadUrl: string // Now stores JSON.stringify(DigitalAsset[])
   createdAt: Date
   updatedAt: Date

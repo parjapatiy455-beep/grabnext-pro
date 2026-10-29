@@ -6,7 +6,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const pageUrl = `${siteUrl}/software`
 
   return {
-    title: "Adobe All Premium Software Bundle 2026 ₹249 | Pre-Activated Lifetime Access | Grabnext",
+    title: "Adobe All Software Bundle 2026 ₹249",
     description: "Get lifetime access to 20+ Adobe CC apps including Photoshop, Premiere Pro, Illustrator, After Effects, and Lightroom. Pre-activated for Windows & Mac with instant download.",
     keywords: [
       "adobe software bundle cheap india",

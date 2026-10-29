@@ -5,8 +5,8 @@ import { CheckCircle2, XCircle, Clock, AlertTriangle } from "lucide-react"
 import type { Metadata } from "next"
 
 export const metadata: Metadata = {
-    title: "Refund & Return Policy | Grabnext",
-    description: "Learn about Grabnext's refund and return policy for digital and physical products.",
+    title: "Refund & Return Policy",
+    description: "Learn about Grabnext's refund and return policy for digital products and download guarantees.",
 }
 
 export default function RefundPage() {

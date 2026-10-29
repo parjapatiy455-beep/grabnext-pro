@@ -10,7 +10,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const pageUrl = `${siteUrl}/editing`
 
   return {
-    title: "World's Biggest Video Editing Bundle ₹199 | Premiere Pro & After Effects Assets | Grabnext",
+    title: "Biggest Video Editing Bundle ₹199",
     description: "Get 70+ GB of premium video editing assets: 800+ transitions, 2,000+ FX presets, 10,000+ fonts, 3,050+ sound effects, cinematic LUTs & full masterclass. Lifetime access for ₹199!",
     keywords: [
       "video editing bundle india",

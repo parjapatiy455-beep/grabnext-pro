@@ -6,7 +6,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const pageUrl = `${siteUrl}/claude-skills`
 
   return {
-    title: "Claude AI Skills & Prompt Engineering Pack | Grabnext",
+    title: "Claude AI Skills & Prompt Engineering Pack",
     description: "Unlock 50+ pro Claude AI skills and prompt engineering templates to automate content writing, coding, marketing, and business workflows.",
     keywords: [
       "claude ai skills pack",

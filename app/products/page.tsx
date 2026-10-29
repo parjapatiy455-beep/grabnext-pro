@@ -12,8 +12,8 @@ export async function generateMetadata(): Promise<Metadata> {
     const pageUrl = `${siteUrl}/products`
 
     return {
-        title: "Buy Digital Products, Software & Design Bundles Online | Grabnext",
-        description: "Explore all digital products on Grabnext India. Buy cheap software source codes, Canva design templates, video editing FX bundles, and online masterclasses with instant download.",
+        title: "Buy Digital Products, Software & Bundles Online",
+        description: "Browse premium digital products in India: cheap software source codes, Canva templates, video editing bundles & masterclasses with instant UPI download.",
         keywords: [
             "buy digital products online",
             "software buy cheap india",
@@ -32,11 +32,20 @@ export async function generateMetadata(): Promise<Metadata> {
             url: pageUrl,
             siteName: "Grabnext",
             type: "website",
+            images: [
+                {
+                    url: `${siteUrl}/logo.webp`,
+                    width: 1200,
+                    height: 630,
+                    alt: "Grabnext Digital Products Marketplace India",
+                },
+            ],
         },
         twitter: {
             card: "summary_large_image",
             title: "Buy Digital Products & Software Online India | Grabnext",
             description: "Browse software source codes, graphic design templates, video editing bundles & courses with instant UPI delivery.",
+            images: [`${siteUrl}/logo.webp`],
         }
     }
 }

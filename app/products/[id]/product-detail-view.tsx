@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import {
     Star, Zap, Shield,
-    Heart, Share2, Loader2, X, ChevronLeft, ChevronRight, Clock, CheckCircle2
+    Heart, Share2, Loader2, X, ChevronLeft, ChevronRight, Clock, CheckCircle2,
+    Play, Video, ShieldCheck, ZoomIn, ImageIcon
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
@@ -20,6 +21,7 @@ import { fetchProductReviews, submitReview, fetchProducts } from "@/lib/d1-clien
 import { toast } from "@/hooks/use-toast"
 import type { Product } from "@/lib/types"
 import { trackViewContent, trackAddToCart } from "@/lib/pixel"
+import { getVideoInfo } from "@/lib/video-utils"
 
 // ─── Star Rating ─────────────────────────────────────────────────────────────
 function StarRating({ rating, interactive = false, onRate }: { rating: number; interactive?: boolean; onRate?: (r: number) => void }) {
@@ -39,7 +41,7 @@ function StarRating({ rating, interactive = false, onRate }: { rating: number; i
     )
 }
 
-// ─── Image Zoom Modal ─────────────────────────────────────────────────────────
+// ─── Image / Screenshot Zoom Modal ───────────────────────────────────────────
 function ZoomModal({ images, startIdx, onClose }: { images: string[]; startIdx: number; onClose: () => void }) {
     const [idx, setIdx] = useState(startIdx)
     const go = (d: number) => setIdx((i) => (i + d + images.length) % images.length)
@@ -53,20 +55,22 @@ function ZoomModal({ images, startIdx, onClose }: { images: string[]; startIdx: 
         return () => window.removeEventListener("keydown", handler)
     }, [])
     return (
-        <div className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center p-4" onClick={onClose}>
+        <div className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center p-3 sm:p-4" onClick={onClose}>
             <button onClick={(e) => { e.stopPropagation(); onClose() }}
-                className="absolute top-4 right-4 h-10 w-10 bg-white/20 text-white rounded-full flex items-center justify-center hover:bg-white/30 transition-colors z-10">
+                className="absolute top-4 right-4 h-10 w-10 bg-white/20 text-white rounded-full flex items-center justify-center hover:bg-white/30 transition-colors z-20">
                 <X className="h-5 w-5" />
             </button>
             {images.length > 1 && (<>
-                <button onClick={(e) => { e.stopPropagation(); go(-1) }} className="absolute left-2 sm:left-4 h-10 w-10 bg-white/20 text-white rounded-full flex items-center justify-center hover:bg-white/30 z-10">
+                <button onClick={(e) => { e.stopPropagation(); go(-1) }} className="absolute left-2 sm:left-4 h-10 w-10 bg-white/20 text-white rounded-full flex items-center justify-center hover:bg-white/30 z-20">
                     <ChevronLeft className="h-5 w-5" />
                 </button>
-                <button onClick={(e) => { e.stopPropagation(); go(1) }} className="absolute right-2 sm:right-4 h-10 w-10 bg-white/20 text-white rounded-full flex items-center justify-center hover:bg-white/30 z-10">
+                <button onClick={(e) => { e.stopPropagation(); go(1) }} className="absolute right-2 sm:right-4 h-10 w-10 bg-white/20 text-white rounded-full flex items-center justify-center hover:bg-white/30 z-20">
                     <ChevronRight className="h-5 w-5" />
                 </button>
             </>)}
-            <img src={images[idx]} alt="Product zoom" className="max-h-[90vh] max-w-[90vw] object-contain" onClick={(e) => e.stopPropagation()} />
+            <div className="max-h-[90vh] max-w-[95vw] sm:max-w-[90vw] overflow-auto flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
+                <img src={images[idx]} alt="Screenshot zoom" className="max-h-[85vh] max-w-full object-contain rounded-lg shadow-2xl" />
+            </div>
             {images.length > 1 && (
                 <div className="absolute bottom-4 flex gap-2">
                     {images.map((_, i) => <button key={i} onClick={(e) => { e.stopPropagation(); setIdx(i) }}
@@ -109,7 +113,8 @@ export function ProductDetailView({ product: initialProduct, id }: { product: Pr
     const [activeTab, setActiveTab] = useState<"description" | "reviews">("description")
     const [activeImg, setActiveImg] = useState(0)
     const [imgFade, setImgFade] = useState(true)
-    const [zoomIdx, setZoomIdx] = useState<number | null>(null)
+    const [activeMediaType, setActiveMediaType] = useState<"image" | "video">("image")
+    const [zoomModalData, setZoomModalData] = useState<{ images: string[]; startIdx: number } | null>(null)
 
     const changeActiveImg = (i: number) => {
         setImgFade(false)
@@ -175,10 +180,27 @@ export function ProductDetailView({ product: initialProduct, id }: { product: Pr
         return [`/placeholder.svg?height=400&width=400&query=${encodeURIComponent(product.title)}`]
     })()
 
+    const proofImages: string[] = (() => {
+        const arr = Array.isArray((product as any).proofImages) ? (product as any).proofImages : []
+        return arr.filter(Boolean)
+    })()
+
+    const videoInfo = product.videoUrl ? getVideoInfo(product.videoUrl) : null
+
     const originalPrice = (product as any).originalPrice || product.price * 1.25
     const discount = Math.round(((originalPrice - product.price) / originalPrice) * 100)
     const avgRating = parseFloat(reviewStats.avgRating)
     const descIsHtml = product.description?.includes("<") && product.description?.includes(">")
+
+    const handleDescriptionClick = (e: React.MouseEvent<HTMLDivElement>) => {
+        const target = e.target as HTMLElement
+        if (target.tagName === "IMG") {
+            const src = (target as HTMLImageElement).src
+            if (src) {
+                setZoomModalData({ images: [src], startIdx: 0 })
+            }
+        }
+    }
 
     return (
         <div className="min-h-screen bg-gray-50 dark:bg-slate-950 flex flex-col text-slate-900 dark:text-slate-100 transition-colors">
@@ -190,43 +212,115 @@ export function ProductDetailView({ product: initialProduct, id }: { product: Pr
                 <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 overflow-hidden transition-colors">
                     <div className="grid grid-cols-1 lg:grid-cols-2">
 
-                        {/* LEFT — Image */}
+                        {/* LEFT — Media (Image & Video) */}
                         <div className="flex flex-col gap-3 p-4 sm:p-6 lg:border-r lg:border-gray-100 dark:lg:border-slate-800">
-                            {/* Main image */}
-                            <div
-                                className="relative rounded-xl overflow-hidden cursor-zoom-in bg-gray-50 dark:bg-slate-950"
-                                onClick={() => setZoomIdx(activeImg)}
-                            >
-                                {product.salesCount > 100 && (
-                                    <Badge className="absolute top-2 left-2 z-10 bg-blue-600 text-white text-[10px]">Bestseller</Badge>
-                                )}
-                                {discount > 0 && (
-                                    <Badge className="absolute top-2 right-2 z-10 bg-red-500 text-white text-[10px] font-bold">{discount}% OFF</Badge>
-                                )}
-                                <div style={{ opacity: imgFade ? 1 : 0, transition: "opacity 0.15s ease-in-out" }}>
-                                    <img
-                                        src={images[activeImg]}
-                                        alt={product.title}
-                                        className="w-full h-auto max-h-[300px] sm:max-h-[380px] object-contain mx-auto block py-2"
-                                    />
+                            
+                            {/* Media Type Switcher Pill (if video exists) */}
+                            {videoInfo && (
+                                <div className="flex items-center gap-1.5 p-1 bg-gray-100 dark:bg-slate-800/80 rounded-xl w-fit text-xs font-semibold">
+                                    <button
+                                        type="button"
+                                        onClick={() => setActiveMediaType("image")}
+                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all ${
+                                            activeMediaType === "image"
+                                                ? "bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-sm"
+                                                : "text-gray-500 hover:text-gray-900 dark:text-slate-400"
+                                        }`}
+                                    >
+                                        <ImageIcon className="h-3.5 w-3.5" /> Photos ({images.length})
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setActiveMediaType("video")}
+                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all ${
+                                            activeMediaType === "video"
+                                                ? "bg-red-600 text-white shadow-sm font-semibold"
+                                                : "text-gray-500 hover:text-gray-900 dark:text-slate-400"
+                                        }`}
+                                    >
+                                        <Play className="h-3.5 w-3.5 fill-current" /> Watch Video
+                                    </button>
                                 </div>
-                                <p className="text-center text-[10px] text-gray-400 dark:text-slate-500 pb-1">Tap to zoom</p>
-                            </div>
+                            )}
 
-                            {/* Thumbnails */}
-                            {images.length > 1 && (
+                            {/* Main Media Display */}
+                            {activeMediaType === "video" && videoInfo ? (
+                                <div className="relative rounded-xl overflow-hidden bg-black shadow-inner aspect-video sm:aspect-[16/10] w-full flex items-center justify-center">
+                                    {videoInfo.type === 'direct' ? (
+                                        <video 
+                                            src={videoInfo.embedUrl} 
+                                            controls 
+                                            playsInline 
+                                            autoPlay 
+                                            className="w-full h-full object-contain" 
+                                        />
+                                    ) : (
+                                        <iframe
+                                            src={videoInfo.embedUrl}
+                                            className="w-full h-full border-0"
+                                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                            allowFullScreen
+                                        />
+                                    )}
+                                </div>
+                            ) : (
+                                <div
+                                    className="relative rounded-xl overflow-hidden cursor-zoom-in bg-gray-50 dark:bg-slate-950"
+                                    onClick={() => setZoomModalData({ images, startIdx: activeImg })}
+                                >
+                                    {product.salesCount > 100 && (
+                                        <Badge className="absolute top-2 left-2 z-10 bg-blue-600 text-white text-[10px]">Bestseller</Badge>
+                                    )}
+                                    {discount > 0 && (
+                                        <Badge className="absolute top-2 right-2 z-10 bg-red-500 text-white text-[10px] font-bold">{discount}% OFF</Badge>
+                                    )}
+                                    <div style={{ opacity: imgFade ? 1 : 0, transition: "opacity 0.15s ease-in-out" }}>
+                                        <img
+                                            src={images[activeImg]}
+                                            alt={product.title}
+                                            className="w-full h-auto max-h-[300px] sm:max-h-[380px] object-contain mx-auto block py-2"
+                                        />
+                                    </div>
+                                    <p className="text-center text-[10px] text-gray-400 dark:text-slate-500 pb-1">Tap to zoom</p>
+                                </div>
+                            )}
+
+                            {/* Thumbnails Row (Images + Video thumbnail) */}
+                            {(images.length > 1 || videoInfo) && (
                                 <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
                                     {images.map((img, i) => (
                                         <button
                                             key={i}
-                                            onMouseEnter={() => changeActiveImg(i)}
-                                            onClick={() => changeActiveImg(i)}
+                                            onMouseEnter={() => { setActiveMediaType("image"); changeActiveImg(i) }}
+                                            onClick={() => { setActiveMediaType("image"); changeActiveImg(i) }}
                                             className={`shrink-0 h-14 w-14 rounded-lg border-2 overflow-hidden transition-all duration-200 bg-gray-50 dark:bg-slate-950
-                                                ${i === activeImg ? "border-blue-600 dark:border-blue-500 shadow-md scale-105" : "border-gray-200 dark:border-slate-800 hover:border-blue-400 dark:hover:border-blue-500"}`}
+                                                ${activeMediaType === "image" && i === activeImg ? "border-blue-600 dark:border-blue-500 shadow-md scale-105" : "border-gray-200 dark:border-slate-800 hover:border-blue-400 dark:hover:border-blue-500"}`}
                                         >
                                             <img src={img} alt={`View ${i + 1}`} className="w-full h-full object-contain p-1" />
                                         </button>
                                     ))}
+
+                                    {videoInfo && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setActiveMediaType("video")}
+                                            className={`shrink-0 h-14 w-14 rounded-lg border-2 overflow-hidden transition-all duration-200 relative bg-black flex items-center justify-center
+                                                ${activeMediaType === "video" ? "border-red-600 shadow-md scale-105 ring-2 ring-red-500/20" : "border-gray-200 dark:border-slate-800 hover:border-red-500"}`}
+                                            title="Watch product video"
+                                        >
+                                            {videoInfo.thumbnail ? (
+                                                <img src={videoInfo.thumbnail} alt="Video preview" className="w-full h-full object-cover opacity-80" />
+                                            ) : (
+                                                <div className="w-full h-full bg-gradient-to-br from-red-950 to-black flex items-center justify-center" />
+                                            )}
+                                            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40">
+                                                <div className="h-6 w-6 rounded-full bg-red-600 text-white flex items-center justify-center shadow-md">
+                                                    <Play className="h-3 w-3 fill-current ml-0.5" />
+                                                </div>
+                                                <span className="text-[8px] font-bold text-white tracking-wider uppercase mt-0.5">Video</span>
+                                            </div>
+                                        </button>
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -249,6 +343,11 @@ export function ProductDetailView({ product: initialProduct, id }: { product: Pr
                                 <button onClick={() => setActiveTab("reviews")} className="flex items-center gap-1 bg-green-600 text-white text-xs font-bold px-2 py-0.5 rounded hover:bg-green-700 transition">
                                     {avgRating > 0 ? avgRating.toFixed(1) : "New"} <Star className="h-3 w-3 fill-white ml-0.5" />
                                 </button>
+                                {reviewStats.count > 0 && (
+                                    <span className="text-xs text-gray-400 dark:text-slate-500">
+                                        ({reviewStats.count} customer reviews)
+                                    </span>
+                                )}
                             </div>
 
                             <Separator className="dark:bg-slate-800" />
@@ -349,7 +448,7 @@ export function ProductDetailView({ product: initialProduct, id }: { product: Pr
                     </div>
                 </div>
 
-                {/* ── Tabs ─────────────────────────────────────────────── */}
+                {/* ── Tabs: Description & Reviews ───────────────────────── */}
                 <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 overflow-hidden transition-colors">
                     {/* Tab bar */}
                     <div className="flex border-b border-gray-100 dark:border-slate-800">
@@ -373,7 +472,7 @@ export function ProductDetailView({ product: initialProduct, id }: { product: Pr
                     <div className="p-4 sm:p-6 lg:p-8">
                         {/* Description */}
                         {activeTab === "description" && (
-                            <div className="space-y-6">
+                            <div className="space-y-8">
                                 {pageLoading ? (
                                     <div className="animate-pulse space-y-3">
                                         {[...Array(5)].map((_, i) => (
@@ -383,8 +482,9 @@ export function ProductDetailView({ product: initialProduct, id }: { product: Pr
                                 ) : product.description ? (
                                     descIsHtml ? (
                                         <div
-                                            className="product-description max-w-none prose prose-blue dark:prose-invert"
+                                            className="product-description max-w-none prose prose-blue dark:prose-invert prose-img:rounded-xl prose-img:shadow-md prose-img:cursor-zoom-in"
                                             dangerouslySetInnerHTML={{ __html: product.description }}
+                                            onClick={handleDescriptionClick}
                                         />
                                     ) : (
                                         <div className="space-y-3">
@@ -427,6 +527,62 @@ export function ProductDetailView({ product: initialProduct, id }: { product: Pr
                                     )
                                 ) : (
                                     <p className="text-sm text-gray-400 dark:text-slate-500 text-center py-8">No description available.</p>
+                                )}
+
+                                {/* ── Verified Customer Proofs & Trust Section ── */}
+                                {proofImages.length > 0 && (
+                                    <div className="pt-6 border-t border-gray-100 dark:border-slate-800 space-y-4">
+                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-100 dark:border-slate-800 pb-3">
+                                            <div className="flex items-center gap-2.5">
+                                                <div className="h-9 w-9 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                                                    <ShieldCheck className="h-5 w-5" />
+                                                </div>
+                                                <div>
+                                                    <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                                                        Customer Proofs & Real Results
+                                                        <span className="text-[10px] font-semibold bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 rounded-full">
+                                                            100% Genuine
+                                                        </span>
+                                                    </h3>
+                                                    <p className="text-xs text-gray-500 dark:text-slate-400">
+                                                        Real buyer feedback, WhatsApp messages, and results screenshots from our community.
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <span className="text-xs text-gray-400 dark:text-slate-500 font-medium">
+                                                {proofImages.length} verified {proofImages.length === 1 ? 'screenshot' : 'screenshots'}
+                                            </span>
+                                        </div>
+
+                                        {/* Responsive Screenshot Grid */}
+                                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4">
+                                            {proofImages.map((proofUrl, idx) => (
+                                                <div
+                                                    key={idx}
+                                                    onClick={() => setZoomModalData({ images: proofImages, startIdx: idx })}
+                                                    className="group relative aspect-[3/4] sm:aspect-[4/5] rounded-xl overflow-hidden border border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-950 cursor-zoom-in hover:shadow-lg transition-all hover:scale-[1.02]"
+                                                >
+                                                    <img
+                                                        src={proofUrl}
+                                                        alt={`Customer Proof ${idx + 1}`}
+                                                        className="w-full h-full object-cover object-top transition-transform duration-300 group-hover:scale-105"
+                                                        loading="lazy"
+                                                    />
+                                                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-between p-2.5 text-white">
+                                                        <span className="text-[11px] font-medium flex items-center gap-1">
+                                                            <ZoomIn className="h-3.5 w-3.5" /> Tap to zoom
+                                                        </span>
+                                                    </div>
+                                                    <div className="absolute top-2 left-2 bg-black/65 backdrop-blur-sm text-white text-[9px] font-semibold px-2 py-0.5 rounded-md flex items-center gap-1 shadow-sm">
+                                                        <CheckCircle2 className="h-3 w-3 text-emerald-400" /> Genuine
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <p className="text-center text-[11px] text-gray-400 dark:text-slate-500">
+                                            Tip: Tap on any screenshot to zoom in and read full conversations and receipts.
+                                        </p>
+                                    </div>
                                 )}
 
                                 {/* Trust Value Proposition Cards */}
@@ -577,7 +733,13 @@ export function ProductDetailView({ product: initialProduct, id }: { product: Pr
                 )}
             </main>
 
-            {zoomIdx !== null && <ZoomModal images={images} startIdx={zoomIdx} onClose={() => setZoomIdx(null)} />}
+            {zoomModalData && (
+                <ZoomModal 
+                    images={zoomModalData.images} 
+                    startIdx={zoomModalData.startIdx} 
+                    onClose={() => setZoomModalData(null)} 
+                />
+            )}
             <Footer />
         </div>
     )

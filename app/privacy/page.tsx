@@ -4,7 +4,7 @@ import { Footer } from "@/components/footer"
 import type { Metadata } from "next"
 
 export const metadata: Metadata = {
-    title: "Privacy Policy | Grabnext",
+    title: "Privacy Policy",
     description: "Read Grabnext's Privacy Policy to understand how we collect, use, and protect your personal information.",
 }
 

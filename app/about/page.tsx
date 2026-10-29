@@ -10,7 +10,7 @@ export async function generateMetadata(): Promise<Metadata> {
     const pageUrl = `${siteUrl}/about`
 
     return {
-        title: "About Us | Grabnext - India's Trusted Digital Marketplace",
+        title: "About Us - India's Trusted Digital Store",
         description: "Learn about Grabnext — India's premier digital marketplace for software source code, design templates, video editing assets, and online masterclass courses.",
         keywords: [
             "about grabnext",

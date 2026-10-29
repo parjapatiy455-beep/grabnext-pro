@@ -93,6 +93,16 @@ export function ProductsContent() {
             <StoreHeader />
 
             <main className="flex-1 container mx-auto px-3 md:px-4 py-5">
+                {/* Page Heading & Primary H1 */}
+                <div className="mb-4">
+                    <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 tracking-tight">
+                        Buy Digital Products, Software & Design Bundles
+                    </h1>
+                    <p className="text-xs sm:text-sm text-gray-500 mt-1 max-w-3xl">
+                        Discover top-rated software source codes, professional video editing assets, Canva design kits, and AI prompt packs. Instant digital download with 100% secure UPI payment across India.
+                    </p>
+                </div>
+
                 {/* Filter Bar */}
                 <div className="bg-white rounded-xl shadow-sm p-3 mb-4 flex flex-col gap-3">
                     <div className="flex gap-3 items-center">
@@ -192,6 +202,30 @@ export function ProductsContent() {
                         {filtered.map((product) => <ProductCard key={product.id} product={product} />)}
                     </div>
                 )}
+
+                {/* SEO Overview & Buyer Assurance Section */}
+                <div className="mt-12 bg-white rounded-xl shadow-sm p-6 text-slate-700 space-y-4 border border-gray-100">
+                    <h2 className="text-lg font-bold text-gray-900">
+                        Why Buy Digital Products & Software on Grabnext?
+                    </h2>
+                    <p className="text-sm text-gray-600 leading-relaxed">
+                        Grabnext is India's leading digital marketplace offering pre-activated software packages, complete creative video editing bundles, Canva social media ad templates, and AI prompt engineering masterclasses. Whether you are a creator, freelancer, student, or agency owner, our curated collection is engineered to save hundreds of design and development hours at unbeatable prices starting as low as ₹49.
+                    </p>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2 text-xs sm:text-sm">
+                        <div className="bg-slate-50 p-3 rounded-lg border border-slate-100">
+                            <span className="font-semibold text-gray-900 block mb-1">⚡ Instant Digital Download</span>
+                            <p className="text-gray-500">Access your files immediately upon successful payment with high-speed cloud drive links.</p>
+                        </div>
+                        <div className="bg-slate-50 p-3 rounded-lg border border-slate-100">
+                            <span className="font-semibold text-gray-900 block mb-1">🔒 100% Secure UPI Payments</span>
+                            <p className="text-gray-500">Fast checkout via Google Pay, PhonePe, Paytm, BHIM UPI, NetBanking, and credit/debit cards.</p>
+                        </div>
+                        <div className="bg-slate-50 p-3 rounded-lg border border-slate-100">
+                            <span className="font-semibold text-gray-900 block mb-1">🛠️ Lifetime Access & Support</span>
+                            <p className="text-gray-500">No recurring monthly fees. Download once, use forever with dedicated WhatsApp customer assistance.</p>
+                        </div>
+                    </div>
+                </div>
             </main>
             <Footer />
         </div>

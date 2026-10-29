@@ -56,6 +56,12 @@ ALTER TABLE products ADD COLUMN pageCode TEXT;
 -- Products: add displayOrder for custom sorting
 ALTER TABLE products ADD COLUMN displayOrder INTEGER DEFAULT 0;
 
+-- Products: add videoUrl for video links
+ALTER TABLE products ADD COLUMN videoUrl TEXT;
+
+-- Products: add proofImages JSON column for customer proof screenshots
+ALTER TABLE products ADD COLUMN proofImages TEXT;
+
 -- =============================================
 -- 5. LANDING PAGE ANALYTICS & FORM SUBMISSIONS
 -- =============================================

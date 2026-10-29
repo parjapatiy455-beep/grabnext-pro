@@ -50,6 +50,8 @@ async function getProduct(id: string): Promise<Product | null> {
             ...row,
             tags: row.tags ? tryParse(row.tags) : [],
             images: row.images ? tryParse(row.images) : (row.imageUrl ? [row.imageUrl] : []),
+            proofImages: row.proofImages ? tryParse(row.proofImages) : [],
+            videoUrl: row.videoUrl || "",
             isActive: Boolean(row.isActive),
             price: Number(row.price),
             originalPrice: row.originalPrice ? Number(row.originalPrice) : null,
@@ -81,10 +83,24 @@ export async function generateMetadata(
         : (product.imageUrl ? [product.imageUrl] : [])
     const previousImages = (await parent).openGraph?.images || []
 
-    // Strip HTML tags for a clean plain-text description
-    const cleanDescription = product.description
-        ? product.description.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().substring(0, 160)
-        : `Buy ${product.title} at the best price on Grabnext. Instant digital delivery via UPI. 100% secure payment.`
+    const cleanTitle = product.title.replace(/\s+/g, ' ').trim()
+
+    // Strip HTML tags and normalize description to 140-160 characters
+    let cleanDescription = product.description
+        ? product.description.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
+        : ''
+
+    if (cleanDescription.length < 80) {
+        cleanDescription = `Buy ${cleanTitle} online in India at ₹${product.price}. Instant digital download with lifetime access and secure UPI payment on Grabnext.`
+    }
+    if (cleanDescription.length > 155) {
+        cleanDescription = cleanDescription.substring(0, 152).trim() + '...'
+    }
+
+    // Keep title concise so when combined with "%s | Grabnext" it stays under 60 chars
+    const maxTitleLen = 36
+    const truncatedTitle = cleanTitle.length > maxTitleLen ? `${cleanTitle.substring(0, maxTitleLen - 3)}...` : cleanTitle
+    const pageTitle = `${truncatedTitle} - ₹${product.price}`
 
     // Product-specific target keyword mapping for Grabnext store
     const titleLower = product.title.toLowerCase()
@@ -140,7 +156,7 @@ export async function generateMetadata(
     const priceStr = `₹${product.price}`
 
     return {
-        title: `${product.title} - Buy Online at ₹${product.price} | Grabnext`,
+        title: pageTitle,
         description: cleanDescription,
         keywords,
         authors: [{ name: 'Grabnext', url: siteUrl }],

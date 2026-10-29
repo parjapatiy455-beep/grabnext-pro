@@ -31,9 +31,9 @@ export async function GET(request: NextRequest) {
       productRows = await executeQuery(primarySql)
     } catch (err: any) {
       console.warn('[Products GET] Primary query with displayOrder failed, falling back to createdAt DESC:', err.message)
-      // Attempt to auto-add displayOrder column in DB if missing
       executeQuery('ALTER TABLE products ADD COLUMN displayOrder INTEGER DEFAULT 0').catch(() => {})
-      // Fallback query without displayOrder in ORDER BY
+      executeQuery('ALTER TABLE products ADD COLUMN videoUrl TEXT').catch(() => {})
+      executeQuery('ALTER TABLE products ADD COLUMN proofImages TEXT').catch(() => {})
       productRows = await executeQuery(fallbackSql).catch(() => [])
     }
 
@@ -55,6 +55,8 @@ export async function GET(request: NextRequest) {
       ...p,
       tags: p.tags ? tryParse(p.tags) : [],
       images: p.images ? tryParse(p.images) : [],
+      proofImages: p.proofImages ? tryParse(p.proofImages) : [],
+      videoUrl: p.videoUrl || "",
       isActive: Boolean(p.isActive),
       price: Number(p.price),
       originalPrice: p.originalPrice ? Number(p.originalPrice) : null,
@@ -84,22 +86,36 @@ export async function POST(request: NextRequest) {
     const images = data.images && data.images.length > 0 ? data.images : (data.imageUrl ? [data.imageUrl] : [])
     const imageUrl = images[0] || data.imageUrl || ''
     const displayOrder = typeof data.displayOrder === 'number' ? data.displayOrder : (parseInt(data.displayOrder, 10) || 0)
+    const videoUrl = data.videoUrl ? String(data.videoUrl).trim() : null
+    const proofImages = Array.isArray(data.proofImages) ? data.proofImages : []
+
+    // Ensure columns exist
+    await executeQuery('ALTER TABLE products ADD COLUMN displayOrder INTEGER DEFAULT 0').catch(() => {})
+    await executeQuery('ALTER TABLE products ADD COLUMN videoUrl TEXT').catch(() => {})
+    await executeQuery('ALTER TABLE products ADD COLUMN proofImages TEXT').catch(() => {})
 
     try {
+      await executeQuery(
+        `INSERT INTO products (id, title, description, price, originalPrice, category, tags, imageUrl, images, videoUrl, proofImages, slug, downloadUrl, isActive, salesCount, pageCode, pageType, createdBy, displayOrder, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [id, data.title || '', data.description || '', data.price || 0, data.originalPrice || null,
+          data.category || 'general', JSON.stringify(data.tags || []), imageUrl, JSON.stringify(images),
+          videoUrl, JSON.stringify(proofImages), slug,
+          data.downloadUrl || '', data.isActive !== false ? 1 : 0, 0, data.pageCode || null, data.pageType || 'shop', data.createdBy || 'admin', displayOrder, now, now]
+      )
+    } catch (err: any) {
       await executeQuery(
         `INSERT INTO products (id, title, description, price, originalPrice, category, tags, imageUrl, images, slug, downloadUrl, isActive, salesCount, pageCode, pageType, createdBy, displayOrder, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [id, data.title || '', data.description || '', data.price || 0, data.originalPrice || null,
           data.category || 'general', JSON.stringify(data.tags || []), imageUrl, JSON.stringify(images), slug,
           data.downloadUrl || '', data.isActive !== false ? 1 : 0, 0, data.pageCode || null, data.pageType || 'shop', data.createdBy || 'admin', displayOrder, now, now]
-      )
-    } catch (err: any) {
-      await executeQuery('ALTER TABLE products ADD COLUMN displayOrder INTEGER DEFAULT 0').catch(() => {})
-      await executeQuery(
-        `INSERT INTO products (id, title, description, price, originalPrice, category, tags, imageUrl, images, slug, downloadUrl, isActive, salesCount, pageCode, pageType, createdBy, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [id, data.title || '', data.description || '', data.price || 0, data.originalPrice || null,
-          data.category || 'general', JSON.stringify(data.tags || []), imageUrl, JSON.stringify(images), slug,
-          data.downloadUrl || '', data.isActive !== false ? 1 : 0, 0, data.pageCode || null, data.pageType || 'shop', data.createdBy || 'admin', now, now]
-      )
+      ).catch(async () => {
+        await executeQuery(
+          `INSERT INTO products (id, title, description, price, originalPrice, category, tags, imageUrl, images, slug, downloadUrl, isActive, salesCount, pageCode, pageType, createdBy, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [id, data.title || '', data.description || '', data.price || 0, data.originalPrice || null,
+            data.category || 'general', JSON.stringify(data.tags || []), imageUrl, JSON.stringify(images), slug,
+            data.downloadUrl || '', data.isActive !== false ? 1 : 0, 0, data.pageCode || null, data.pageType || 'shop', data.createdBy || 'admin', now, now]
+        )
+      })
     }
     return NextResponse.json({ success: true, id, slug }, { status: 201 })
   } catch (error: any) {

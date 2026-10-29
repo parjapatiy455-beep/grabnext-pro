@@ -6,7 +6,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const pageUrl = `${siteUrl}/faq`
 
   return {
-    title: "Frequently Asked Questions (FAQ) | Grabnext Digital Store",
+    title: "Frequently Asked Questions (FAQ)",
     description: "Find answers to common questions about ordering digital products, instant UPI payments, file downloads, refunds, and security on Grabnext India.",
     keywords: [
       "grabnext faq",

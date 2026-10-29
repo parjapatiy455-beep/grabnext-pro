@@ -6,7 +6,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const pageUrl = `${siteUrl}/contact`
 
   return {
-    title: "Contact Us | Grabnext Digital Support",
+    title: "Contact Us - Customer Support",
     description: "Get in touch with Grabnext support team for assistance with digital product orders, software downloads, instant UPI payments, or business queries.",
     keywords: [
       "contact grabnext",

@@ -14,7 +14,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const pageUrl = `${siteUrl}/blog`
 
   return {
-    title: "Digital Products Blog & Guides – Software, Video Editing & AI Tools | Grabnext",
+    title: "Digital Products Blog, Guides & AI Tools",
     description: "Read in-depth guides on digital products in India: video editing assets, Canva templates, WhatsApp CRM software, Claude AI skills, and online marketing tools with instant UPI delivery.",
     keywords: [
       "digital products blog india",

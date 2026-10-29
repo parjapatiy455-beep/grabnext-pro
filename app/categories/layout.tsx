@@ -6,7 +6,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const pageUrl = `${siteUrl}/categories`
 
   return {
-    title: "Browse Digital Product Categories - Software, Templates, Courses & Ebooks | Grabnext",
+    title: "Browse Digital Product Categories",
     description: "Explore all digital product categories on Grabnext India: Software, Graphic Design Templates, Video Editing Packs, Masterclasses, E-books, and Plugins.",
     keywords: [
       "digital product categories india",

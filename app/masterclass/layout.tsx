@@ -6,7 +6,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const pageUrl = `${siteUrl}/masterclass`
 
   return {
-    title: "Digital Product Selling Masterclass ₹49 | Live Workshop & Blueprint | Grabnext",
+    title: "Digital Product Selling Masterclass ₹49",
     description: "Learn how to build a ₹1,00,000/month digital product business in Hindi. Digital product sourcing, 30-min website building & Facebook ads setup @ ₹49 only!",
     keywords: [
       "digital product selling masterclass hindi",

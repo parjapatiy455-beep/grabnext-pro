@@ -47,7 +47,7 @@ export const BLOG_POSTS: BlogPost[] = [
       role: "Digital Products & Growth Specialist",
       avatar: "/logo.webp"
     },
-    metaTitle: "Top 10 Best Digital Products to Buy & Sell in India (2026) | Grabnext",
+    metaTitle: "Top 10 Digital Products to Buy & Sell (2026)",
     metaDescription: "Explore the most profitable digital products in India: video editing assets, Canva templates, software codes, AI bundles & courses with instant UPI delivery.",
     keywords: [
       "digital products india",
@@ -202,7 +202,7 @@ export const BLOG_POSTS: BlogPost[] = [
       role: "Lead Motion Designer & Video Creator",
       avatar: "/logo.webp"
     },
-    metaTitle: "Best Video Editing Assets Bundle 2026 (LUTs, SFX, Transitions) | Grabnext",
+    metaTitle: "Best Video Editing Assets Bundle 2026",
     metaDescription: "Download the ultimate video editing bundle for Premiere Pro, After Effects, DaVinci Resolve & Final Cut Pro. Cinematic LUTs, smooth transitions, SFX & VFX presets.",
     keywords: [
       "video editing assets bundle",
@@ -336,7 +336,7 @@ export const BLOG_POSTS: BlogPost[] = [
       role: "E-commerce & Performance Marketer",
       avatar: "/logo.webp"
     },
-    metaTitle: "900+ Canva Ad Creative Templates Guide – 10x Social Media CTR | Grabnext",
+    metaTitle: "900+ Canva Ad Creative Templates Guide",
     metaDescription: "Boost your Facebook & Instagram ad performance with 900+ high-converting Canva templates. Fully customizable design pack with instant UPI download.",
     keywords: [
       "canva ad creative bundle",
@@ -454,7 +454,7 @@ export const BLOG_POSTS: BlogPost[] = [
       role: "SaaS Specialist & Marketing Consultant",
       avatar: "/logo.webp"
     },
-    metaTitle: "WhatsApp Bulk Sender & CRM Software Guide India (2026) | Grabnext",
+    metaTitle: "WhatsApp Bulk Sender & CRM Guide 2026",
     metaDescription: "Master WhatsApp automation for business in India. Bulk sender software, CRM lead management, and auto-reply workflows with 98% open rates.",
     keywords: [
       "whatsapp bulk sender software",
@@ -566,7 +566,7 @@ export const BLOG_POSTS: BlogPost[] = [
       role: "AI Workflow Architect & Full-Stack Dev",
       avatar: "/logo.webp"
     },
-    metaTitle: "2,000+ Claude AI Skills & Prompts Bundle Guide (2026) | Grabnext",
+    metaTitle: "2,000+ Claude AI Skills & Prompts Guide",
     metaDescription: "Unlock 2,000+ ready-to-use Claude skills & AI prompts for sales, software engineering, marketing, and business automation with instant download.",
     keywords: [
       "claude ai skills bundle",
@@ -637,7 +637,7 @@ export const BLOG_POSTS: BlogPost[] = [
       role: "Conversion Rate Optimization (CRO) Lead",
       avatar: "/logo.webp"
     },
-    metaTitle: "300+ Landing Page Templates Bundle (Elementor & HTML) | Grabnext",
+    metaTitle: "300+ Landing Page Templates (Elementor/HTML)",
     metaDescription: "Download 300+ high-converting landing page templates for Elementor, WordPress & HTML. Boost conversions for digital products, lead gen & e-commerce.",
     keywords: [
       "landing page templates bundle",

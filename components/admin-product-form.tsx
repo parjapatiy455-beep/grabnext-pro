@@ -10,10 +10,15 @@ import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { RichTextEditor } from "@/components/rich-text-editor"
 import { toast } from "@/hooks/use-toast"
-import { ArrowLeft, Upload, Loader2, X, ImageIcon, Plus, GripVertical, FileText, Video, Link as LinkIcon, File } from "lucide-react"
+import { 
+    ArrowLeft, Upload, Loader2, X, ImageIcon, Plus, 
+    FileText, Video, Link as LinkIcon, File, Play, 
+    ShieldCheck, CheckCircle2, ExternalLink
+} from "lucide-react"
 import { fetchCategories } from "@/lib/d1-client"
 import { DigitalAsset } from "@/lib/types"
 import { convertToWebP } from "@/lib/image-optimizer"
+import { getVideoInfo, isValidVideoUrl } from "@/lib/video-utils"
 
 interface ProductFormProps {
     mode: "create" | "edit"
@@ -21,18 +26,29 @@ interface ProductFormProps {
 }
 
 const EMPTY = {
-    title: "", description: "", price: "", originalPrice: "", category: "",
-    tags: "", downloadUrl: "", isActive: true, images: [] as string[],
+    title: "", 
+    description: "", 
+    price: "", 
+    originalPrice: "", 
+    category: "",
+    tags: "", 
+    downloadUrl: "", 
+    isActive: true, 
+    images: [] as string[],
+    videoUrl: "",
+    proofImages: [] as string[],
     displayOrder: "0",
 }
 
 export function AdminProductForm({ mode, productId }: ProductFormProps) {
     const router = useRouter()
     const fileRef = useRef<HTMLInputElement>(null)
+    const proofFileRef = useRef<HTMLInputElement>(null)
     const [form, setForm] = useState(EMPTY)
     const [categories, setCategories] = useState<any[]>([])
     const [submitting, setSubmitting] = useState(false)
     const [uploading, setUploading] = useState(false)
+    const [proofUploading, setProofUploading] = useState(false)
     const [imageStorageProvider, setImageStorageProvider] = useState<"vercel" | "tdrive">("vercel")
     const [digitalStorageProvider, setDigitalStorageProvider] = useState<"vercel" | "tdrive" | "external">("tdrive")
     const [digitalAssetType, setDigitalAssetType] = useState<DigitalAsset["type"]>("file")
@@ -40,6 +56,7 @@ export function AdminProductForm({ mode, productId }: ProductFormProps) {
     const [digitalUploading, setDigitalUploading] = useState(false)
     const [digitalAssets, setDigitalAssets] = useState<DigitalAsset[]>([])
     const [loading, setLoading] = useState(mode === "edit")
+    const [proofUrlInput, setProofUrlInput] = useState("")
     const digitalFileRef = useRef<HTMLInputElement>(null)
 
     useEffect(() => {
@@ -67,6 +84,8 @@ export function AdminProductForm({ mode, productId }: ProductFormProps) {
                     downloadUrl: p.downloadUrl || "",
                     isActive: p.isActive !== false,
                     images: Array.isArray(p.images) ? p.images : (p.imageUrl ? [p.imageUrl] : []),
+                    videoUrl: p.videoUrl || "",
+                    proofImages: Array.isArray(p.proofImages) ? p.proofImages : [],
                     displayOrder: p.displayOrder ? p.displayOrder.toString() : "0",
                 })
                 setDigitalAssets(parsedAssets)
@@ -96,6 +115,47 @@ export function AdminProductForm({ mode, productId }: ProductFormProps) {
         setForm(f => ({ ...f, images: [...f.images, ...uploaded] }))
         setUploading(false)
         toast({ title: `✅ ${uploaded.length} image(s) optimized & uploaded as WebP!` })
+    }
+
+    const handleProofUpload = async (files: FileList | null) => {
+        if (!files || files.length === 0) return
+        setProofUploading(true)
+        const uploaded: string[] = []
+        for (const rawFile of Array.from(files)) {
+            try {
+                const file = await convertToWebP(rawFile, { maxWidth: 1200, maxHeight: 1200, quality: 0.85 })
+                const fd = new FormData(); fd.append("file", file)
+                const endpoint = imageStorageProvider === "vercel" ? "/api/upload" : "/api/upload-tdrive"
+                const res = await fetch(endpoint, { method: "POST", body: fd })
+                const data = await res.json()
+                if (!res.ok) throw new Error(data.error || "Upload failed")
+                const imageUrl = imageStorageProvider === "vercel" ? data.url : data.preview_url
+                uploaded.push(imageUrl)
+            } catch (err: any) {
+                toast({ title: `Proof upload failed: ${rawFile.name}`, description: err.message, variant: "destructive" })
+            }
+        }
+        setForm(f => ({ ...f, proofImages: [...f.proofImages, ...uploaded] }))
+        setProofUploading(false)
+        toast({ title: `✅ ${uploaded.length} proof screenshot(s) uploaded!` })
+    }
+
+    const handleAddProofUrl = () => {
+        const val = proofUrlInput.trim()
+        if (!val) return
+        setForm(f => ({ ...f, proofImages: [...f.proofImages, val] }))
+        setProofUrlInput("")
+        toast({ title: "✅ Screenshot URL added!" })
+    }
+
+    const removeProofImage = (idx: number) => {
+        setForm(f => ({ ...f, proofImages: f.proofImages.filter((_, i) => i !== idx) }))
+    }
+
+    const insertProofIntoDescription = (url: string) => {
+        const snippet = `<figure class="my-4 text-center"><img src="${url}" alt="Customer Proof Screenshot" class="rounded-xl shadow-md max-w-full h-auto mx-auto border border-gray-200" /><figcaption class="text-xs text-gray-500 mt-1">Verified Customer Proof</figcaption></figure><p><br></p>`
+        setForm(f => ({ ...f, description: (f.description || "") + snippet }))
+        toast({ title: "✅ Screenshot inserted into description editor!" })
     }
 
     const handleDigitalUpload = async (files: FileList | null) => {
@@ -171,7 +231,9 @@ export function AdminProductForm({ mode, productId }: ProductFormProps) {
                 tags: form.tags.split(",").map(t => t.trim()).filter(Boolean),
                 images: form.images,
                 imageUrl: form.images[0] || "",
-                downloadUrl: JSON.stringify(digitalAssets), // Store assets as JSON
+                videoUrl: form.videoUrl.trim() || null,
+                proofImages: form.proofImages,
+                downloadUrl: JSON.stringify(digitalAssets),
                 isActive: form.isActive,
                 displayOrder: parseInt(form.displayOrder, 10) || 0,
                 pageType: "shop",
@@ -190,6 +252,8 @@ export function AdminProductForm({ mode, productId }: ProductFormProps) {
         }
     }
 
+    const videoInfo = form.videoUrl ? getVideoInfo(form.videoUrl) : null
+
     if (loading) return <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
 
     return (
@@ -203,12 +267,12 @@ export function AdminProductForm({ mode, productId }: ProductFormProps) {
                         </Button>
                         <div>
                             <h1 className="text-xl font-bold">{mode === "edit" ? "Edit Product" : "Add New Product"}</h1>
-                            <p className="text-xs text-gray-400">{mode === "edit" ? "Update product details" : "Fill in details to create a new product"}</p>
+                            <p className="text-xs text-gray-400">{mode === "edit" ? "Update product details & media" : "Fill in details to create a new product"}</p>
                         </div>
                     </div>
                     <div className="flex gap-2">
                         <Button type="button" variant="outline" asChild><Link href="/admin/products">Cancel</Link></Button>
-                        <Button type="submit" form="product-form" disabled={submitting || uploading || digitalUploading}>
+                        <Button type="submit" form="product-form" disabled={submitting || uploading || digitalUploading || proofUploading}>
                             {submitting ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Saving...</> : mode === "edit" ? "Save Changes" : "Create Product"}
                         </Button>
                     </div>
@@ -233,7 +297,7 @@ export function AdminProductForm({ mode, productId }: ProductFormProps) {
                                         <Textarea
                                             value={form.title}
                                             onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
-                                            placeholder="e.g. Samsung Galaxy S24 Ultra 256GB"
+                                            placeholder="e.g. Video Editing Mega Pack 2026 with Transitions & LUTs"
                                             className="mt-1.5 text-base min-h-[80px] border-gray-200 focus:ring-primary/20 transition-all"
                                             required
                                         />
@@ -284,17 +348,110 @@ export function AdminProductForm({ mode, productId }: ProductFormProps) {
                                         <div>
                                             <Label>Tags <span className="text-gray-400 text-[10px] font-normal">(comma separated)</span></Label>
                                             <Input value={form.tags} onChange={e => setForm(f => ({ ...f, tags: e.target.value }))}
-                                                placeholder="electronics, gadget, phone" className="mt-1.5 h-11 border-gray-200" />
+                                                placeholder="presets, editing, luts" className="mt-1.5 h-11 border-gray-200" />
                                         </div>
                                     </div>
                                 </div>
                             </div>
- 
+
+                            {/* Customer Proof & Trust Screenshots Card */}
+                            <div className="bg-white rounded-2xl p-6 border shadow-sm space-y-5">
+                                <div className="flex items-center justify-between border-b pb-3">
+                                    <div className="flex items-center gap-2">
+                                        <div className="h-8 w-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+                                            <ShieldCheck className="h-4 w-4" />
+                                        </div>
+                                        <div>
+                                            <h2 className="font-semibold text-gray-800">Customer Proof & Trust Screenshots</h2>
+                                            <p className="text-xs text-gray-400">WhatsApp chats, payment receipts, earnings proofs, or positive review screenshots</p>
+                                        </div>
+                                    </div>
+                                    <span className="text-xs bg-emerald-50 text-emerald-700 font-semibold px-2 py-0.5 rounded-full">
+                                        {form.proofImages.length} Proofs Added
+                                    </span>
+                                </div>
+
+                                {/* Proof Screenshots Grid */}
+                                {form.proofImages.length > 0 && (
+                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                                        {form.proofImages.map((proofUrl, idx) => (
+                                            <div key={idx} className="relative group rounded-xl overflow-hidden border border-gray-200 bg-white aspect-[3/4] shadow-sm flex flex-col">
+                                                <div className="flex-1 overflow-hidden relative">
+                                                    <img src={proofUrl} alt={`Proof ${idx + 1}`} className="w-full h-full object-cover object-top" />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => removeProofImage(idx)}
+                                                        className="absolute top-1.5 right-1.5 h-6 w-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-md transition"
+                                                        title="Remove screenshot"
+                                                    >
+                                                        <X className="h-3.5 w-3.5" />
+                                                    </button>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => insertProofIntoDescription(proofUrl)}
+                                                    className="w-full py-1 text-[10px] bg-slate-100 hover:bg-blue-50 text-slate-700 hover:text-blue-600 font-semibold transition border-t text-center"
+                                                >
+                                                    Insert in Text ↵
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+
+                                {/* Proof Upload Controls */}
+                                <div className="space-y-3">
+                                    <div className="grid sm:grid-cols-2 gap-3">
+                                        {/* Upload from device */}
+                                        <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+                                            <Label className="text-xs font-semibold text-slate-600">Upload Screenshots from Device</Label>
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                className="w-full h-10 border-dashed border-2 hover:bg-white text-xs"
+                                                onClick={() => proofFileRef.current?.click()}
+                                                disabled={proofUploading}
+                                            >
+                                                {proofUploading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Upload className="h-4 w-4 mr-2 text-emerald-600" />}
+                                                {proofUploading ? "Optimizing & Uploading..." : "Choose Screenshots (Multi-select)"}
+                                            </Button>
+                                            <input
+                                                ref={proofFileRef}
+                                                type="file"
+                                                accept="image/*"
+                                                multiple
+                                                className="hidden"
+                                                onChange={e => handleProofUpload(e.target.files)}
+                                            />
+                                            <p className="text-[10px] text-gray-400 text-center">Auto-converted to lightweight WebP</p>
+                                        </div>
+
+                                        {/* Add by URL */}
+                                        <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+                                            <Label className="text-xs font-semibold text-slate-600">Or Paste Screenshot URL</Label>
+                                            <div className="flex gap-2">
+                                                <Input
+                                                    placeholder="https://..."
+                                                    value={proofUrlInput}
+                                                    onChange={e => setProofUrlInput(e.target.value)}
+                                                    onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); handleAddProofUrl() } }}
+                                                    className="h-10 text-xs bg-white"
+                                                />
+                                                <Button type="button" onClick={handleAddProofUrl} disabled={!proofUrlInput.trim()} className="h-10 px-3">
+                                                    <Plus className="h-4 w-4" />
+                                                </Button>
+                                            </div>
+                                            <p className="text-[10px] text-gray-400 text-center">Direct link to hosted screenshot</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
                             {/* Digital Assets Section */}
                             <div className="bg-white rounded-2xl p-6 border shadow-sm space-y-5">
                                 <div className="flex items-center gap-2 border-b pb-3">
                                     <div className="h-8 w-8 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center font-bold">2</div>
-                                    <h2 className="font-semibold text-gray-800">Digital Assets</h2>
+                                    <h2 className="font-semibold text-gray-800">Digital Assets (Downloads)</h2>
                                 </div>
                                 <div className="bg-slate-50 border border-slate-100 rounded-xl p-4 space-y-4">
                                     {digitalAssets.length > 0 && (
@@ -320,12 +477,12 @@ export function AdminProductForm({ mode, productId }: ProductFormProps) {
                                             ))}
                                         </div>
                                     )}
- 
+
                                     <div className="p-4 bg-white border border-slate-200 rounded-xl space-y-4">
                                         <div className="grid grid-cols-2 gap-4">
                                             <div>
                                                 <Label className="text-xs font-semibold uppercase tracking-wider text-slate-500">Asset Name *</Label>
-                                                <Input value={digitalAssetName} onChange={e => setDigitalAssetName(e.target.value)} placeholder="e.g. Chapter 1 Video" className="h-10 mt-1.5" />
+                                                <Input value={digitalAssetName} onChange={e => setDigitalAssetName(e.target.value)} placeholder="e.g. Masterclass Video Zip" className="h-10 mt-1.5" />
                                             </div>
                                             <div>
                                                 <Label className="text-xs font-semibold uppercase tracking-wider text-slate-500">Asset Type</Label>
@@ -341,7 +498,7 @@ export function AdminProductForm({ mode, productId }: ProductFormProps) {
                                                 </select>
                                             </div>
                                         </div>
- 
+
                                         <div className="space-y-2">
                                             <Label className="flex justify-between items-center text-xs font-semibold uppercase tracking-wider text-slate-500">
                                                 <span>Source Provider</span>
@@ -355,7 +512,7 @@ export function AdminProductForm({ mode, productId }: ProductFormProps) {
                                                     <option value="external">External Link</option>
                                                 </select>
                                             </Label>
- 
+
                                             {digitalStorageProvider === 'external' ? (
                                                 <div className="flex gap-2">
                                                     <Input value={form.downloadUrl} onChange={e => setForm(f => ({ ...f, downloadUrl: e.target.value }))}
@@ -384,16 +541,16 @@ export function AdminProductForm({ mode, productId }: ProductFormProps) {
                                 </div>
                             </div>
                         </div>
- 
+
                         {/* Sidebar Column */}
                         <div className="space-y-6">
-                            {/* Images Card */}
+                            {/* Product Images Card */}
                             <div className="bg-white rounded-2xl p-6 border shadow-sm space-y-5">
                                 <div className="flex items-center gap-2 border-b pb-3">
                                     <div className="h-8 w-8 rounded-lg bg-orange-50 text-orange-600 flex items-center justify-center font-bold">3</div>
-                                    <h2 className="font-semibold text-gray-800">Media</h2>
+                                    <h2 className="font-semibold text-gray-800">Product Images</h2>
                                 </div>
- 
+
                                 <div className="grid grid-cols-2 gap-2">
                                     {form.images.map((url, i) => (
                                         <div key={i} className="relative group rounded-xl overflow-hidden border border-gray-100 aspect-square bg-slate-50 transition-all hover:ring-2 hover:ring-primary/20">
@@ -412,16 +569,16 @@ export function AdminProductForm({ mode, productId }: ProductFormProps) {
                                         </div>
                                     ))}
                                     {form.images.length === 0 && (
-                                        <div className="col-span-2 h-32 border-2 border-dashed border-slate-200 rounded-xl flex flex-col items-center justify-center gap-2 text-slate-400 bg-slate-50">
+                                        <div className="col-span-2 h-28 border-2 border-dashed border-slate-200 rounded-xl flex flex-col items-center justify-center gap-2 text-slate-400 bg-slate-50">
                                             <ImageIcon className="h-8 w-8 stroke-[1.5px]" />
                                             <p className="text-xs font-medium">No images uploaded</p>
                                         </div>
                                     )}
                                 </div>
- 
+
                                 <div className="space-y-3 pt-2">
                                     <div>
-                                        <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Add by URL</Label>
+                                        <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Add Image by URL</Label>
                                         <div className="flex gap-2 mt-1.5">
                                             <Input
                                                 placeholder="https://..."
@@ -443,13 +600,13 @@ export function AdminProductForm({ mode, productId }: ProductFormProps) {
                                             </Button>
                                         </div>
                                     </div>
- 
-                                    <div className="relative flex items-center py-2">
+
+                                    <div className="relative flex items-center py-1">
                                         <div className="flex-grow border-t border-slate-100"></div>
                                         <span className="flex-shrink mx-4 text-[10px] text-slate-300 font-bold uppercase tracking-widest text-center">or upload</span>
                                         <div className="flex-grow border-t border-slate-100"></div>
                                     </div>
- 
+
                                     <div className="space-y-2">
                                         <select
                                             value={imageStorageProvider}
@@ -474,7 +631,73 @@ export function AdminProductForm({ mode, productId }: ProductFormProps) {
                                     </div>
                                 </div>
                             </div>
- 
+
+                            {/* Product Video Card */}
+                            <div className="bg-white rounded-2xl p-6 border shadow-sm space-y-4">
+                                <div className="flex items-center justify-between border-b pb-3">
+                                    <div className="flex items-center gap-2">
+                                        <div className="h-8 w-8 rounded-lg bg-red-50 text-red-600 flex items-center justify-center font-bold">
+                                            <Video className="h-4 w-4" />
+                                        </div>
+                                        <div>
+                                            <h2 className="font-semibold text-gray-800">Product Video</h2>
+                                            <p className="text-[11px] text-gray-400">Shows alongside photos on product page</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-3">
+                                    <div>
+                                        <Label className="text-xs font-semibold text-slate-600">Video Link (YouTube, Vimeo, Drive, MP4)</Label>
+                                        <div className="relative mt-1.5">
+                                            <Input
+                                                type="url"
+                                                value={form.videoUrl}
+                                                onChange={e => setForm(f => ({ ...f, videoUrl: e.target.value }))}
+                                                placeholder="https://www.youtube.com/watch?v=... or .mp4"
+                                                className="h-10 text-xs pr-8"
+                                            />
+                                            {form.videoUrl && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setForm(f => ({ ...f, videoUrl: "" }))}
+                                                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500"
+                                                >
+                                                    <X className="h-3.5 w-3.5" />
+                                                </button>
+                                            )}
+                                        </div>
+                                        <p className="text-[10px] text-gray-400 mt-1">
+                                            Supports YouTube, Shorts, Vimeo, Loom, Google Drive, or direct MP4 link.
+                                        </p>
+                                    </div>
+
+                                    {/* Video Preview */}
+                                    {videoInfo && (
+                                        <div className="space-y-2 pt-1">
+                                            <div className="flex items-center justify-between text-xs font-semibold text-gray-700">
+                                                <span className="flex items-center gap-1.5 capitalize text-red-600">
+                                                    <Play className="h-3 w-3 fill-current" /> {videoInfo.type} Video Active
+                                                </span>
+                                                <span className="text-[10px] text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full font-bold">Ready</span>
+                                            </div>
+                                            <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-black border shadow-sm">
+                                                {videoInfo.type === 'direct' ? (
+                                                    <video src={videoInfo.embedUrl} controls className="w-full h-full object-contain" />
+                                                ) : (
+                                                    <iframe
+                                                        src={videoInfo.embedUrl}
+                                                        className="w-full h-full border-0"
+                                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                                        allowFullScreen
+                                                    />
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
                             {/* Status Card */}
                             <div className="bg-white rounded-2xl p-6 border shadow-sm space-y-4">
                                 <div className="flex items-center gap-2 border-b pb-3">
@@ -498,7 +721,7 @@ export function AdminProductForm({ mode, productId }: ProductFormProps) {
                             </div>
                         </div>
                     </div>
- 
+
                     {/* Bottom Section: Full Width Description */}
                     <div className="bg-white rounded-2xl p-8 border shadow-sm space-y-6">
                         <div className="flex items-center justify-between border-b pb-4">
@@ -508,7 +731,9 @@ export function AdminProductForm({ mode, productId }: ProductFormProps) {
                                 </div>
                                 <div>
                                     <h2 className="font-bold text-xl text-gray-900 tracking-tight">Full Product Description</h2>
-                                    <p className="text-sm text-gray-400 mt-0.5">Write a compelling story about your product. Use headings and tools for better formatting.</p>
+                                    <p className="text-sm text-gray-400 mt-0.5">
+                                        Write detailed information and embed proof screenshots or comparison images directly into the text.
+                                    </p>
                                 </div>
                             </div>
                         </div>
@@ -517,7 +742,7 @@ export function AdminProductForm({ mode, productId }: ProductFormProps) {
                             <RichTextEditor
                                 value={form.description}
                                 onChange={val => setForm(f => ({ ...f, description: val }))}
-                                placeholder="Describe your product in detail here..."
+                                placeholder="Describe your product in detail here. You can click 'Add Screenshot' in the toolbar or paste screenshots with Ctrl+V..."
                                 minHeight={400}
                             />
                         </div>
