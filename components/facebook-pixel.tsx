@@ -18,12 +18,24 @@ import { usePathname } from "next/navigation"
 import { trackPageView } from "@/lib/pixel"
 
 // Read from env — NEXT_PUBLIC_ prefix makes it safe in both server and client components
-export const FB_PIXEL_ID = process.env.NEXT_PUBLIC_FB_PIXEL_ID || "1004524488604833"
-export const SECONDARY_FB_PIXEL_ID = process.env.NEXT_PUBLIC_SECONDARY_FB_PIXEL_ID || "864520106659183"
+export const DEFAULT_PIXEL_IDS = [
+  "1004524488604833",
+  "1350267536434257",
+  "960737320324988",
+  "1765109014782891",
+  "864520106659183",
+]
+
+const envPixelList = (process.env.NEXT_PUBLIC_FB_PIXEL_IDS || process.env.NEXT_PUBLIC_FB_PIXEL_ID || "")
+  .split(",")
+  .map(id => id.trim())
+  .filter(Boolean)
 
 export const ALL_FB_PIXEL_IDS = Array.from(
-  new Set([FB_PIXEL_ID, SECONDARY_FB_PIXEL_ID].filter(Boolean))
+  new Set([...envPixelList, ...DEFAULT_PIXEL_IDS].filter(Boolean))
 )
+
+export const FB_PIXEL_ID = ALL_FB_PIXEL_IDS[0] || "1004524488604833"
 
 // ── SPA route-change tracker (Client Component) ───────────────────────────────
 export function FacebookPixelRouteTracker() {

@@ -3,9 +3,22 @@ export const runtime = 'edge'
 import { NextResponse } from "next/server"
 import { hashData } from "@/lib/hash"
 
-const PIXEL_ID = process.env.NEXT_PUBLIC_FB_PIXEL_ID || "1004524488604833"
-const SECONDARY_PIXEL_ID = process.env.NEXT_PUBLIC_SECONDARY_FB_PIXEL_ID || "864520106659183"
-const ALL_PIXEL_IDS = Array.from(new Set([PIXEL_ID, SECONDARY_PIXEL_ID].filter(Boolean)))
+const DEFAULT_PIXEL_IDS = [
+  "1004524488604833",
+  "1350267536434257",
+  "960737320324988",
+  "1765109014782891",
+  "864520106659183",
+]
+
+const envPixelList = (process.env.NEXT_PUBLIC_FB_PIXEL_IDS || process.env.NEXT_PUBLIC_FB_PIXEL_ID || "")
+  .split(",")
+  .map(id => id.trim())
+  .filter(Boolean)
+
+const ALL_PIXEL_IDS = Array.from(
+  new Set([...envPixelList, ...DEFAULT_PIXEL_IDS].filter(Boolean))
+)
 const ACCESS_TOKEN = process.env.FB_ACCESS_TOKEN
 const TEST_EVENT_CODE = process.env.NEXT_PUBLIC_FB_TEST_EVENT_CODE
 

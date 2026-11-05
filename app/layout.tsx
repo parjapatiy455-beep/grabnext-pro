@@ -184,13 +184,40 @@ html {
         />
       </head>
       <body>
-        {/* Meta Pixel noscript fallback for landing page tracking */}
+        {/* Meta Pixel noscript fallbacks */}
         <noscript>
           <img
             height="1"
             width="1"
             style={{ display: "none" }}
             src="https://www.facebook.com/tr?id=1004524488604833&ev=PageView&noscript=1"
+            alt=""
+          />
+        </noscript>
+        <noscript>
+          <img
+            height="1"
+            width="1"
+            style={{ display: "none" }}
+            src="https://www.facebook.com/tr?id=1350267536434257&ev=PageView&noscript=1"
+            alt=""
+          />
+        </noscript>
+        <noscript>
+          <img
+            height="1"
+            width="1"
+            style={{ display: "none" }}
+            src="https://www.facebook.com/tr?id=960737320324988&ev=PageView&noscript=1"
+            alt=""
+          />
+        </noscript>
+        <noscript>
+          <img
+            height="1"
+            width="1"
+            style={{ display: "none" }}
+            src="https://www.facebook.com/tr?id=1765109014782891&ev=PageView&noscript=1"
             alt=""
           />
         </noscript>
