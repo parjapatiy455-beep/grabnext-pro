@@ -47,6 +47,45 @@ export function EditingLandingPageClient() {
   const [showPromoModal, setShowPromoModal] = useState(false)
   const [copiedCoupon, setCopiedCoupon] = useState(false)
 
+  // 10-minute countdown timer for 50% OFF promo modal (600 seconds)
+  const [promoTimeLeft, setPromoTimeLeft] = useState(600)
+
+  useEffect(() => {
+    const storageKey = "grabnext_promo_timer_10m"
+    let endTime: number
+    try {
+      const stored = sessionStorage.getItem(storageKey)
+      if (stored) {
+        endTime = parseInt(stored, 10)
+      } else {
+        endTime = Date.now() + 10 * 60 * 1000
+        sessionStorage.setItem(storageKey, endTime.toString())
+      }
+    } catch {
+      endTime = Date.now() + 10 * 60 * 1000
+    }
+
+    const tick = () => {
+      const remaining = Math.max(0, Math.floor((endTime - Date.now()) / 1000))
+      setPromoTimeLeft(remaining)
+      if (remaining <= 0) {
+        try {
+          const newEnd = Date.now() + 10 * 60 * 1000
+          sessionStorage.setItem(storageKey, newEnd.toString())
+        } catch {}
+      }
+    }
+
+    tick()
+    const interval = setInterval(tick, 1000)
+    return () => clearInterval(interval)
+  }, [])
+
+  const promoMin = Math.floor(promoTimeLeft / 60)
+  const promoSec = promoTimeLeft % 60
+  const promoMinStr = String(promoMin).padStart(2, "0")
+  const promoSecStr = String(promoSec).padStart(2, "0")
+
   // 30-second timer for 50% OFF promo modal popup
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -918,6 +957,31 @@ export function EditingLandingPageClient() {
             <p className="text-xs text-slate-300 mt-1.5 leading-relaxed">
               Use this secret coupon code to get 50% discount instantly at checkout!
             </p>
+
+            {/* 10-Minute Countdown Timer */}
+            <div className="mt-3.5 mb-2 p-3 rounded-2xl bg-gradient-to-b from-amber-500/15 to-amber-500/5 border border-amber-500/35 shadow-inner">
+              <div className="flex items-center justify-center gap-1.5 text-amber-300 font-extrabold text-[11px] sm:text-xs uppercase tracking-wider mb-2">
+                <Clock className="w-3.5 h-3.5 animate-pulse text-amber-400" />
+                <span>Offer Valid Only For 10 Min!</span>
+              </div>
+              
+              {/* Countdown Display Boxes */}
+              <div className="flex items-center justify-center gap-2">
+                <div className="flex flex-col items-center">
+                  <span className="bg-slate-950 border border-amber-400/50 rounded-xl px-3 py-1.5 text-xl sm:text-2xl font-mono font-black text-amber-300 shadow-md min-w-[50px] text-center tracking-wider">
+                    {promoMinStr}
+                  </span>
+                  <span className="text-[9px] uppercase font-bold text-slate-400 mt-1 tracking-widest">MINS</span>
+                </div>
+                <span className="text-amber-400 font-mono font-black text-xl -mt-4 animate-pulse">:</span>
+                <div className="flex flex-col items-center">
+                  <span className="bg-slate-950 border border-amber-400/50 rounded-xl px-3 py-1.5 text-xl sm:text-2xl font-mono font-black text-amber-300 shadow-md min-w-[50px] text-center tracking-wider">
+                    {promoSecStr}
+                  </span>
+                  <span className="text-[9px] uppercase font-bold text-slate-400 mt-1 tracking-widest">SECS</span>
+                </div>
+              </div>
+            </div>
 
             {/* Coupon Box */}
             <div className="my-5 p-4 bg-slate-950/80 border-2 border-dashed border-amber-400/60 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3 shadow-inner">

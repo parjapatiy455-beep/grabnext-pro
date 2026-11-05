@@ -26,8 +26,8 @@ export function WhatsAppToggle({
     return () => clearInterval(interval)
   }, [])
 
-  // Hide on admin panel or editor pages if desired
-  if (pathname?.startsWith("/admin")) {
+  // Hide on admin panel or software landing page (which has its own dedicated left-side WhatsApp widget)
+  if (pathname?.startsWith("/admin") || pathname?.startsWith("/software")) {
     return null
   }
 
