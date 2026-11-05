@@ -3,6 +3,7 @@ export const runtime = 'edge'
 
 import React, { useEffect, useState } from "react"
 import { useCart } from "@/contexts/cart-context"
+import { trackViewContent, trackAddToCart } from "@/lib/pixel"
 
 const DEFAULT_PRODUCT = {
   id: "all-in-one-claude-skills-bundle-a592f1",
@@ -1219,6 +1220,21 @@ export default function ClaudeSkillsLandingPage() {
       .catch(err => console.error("[v0] Error fetching product details:", err))
   }, [])
 
+  // Track Meta Pixel ViewContent for landing page
+  useEffect(() => {
+    try {
+      trackViewContent({
+        content_name: product.title,
+        content_ids: [product.id],
+        contents: [{ id: product.id, quantity: 1, item_price: product.price }],
+        value: product.price,
+        currency: "INR",
+      })
+    } catch (e) {
+      console.error("ViewContent tracking error", e)
+    }
+  }, [product]) /* pixel tracked */
+
   // 1. Evergreen Timer Logic
   useEffect(() => {
     const evergreenDuration = 28740 * 1000 // 7 hrs 59 mins
@@ -1278,6 +1294,17 @@ export default function ClaudeSkillsLandingPage() {
         const href = link.getAttribute("href")
         if (href && (href.includes("superprofile.bio/vp/claude-skills") || href === "#buy" || href === "#checkout")) {
           e.preventDefault()
+          try {
+            trackAddToCart({
+              content_name: product.title,
+              content_ids: [product.id],
+              contents: [{ id: product.id, quantity: 1, item_price: product.price }],
+              value: product.price,
+              currency: "INR",
+            })
+          } catch (e) {
+            console.error("AddToCart tracking error", e)
+          }
           addToCart(product as any)
           setDrawerOpen(true)
           return

@@ -5,7 +5,12 @@
 
 import { gaViewItem, gaAddToCart, gaBeginCheckout, gaPurchase } from "@/lib/gtag"
 
-export const FB_PIXEL_ID = process.env.NEXT_PUBLIC_FB_PIXEL_ID || "864520106659183"
+export const FB_PIXEL_ID = process.env.NEXT_PUBLIC_FB_PIXEL_ID || "1004524488604833"
+export const SECONDARY_FB_PIXEL_ID = process.env.NEXT_PUBLIC_SECONDARY_FB_PIXEL_ID || "864520106659183"
+
+export const ALL_FB_PIXEL_IDS = Array.from(
+  new Set([FB_PIXEL_ID, SECONDARY_FB_PIXEL_ID].filter(Boolean))
+)
 
 // ── TypeScript declarations ───────────────────────────────────────────────────
 declare global {

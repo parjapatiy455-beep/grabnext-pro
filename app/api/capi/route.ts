@@ -3,7 +3,9 @@ export const runtime = 'edge'
 import { NextResponse } from "next/server"
 import { hashData } from "@/lib/hash"
 
-const PIXEL_ID = process.env.NEXT_PUBLIC_FB_PIXEL_ID || "864520106659183"
+const PIXEL_ID = process.env.NEXT_PUBLIC_FB_PIXEL_ID || "1004524488604833"
+const SECONDARY_PIXEL_ID = process.env.NEXT_PUBLIC_SECONDARY_FB_PIXEL_ID || "864520106659183"
+const ALL_PIXEL_IDS = Array.from(new Set([PIXEL_ID, SECONDARY_PIXEL_ID].filter(Boolean)))
 const ACCESS_TOKEN = process.env.FB_ACCESS_TOKEN
 const TEST_EVENT_CODE = process.env.NEXT_PUBLIC_FB_TEST_EVENT_CODE
 
@@ -61,26 +63,30 @@ export async function POST(req: Request) {
       ...(TEST_EVENT_CODE ? { test_event_code: TEST_EVENT_CODE } : {})
     }
 
-    // 5. Dispatch to Meta Graph API
-    const metaUrl = `https://graph.facebook.com/v19.0/${PIXEL_ID}/events?access_token=${ACCESS_TOKEN}`
-    
-    const response = await fetch(metaUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    })
-
-    const data = await response.json()
-
-    if (!response.ok) {
-      if (process.env.NODE_ENV !== "production") {
-        console.error("[Meta CAPI] Error response from Facebook:", data)
-      }
-      return NextResponse.json({ error: "Graph API Error", details: data }, { status: response.status })
-    }
+    // 5. Dispatch to Meta Graph API for all configured pixels
+    await Promise.allSettled(
+      ALL_PIXEL_IDS.map(async (pId) => {
+        const metaUrl = `https://graph.facebook.com/v19.0/${pId}/events?access_token=${ACCESS_TOKEN}`
+        try {
+          const response = await fetch(metaUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          })
+          const data = await response.json()
+          if (!response.ok && process.env.NODE_ENV !== "production") {
+            console.error(`[Meta CAPI] Error response for Pixel ${pId}:`, data)
+          }
+        } catch (err) {
+          if (process.env.NODE_ENV !== "production") {
+            console.error(`[Meta CAPI] Network error for Pixel ${pId}:`, err)
+          }
+        }
+      })
+    )
 
     if (process.env.NODE_ENV !== "production") {
-      console.log(`[Meta CAPI] Successfully fired ${eventName} (ID: ${eventId})`)
+      console.log(`[Meta CAPI] Successfully dispatched ${eventName} (ID: ${eventId})`)
     }
 
     return NextResponse.json({ success: true, eventId })

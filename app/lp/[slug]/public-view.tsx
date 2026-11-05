@@ -3,6 +3,7 @@
 import { useEffect } from 'react'
 import { useCart, CartProvider } from '@/contexts/cart-context'
 import { RenderSection } from '@/app/products/[id]/landing-page-view'
+import { trackViewContent, trackAddToCart } from '@/lib/pixel'
 
 interface Props {
     sections: any[]
@@ -40,6 +41,23 @@ function interpolateProductData(value: any, product: any): any {
 export default function LandingPagePublicView({ sections, product }: Props) {
     const { addToCart, setDrawerOpen } = useCart()
 
+    // Track Meta Pixel ViewContent when landing page product is loaded
+    useEffect(() => {
+        if (product && product.id && product.id !== 'lp-dummy') {
+            try {
+                trackViewContent({
+                    content_name: product.title || "Landing Page Offer",
+                    content_ids: [product.id],
+                    contents: [{ id: product.id, quantity: 1, item_price: product.price || 0 }],
+                    value: product.price || 0,
+                    currency: "INR",
+                })
+            } catch (e) {
+                console.error("ViewContent tracking error", e)
+            }
+        }
+    }, [product])
+
     useEffect(() => {
         if (typeof sections !== 'string') return
 
@@ -47,6 +65,17 @@ export default function LandingPagePublicView({ sections, product }: Props) {
             const target = e.target as HTMLElement
             if (target && (target.id === 'lp-buy-button' || target.closest('#lp-buy-button'))) {
                 e.preventDefault()
+                try {
+                    trackAddToCart({
+                        content_name: product?.title || "Landing Page Offer",
+                        content_ids: [product?.id || "product"],
+                        contents: [{ id: product?.id || "product", quantity: 1, item_price: product?.price || 0 }],
+                        value: product?.price || 0,
+                        currency: "INR",
+                    })
+                } catch (e) {
+                    console.error("AddToCart tracking error", e)
+                }
                 addToCart(product)
                 setDrawerOpen(true)
             }

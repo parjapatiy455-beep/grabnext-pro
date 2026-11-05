@@ -18,7 +18,12 @@ import { usePathname } from "next/navigation"
 import { trackPageView } from "@/lib/pixel"
 
 // Read from env — NEXT_PUBLIC_ prefix makes it safe in both server and client components
-export const FB_PIXEL_ID = process.env.NEXT_PUBLIC_FB_PIXEL_ID || "864520106659183"
+export const FB_PIXEL_ID = process.env.NEXT_PUBLIC_FB_PIXEL_ID || "1004524488604833"
+export const SECONDARY_FB_PIXEL_ID = process.env.NEXT_PUBLIC_SECONDARY_FB_PIXEL_ID || "864520106659183"
+
+export const ALL_FB_PIXEL_IDS = Array.from(
+  new Set([FB_PIXEL_ID, SECONDARY_FB_PIXEL_ID].filter(Boolean))
+)
 
 // ── SPA route-change tracker (Client Component) ───────────────────────────────
 export function FacebookPixelRouteTracker() {
@@ -77,8 +82,8 @@ export function FacebookPixelScript() {
     "t.src=v;s=b.getElementsByTagName(e)[0];",
     "s.parentNode.insertBefore(t,s)",
     "}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');",
-    // init
-    `fbq('init','${FB_PIXEL_ID}');`,
+    // init all configured pixels (including landing page pixel 1004524488604833)
+    ...ALL_FB_PIXEL_IDS.map(id => `fbq('init','${id}');`),
     // optional: test event code for Facebook Events Manager
     testCode ? `fbq('set','agent','test','${testCode}');` : "",
     // first PageView – inline script fires synchronously on every hard load

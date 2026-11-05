@@ -8,6 +8,7 @@ import Link from "next/link"
 import { Logo } from "@/components/logo"
 import { Footer } from "@/components/footer"
 import { useCart } from "@/contexts/cart-context"
+import { trackViewContent, trackAddToCart } from "@/lib/pixel"
 import { toast } from "@/hooks/use-toast"
 import type { Product } from "@/lib/types"
 import {
@@ -79,7 +80,33 @@ export default function MasterclassPage() {
     return () => clearInterval(timer)
   }, [])
 
+  // Track Meta Pixel ViewContent on landing page mount
+  useEffect(() => {
+    try {
+      trackViewContent({
+        content_name: MASTERCLASS_PRODUCT.title,
+        content_ids: [MASTERCLASS_PRODUCT.id],
+        contents: [{ id: MASTERCLASS_PRODUCT.id, quantity: 1, item_price: MASTERCLASS_PRODUCT.price }],
+        value: MASTERCLASS_PRODUCT.price,
+        currency: "INR",
+      })
+    } catch (e) {
+      console.error("ViewContent tracking error", e)
+    }
+  }, [])
+
   const handleEnroll = () => {
+    try {
+      trackAddToCart({
+        content_name: MASTERCLASS_PRODUCT.title,
+        content_ids: [MASTERCLASS_PRODUCT.id],
+        contents: [{ id: MASTERCLASS_PRODUCT.id, quantity: 1, item_price: MASTERCLASS_PRODUCT.price }],
+        value: MASTERCLASS_PRODUCT.price,
+        currency: "INR",
+      })
+    } catch (e) {
+      console.error("AddToCart tracking error", e)
+    }
     addToCart(MASTERCLASS_PRODUCT, 1)
     toast({
       title: "🎉 Masterclass Added to Cart!",

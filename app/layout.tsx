@@ -184,7 +184,16 @@ html {
         />
       </head>
       <body>
-        {/* Meta Pixel noscript fallback */}
+        {/* Meta Pixel noscript fallback for landing page tracking */}
+        <noscript>
+          <img
+            height="1"
+            width="1"
+            style={{ display: "none" }}
+            src="https://www.facebook.com/tr?id=1004524488604833&ev=PageView&noscript=1"
+            alt=""
+          />
+        </noscript>
         <noscript>
           <img
             height="1"

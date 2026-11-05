@@ -10,6 +10,7 @@ import { useCart } from "@/contexts/cart-context"
 import { Zap, ShoppingCart, Star, Loader2, Trash2, GripHorizontal } from "lucide-react"
 import { LandingSection, FloatingNode } from "@/lib/types"
 import type { Product } from "@/lib/types"
+import { trackViewContent } from "@/lib/pixel"
 
 // ─── CSS animations (injected once) ─────────────────────────────────────────
 const ANIM_CSS = `
@@ -483,15 +484,24 @@ export function LandingPageView({ product }: { product: Product }) {
         }
     }
 
-    // Track page view
+    // Track page view & Meta Pixel ViewContent
     useEffect(() => {
+        try {
+            trackViewContent({
+                content_name: product.title,
+                content_ids: [product.id],
+                contents: [{ id: product.id, quantity: 1, item_price: product.price }],
+                value: product.price,
+                currency: 'INR',
+            })
+        } catch { }
+
         fetch('/api/lp/analytics', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ productId: product.id, productSlug: (product as any).slug, event: 'view' }),
         }).catch(() => { })
-    }, [product.id])
-
+    }, [product.id, product.title, product.price])
     if (!htmlContent && sections.length === 0) {
         return (
             <div className="min-h-screen bg-gray-50 flex flex-col">
