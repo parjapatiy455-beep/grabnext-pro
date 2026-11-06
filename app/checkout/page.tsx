@@ -4,7 +4,7 @@ export const runtime = 'edge'
 import type React from "react"
 import { useState, useCallback, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
-import { Loader2, Lock, ShieldCheck, ArrowRight, CheckCircle2, Tag, ChevronDown, ChevronUp, ShoppingBag } from "lucide-react"
+import { Loader2, Lock, ShieldCheck, ArrowRight, CheckCircle2, Tag, ChevronDown, ChevronUp, ShoppingBag, Zap, Headphones, Award, Star, Check } from "lucide-react"
 import { useCart } from "@/contexts/cart-context"
 import { useAuth } from "@/contexts/auth-context"
 import { toast } from "@/hooks/use-toast"
@@ -585,21 +585,54 @@ export default function CheckoutPage() {
                   </button>
                 </div>
 
-                {/* Trust Badges */}
-                <div className="grid grid-cols-3 gap-2 pt-3 text-center text-[11px] text-slate-600 border-t border-slate-100">
-                  <div className="flex items-center justify-center gap-1">
-                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                    <span>UPI & Cards</span>
+                {/* Trust & Confidence Section */}
+                <div className="pt-4 border-t border-slate-200/90 space-y-3.5">
+                  {/* 4 Feature Badges Grid */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
+                    <div className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 flex flex-col items-center justify-center">
+                      <Lock className="w-4 h-4 text-emerald-600 mb-1" />
+                      <span className="text-[11px] font-black text-slate-800">256-Bit SSL</span>
+                      <span className="text-[9px] text-slate-500 font-medium">Bank-grade Encrypted</span>
+                    </div>
+                    <div className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 flex flex-col items-center justify-center">
+                      <Zap className="w-4 h-4 text-amber-500 mb-1" />
+                      <span className="text-[11px] font-black text-slate-800">Instant Delivery</span>
+                      <span className="text-[9px] text-slate-500 font-medium">Email & WhatsApp</span>
+                    </div>
+                    <div className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 flex flex-col items-center justify-center">
+                      <ShieldCheck className="w-4 h-4 text-emerald-600 mb-1" />
+                      <span className="text-[11px] font-black text-slate-800">100% Genuine</span>
+                      <span className="text-[9px] text-slate-500 font-medium">Pre-Activated Lifetime</span>
+                    </div>
+                    <div className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 flex flex-col items-center justify-center">
+                      <Headphones className="w-4 h-4 text-blue-600 mb-1" />
+                      <span className="text-[11px] font-black text-slate-800">24/7 Support</span>
+                      <span className="text-[9px] text-slate-500 font-medium">+91 75001 67987</span>
+                    </div>
                   </div>
-                  <div className="flex items-center justify-center gap-1">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                    <span>Instant Link</span>
+
+                  {/* Verified Payment Guarantee Box */}
+                  <div className="bg-emerald-50/70 border border-emerald-200 rounded-xl p-3 flex items-start gap-2.5 text-left">
+                    <Award className="w-5 h-5 text-emerald-700 shrink-0 mt-0.5" />
+                    <div className="text-xs leading-relaxed">
+                      <p className="font-extrabold text-emerald-950">
+                        100% Safe & RBI Compliant Payments
+                      </p>
+                      <p className="text-[11px] text-emerald-800 font-medium mt-0.5">
+                        Pay securely via UPI (Google Pay, PhonePe, Paytm, BHIM), Debit/Credit Cards & NetBanking. Your order is backed by full replacement & setup support.
+                      </p>
+                    </div>
                   </div>
-                  <div className="flex items-center justify-center gap-1">
-                    <Lock className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                    <span>SSL Secure</span>
+
+                  {/* Social Proof / Rating */}
+                  <div className="flex items-center justify-center gap-1.5 text-xs text-slate-600 font-semibold pt-0.5">
+                    <div className="flex text-amber-400 text-sm">
+                      ★★★★★
+                    </div>
+                    <span>Rated <strong>4.9 / 5</strong> by 3,929+ Indian Creators & Editors</span>
                   </div>
                 </div>
+
 
               </form>
 
@@ -654,6 +687,28 @@ export default function CheckoutPage() {
                 <div className="flex justify-between items-center text-base font-black pt-3 border-t border-slate-200 text-slate-900">
                   <span>Total Amount</span>
                   <span className="text-amber-600 text-lg font-mono">{formatPrice(finalAmount)}</span>
+                </div>
+              </div>
+
+              {/* Desktop Buyer Protection Card */}
+              <div className="mt-4 bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-2">
+                <div className="flex items-center gap-2 text-slate-800 font-extrabold text-xs">
+                  <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>Buyer Protection Guaranteed</span>
+                </div>
+                <div className="space-y-1.5 text-[11px] text-slate-600">
+                  <div className="flex items-center gap-1.5">
+                    <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    <span>Instant Email & WhatsApp Delivery in 60s</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    <span>Free Installation & Setup Assistance</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    <span>100% Pre-Activated Lifetime Access</span>
+                  </div>
                 </div>
               </div>
 

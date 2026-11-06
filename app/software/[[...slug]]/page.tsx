@@ -7,7 +7,7 @@ import { useCart } from "@/contexts/cart-context";
 import { useRouter } from "next/navigation";
 import { trackAddToCart } from "@/lib/pixel";
 import { toast } from "@/hooks/use-toast";
-import { X, Gift, Tag, Copy, Check, Clock } from "lucide-react";
+import { X, Gift, Tag, Copy, Check, Clock, Sparkles } from "lucide-react";
 
 /* ── Animated CTA Button (matches Elementor .btn class) ── */
 const BTN_STYLE: React.CSSProperties = {
@@ -445,6 +445,56 @@ export default function SoftwareFunnelPage({ params }: { params?: { slug?: strin
   // Promo modal & SAVE50 coupon code state
   const [showPromoModal, setShowPromoModal] = useState(false);
   const [copiedCoupon, setCopiedCoupon] = useState(false);
+  const [isDiscountClaimed, setIsDiscountClaimed] = useState(false);
+
+  // Check if SAVE50 coupon was already saved in sessionStorage or present in URL
+  useEffect(() => {
+    try {
+      const saved = sessionStorage.getItem("copiedCouponCode");
+      const urlCoupon = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("coupon") : null;
+      if (saved === "SAVE50" || urlCoupon === "SAVE50") {
+        setIsDiscountClaimed(true);
+      }
+    } catch {}
+  }, []);
+
+  // Base price from DB (default 499) and 50% discount price (249)
+  const basePrice = adobeProduct?.price || 499;
+  const discountAmount = Math.round(basePrice * 0.5);
+  const discountedPrice = basePrice - discountAmount; // Exactly 249 when basePrice is 499
+  const currentPrice = isDiscountClaimed ? discountedPrice : basePrice;
+
+  const handleApplyDiscount = (e?: React.MouseEvent) => {
+    if (e) e.preventDefault();
+    try {
+      if (typeof navigator !== "undefined" && navigator.clipboard) {
+        navigator.clipboard.writeText("SAVE50").catch(() => {});
+      }
+      sessionStorage.setItem("copiedCouponCode", "SAVE50");
+      setIsDiscountClaimed(true);
+    } catch {}
+    setIsDiscountClaimed(true);
+    setCopiedCoupon(true);
+    toast({
+      title: "🎉 50% OFF Applied!",
+      description: `Price updated to ₹${discountedPrice}! Discount will automatically apply at checkout.`,
+    });
+    setTimeout(() => {
+      setCopiedCoupon(false);
+    }, 2000);
+  };
+
+  const handleRemoveDiscount = (e: React.MouseEvent) => {
+    e.preventDefault();
+    try {
+      sessionStorage.removeItem("copiedCouponCode");
+    } catch {}
+    setIsDiscountClaimed(false);
+    toast({
+      title: "Discount Removed",
+      description: `Standard price ₹${basePrice} restored.`,
+    });
+  };
 
   // 10-minute countdown timer for 50% OFF promo modal (600 seconds)
   const [promoTimeLeft, setPromoTimeLeft] = useState(600);
@@ -499,6 +549,7 @@ export default function SoftwareFunnelPage({ params }: { params?: { slug?: strin
     }
     try {
       sessionStorage.setItem("copiedCouponCode", "SAVE50");
+      setIsDiscountClaimed(true);
     } catch {}
     setCopiedCoupon(true);
     setTimeout(() => {
@@ -571,14 +622,21 @@ export default function SoftwareFunnelPage({ params }: { params?: { slug?: strin
     return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
   };
 
-  const handleBuyClick = (e: React.MouseEvent) => {
+  const handleBuyClick = (e: React.MouseEvent, forceDiscount = false) => {
+    const shouldApplyDiscount = isDiscountClaimed || forceDiscount;
+    if (shouldApplyDiscount) {
+      try {
+        sessionStorage.setItem("copiedCouponCode", "SAVE50");
+      } catch {}
+      setIsDiscountClaimed(true);
+    }
     e.preventDefault();
     
     // Find the Adobe product or fallback to a structured one
     const targetProduct = adobeProduct || {
       id: "adobe-all-premium-software-bundle-2026-for-windows-mac-420947", // Fallback ID
       title: "Adobe All Premium Software Bundle 2026",
-      price: 249,
+      price: basePrice,
       category: "software",
       imageUrl: "/hero-bundle.webp",
       downloadUrl: "[]",
@@ -591,7 +649,7 @@ export default function SoftwareFunnelPage({ params }: { params?: { slug?: strin
       content_name: targetProduct.title,
       content_ids: [targetProduct.id],
       contents: [{ id: targetProduct.id, quantity: 1, item_price: targetProduct.price }],
-      value: targetProduct.price,
+      value: isDiscountClaimed ? discountedPrice : targetProduct.price,
     });
 
     // Clear cart and add Adobe product
@@ -599,7 +657,7 @@ export default function SoftwareFunnelPage({ params }: { params?: { slug?: strin
     addToCart(targetProduct);
     
     // Redirect to checkout
-    router.push("/checkout");
+    router.push(shouldApplyDiscount ? "/checkout?coupon=SAVE50" : "/checkout");
   };
 
   const handleClaimClick = (e: React.MouseEvent) => {
@@ -608,7 +666,7 @@ export default function SoftwareFunnelPage({ params }: { params?: { slug?: strin
     const targetProduct = adobeProduct || {
       id: "adobe-all-premium-software-bundle-2026-for-windows-mac-420947",
       title: "Adobe All Premium Software Bundle 2026",
-      price: 249,
+      price: basePrice,
       category: "software",
       imageUrl: "/hero-bundle.webp",
       downloadUrl: "[]",
@@ -636,7 +694,7 @@ export default function SoftwareFunnelPage({ params }: { params?: { slug?: strin
         { id: targetProduct.id, quantity: 1, item_price: targetProduct.price },
         { id: freeProduct.id, quantity: 1, item_price: 0 }
       ],
-      value: targetProduct.price,
+      value: isDiscountClaimed ? discountedPrice : targetProduct.price,
     });
 
     // Notify user they claimed it successfully
@@ -660,7 +718,13 @@ export default function SoftwareFunnelPage({ params }: { params?: { slug?: strin
         {/* ── 1. TOP URGENCY BAR (High visibility green positive alert) ── */}
         <div style={{ backgroundColor: "#05FF00" }} className="text-black text-center py-2.5 px-4 font-black text-sm sm:text-base sticky top-0 z-50 shadow-md">
           🔥 Adobe All Premium Software Bundle 2026! &nbsp;|&nbsp; Launch Sale: <strong>90% OFF</strong> &nbsp;|&nbsp;
-          <a href="/checkout" onClick={handleBuyClick} className="underline font-black hover:opacity-80 transition-opacity ml-1">Grab Now for ₹{adobeProduct ? adobeProduct.price : 249} Only →</a>
+          <a href="/checkout" onClick={(e) => handleBuyClick(e, !isDiscountClaimed)} className="underline font-black hover:opacity-80 transition-opacity ml-1">
+            {isDiscountClaimed ? (
+              <>🎉 50% OFF Applied! Grab for <span className="line-through opacity-70 mr-1">₹{basePrice}</span> ₹{discountedPrice} Only →</>
+            ) : (
+              <>Grab Now for ₹{basePrice} Only →</>
+            )}
+          </a>
         </div>
 
         {/* ── 2. HERO (Premium Dark Blue Theme) ── */}
@@ -695,7 +759,11 @@ export default function SoftwareFunnelPage({ params }: { params?: { slug?: strin
             </div>
             <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
               <button onClick={handleBuyClick} className="hover:-translate-y-0.5 active:translate-y-0 hover:shadow-[0px_10px_25px_rgba(5,255,0,0.4)] transition-all duration-200" style={{ ...BTN_STYLE, fontSize: "clamp(18px,2.8vw,32px)", padding: "16px 48px", width: "min(90%,580px)" }}>
-                🚀 Get Instant Access At Just ₹{adobeProduct ? adobeProduct.price : 249}/- 🚀
+                {isDiscountClaimed ? (
+                  `🚀 Get Instant Access At Just ₹${discountedPrice}/- (50% OFF) 🚀`
+                ) : (
+                  `🚀 Get 50% OFF — Buy for ₹${discountedPrice}/- 🚀`
+                )}
               </button>
             </div>
             <p className="text-white/70 text-xs sm:text-sm mt-5 font-bold flex items-center justify-center flex-wrap gap-x-4 gap-y-1.5">
@@ -713,7 +781,7 @@ export default function SoftwareFunnelPage({ params }: { params?: { slug?: strin
         {/* ── 3. TRUST STATS (Alternating White background) ── */}
         <section className="bg-white py-10 px-4 border-b border-gray-150">
           <div className="max-w-4xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-4">
-            {[["3,929+", "Happy Customers"], ["20+", "Creative Software Tools"], ["24x7", "WhatsApp Support"], ["₹" + (adobeProduct ? adobeProduct.price : 249), "One-Time Price"]].map(([n, l]) => (
+            {[["3,929+", "Happy Customers"], ["20+", "Creative Software Tools"], ["24x7", "WhatsApp Support"], ["₹" + currentPrice, isDiscountClaimed ? "50% OFF Price" : "One-Time Price"]].map(([n, l]) => (
               <div key={l} className="text-center py-5 px-3 bg-gray-50 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
                 <div className="text-2xl md:text-3xl font-black text-[#00114E]">{n}</div>
                 <div className="text-gray-700 text-xs sm:text-sm font-extrabold mt-1">{l}</div>
@@ -734,7 +802,11 @@ export default function SoftwareFunnelPage({ params }: { params?: { slug?: strin
             </div>
             <div className="flex justify-center mt-12">
               <button onClick={handleBuyClick} className="hover:-translate-y-0.5 hover:shadow-[0px_10px_20px_rgba(0,0,0,0.3)] transition-all duration-200" style={{ ...BTN_STYLE, fontSize: "clamp(16px,2.5vw,28px)", padding: "14px 44px", width: "min(85%,520px)" }}>
-                🚀 Get Instant Access At Just ₹{adobeProduct ? adobeProduct.price : 249}/- 🚀
+                {isDiscountClaimed ? (
+                  `🚀 Get Instant Access At Just ₹${discountedPrice}/- (50% OFF) 🚀`
+                ) : (
+                  `🚀 Get 50% OFF — Buy for ₹${discountedPrice}/- 🚀`
+                )}
               </button>
             </div>
           </div>
@@ -766,7 +838,17 @@ export default function SoftwareFunnelPage({ params }: { params?: { slug?: strin
                 Offer Price : ₹{adobeProduct?.originalPrice ? Math.round(adobeProduct.originalPrice * 0.16).toLocaleString('en-IN') : "3,999"}/-
               </div>
               <div className="font-black text-[#22c55e] tracking-tight mt-2 animate-pulse" style={{ fontSize: "clamp(38px,7vw,60px)", lineHeight: 1.1 }}>
-                Today Only : ₹{adobeProduct ? adobeProduct.price : 249}/-
+                {isDiscountClaimed ? (
+                  <span className="flex flex-col items-center">
+                    <span className="text-xs sm:text-sm font-black text-emerald-600 uppercase tracking-wider mb-1">🎉 50% Extra Discount Applied</span>
+                    <span className="flex items-center justify-center gap-2 sm:gap-3">
+                      <span className="text-xl sm:text-2xl text-gray-400 line-through font-bold">₹{basePrice}/-</span>
+                      <span className="text-[#22c55e]">₹{discountedPrice}/-</span>
+                    </span>
+                  </span>
+                ) : (
+                  <span>Today Only : ₹{basePrice}/-</span>
+                )}
               </div>
             </div>
 
@@ -777,16 +859,31 @@ export default function SoftwareFunnelPage({ params }: { params?: { slug?: strin
             </div>
 
             {/* Special SAVE50 Coupon Box */}
-            <div className="w-full max-w-md my-4 p-4 bg-amber-500/10 border-2 border-dashed border-amber-400/60 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3 shadow-sm mx-auto">
+            <div className={`w-full max-w-md my-4 p-4 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3 shadow-sm mx-auto transition-all ${
+              isDiscountClaimed 
+                ? "bg-emerald-50 border-2 border-emerald-500 shadow-emerald-500/10" 
+                : "bg-amber-500/10 border-2 border-dashed border-amber-400/80"
+            }`}>
               <div className="flex items-center gap-2.5 text-left">
-                <Tag className="h-5 w-5 text-amber-500 shrink-0" />
+                <Tag className={`h-5 w-5 shrink-0 ${isDiscountClaimed ? "text-emerald-600" : "text-amber-500"}`} />
                 <div>
-                  <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider block">Special Coupon Code (50% OFF)</span>
-                  <span className="text-xl font-mono font-black text-amber-600 tracking-wider">SAVE50</span>
+                  <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider block">
+                    {isDiscountClaimed ? "Active 50% Discount Coupon" : "Special Coupon Code (50% OFF)"}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-xl font-mono font-black tracking-wider ${isDiscountClaimed ? "text-emerald-700" : "text-amber-600"}`}>
+                      SAVE50
+                    </span>
+                    {isDiscountClaimed && (
+                      <span className="bg-emerald-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full">
+                        ACTIVE
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
               <button
-                onClick={handleCopyCoupon}
+                onClick={handleApplyDiscount}
                 className={`w-full sm:w-auto px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 shrink-0 ${
                   copiedCoupon
                     ? "bg-emerald-500 text-white shadow-md"
@@ -795,11 +892,11 @@ export default function SoftwareFunnelPage({ params }: { params?: { slug?: strin
               >
                 {copiedCoupon ? (
                   <>
-                    <Check className="h-4 w-4" /> Code Copied!
+                    <Check className="h-4 w-4" /> 50% OFF Applied!
                   </>
                 ) : (
                   <>
-                    <Copy className="h-4 w-4" /> Copy Coupon Code
+                    <Sparkles className="h-4 w-4" /> Apply 50% OFF (₹{discountedPrice})
                   </>
                 )}
               </button>
@@ -807,11 +904,15 @@ export default function SoftwareFunnelPage({ params }: { params?: { slug?: strin
 
             {/* Giant Green CTA Button */}
             <button 
-              onClick={handleBuyClick} 
+              onClick={(e) => handleBuyClick(e, !isDiscountClaimed)} 
               className="w-full max-w-xl bg-[#00c853] hover:bg-[#00b24a] text-white font-black text-lg sm:text-2xl py-4 px-6 rounded-2xl shadow-[0_8px_25px_rgba(0,200,83,0.35)] transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 text-center uppercase tracking-wide animate-shake-cta"
               style={{ fontFamily: "Poppins, sans-serif" }}
             >
-              Yes, I Want The Adobe All Premium Bundle
+              {isDiscountClaimed ? (
+                `Yes, Buy Adobe Bundle for Just ₹${discountedPrice} 🚀`
+              ) : (
+                `Get 50% Discount & Buy for ₹${discountedPrice} 🚀`
+              )}
             </button>
 
             {/* Urgency */}
@@ -1082,7 +1183,7 @@ export default function SoftwareFunnelPage({ params }: { params?: { slug?: strin
 
             <div className="flex justify-center mt-12">
               <button onClick={handleBuyClick} className="animate-[animatedgradient_3s_ease_infinite_alternate] hover:-translate-y-0.5 hover:shadow-[0px_8px_15px_rgba(255,200,0,0.4)] transition-all duration-200" style={{ ...BTN_STYLE, fontSize: "clamp(16px,2.5vw,28px)", padding: "14px 44px", width: "min(85%,520px)" }}>
-                🚀 Get All Bonuses FREE — Only ₹{adobeProduct ? adobeProduct.price : 249}/- 🚀
+                🚀 Get All Bonuses FREE — Only ₹{currentPrice}/- {isDiscountClaimed ? "(50% OFF)" : ""} 🚀
               </button>
             </div>
           </div>
@@ -1120,14 +1221,14 @@ export default function SoftwareFunnelPage({ params }: { params?: { slug?: strin
                 </thead>
                 <tbody className="bg-white">
                   {[
-                    ["Price", `₹${adobeProduct ? adobeProduct.price : 249} Once`, "₹5,500/mo"],
+                    ["Price", `₹${currentPrice} Once`, "₹5,500/mo"],
                     ["All 20+ Apps & Packs", "✅ Yes", "✅ Yes"],
                     ["Pre-Activated", "✅ Instant", "❌ Sub Required"],
                     ["Lifetime Access", "✅ Lifetime", "❌ Monthly Fee"],
                     ["Windows & Mac", "✅ Both", "✅ Both"],
                     ["M1/M2/M3/M4 Support", "✅ Yes", "✅ Yes"],
                     ["Instant Download", "✅ Instant", "⏳ Slow Install"],
-                    ["Total Cost/Year", `₹${adobeProduct ? adobeProduct.price : 249} (Total)`, "₹66,000+/yr"],
+                    ["Total Cost/Year", `₹${currentPrice} (Total)`, "₹66,000+/yr"],
                   ].map(([feat, g, a], i) => (
                     <tr key={feat} className={`${i % 2 === 0 ? "bg-white" : "bg-gray-50/50"} border-t border-gray-150 hover:bg-green-50/10 transition-colors`}>
                       <td className="py-3 px-4 text-gray-800 font-extrabold text-xs sm:text-sm">{feat}</td>
@@ -1178,8 +1279,8 @@ export default function SoftwareFunnelPage({ params }: { params?: { slug?: strin
           <div className="max-w-3xl mx-auto">
             <h2 className="font-black mb-4" style={{ fontSize: "clamp(22px,4vw,38px)" }}>Don't Miss This Limited Time Offer!</h2>
             <p className="text-[#00FFFF] mb-6 text-lg sm:text-xl font-bold">Join 3,929+ professionals who already own the ultimate Adobe bundle.</p>
-            <button onClick={handleBuyClick} className="inline-block animate-[animatedgradient_3s_ease_infinite_alternate] hover:-translate-y-0.5 hover:shadow-[0px_8px_15px_rgba(255,200,0,0.5)] transition-all duration-200" style={{ ...BTN_STYLE, fontSize: "clamp(16px,3vw,30px)", padding: "14px 44px" }}>
-              🚀 GET INSTANT ACCESS — ONLY ₹{adobeProduct ? adobeProduct.price : 249}/- 🚀
+            <button onClick={(e) => handleBuyClick(e, !isDiscountClaimed)} className="inline-block animate-[animatedgradient_3s_ease_infinite_alternate] hover:-translate-y-0.5 hover:shadow-[0px_8px_15px_rgba(255,200,0,0.5)] transition-all duration-200" style={{ ...BTN_STYLE, fontSize: "clamp(16px,3vw,30px)", padding: "14px 44px" }}>
+              🚀 GET INSTANT ACCESS — ONLY ₹{currentPrice}/- {isDiscountClaimed ? "(50% OFF)" : ""} 🚀
             </button>
             <p className="text-white/60 text-xs sm:text-sm mt-4 font-bold">⚡ Instant Access &nbsp;|&nbsp; ✅ Pre-Activated &nbsp;|&nbsp; 🍎 Mac & 🪟 Windows</p>
           </div>
@@ -1201,8 +1302,10 @@ export default function SoftwareFunnelPage({ params }: { params?: { slug?: strin
 
         {/* ── 15. CONVERSION WIDGETS & PLUGINS ── */}
         <StickyCheckoutBar 
-          onBuy={handleBuyClick} 
-          price={adobeProduct ? adobeProduct.price : 249} 
+          onBuy={(e) => handleBuyClick(e, !isDiscountClaimed)} 
+          price={discountedPrice}
+          basePrice={basePrice}
+          isDiscountClaimed={isDiscountClaimed} 
           originalPrice={adobeProduct ? (adobeProduct.originalPrice || 2499) : 2499}
         />
         <WhatsAppWidget />
@@ -1227,7 +1330,7 @@ export default function SoftwareFunnelPage({ params }: { params?: { slug?: strin
                 To claim this offer, buy our premium bundle.
               </p>
               <button 
-                onClick={handleBuyClick}
+                onClick={(e) => handleBuyClick(e, !isDiscountClaimed)}
                 className="w-full bg-[#00c853] hover:bg-[#00b24a] text-white text-[10px] font-black py-1.5 px-3 rounded-lg uppercase tracking-wider text-center transition-colors"
               >
                 Complete Order →
@@ -1417,7 +1520,7 @@ export default function SoftwareFunnelPage({ params }: { params?: { slug?: strin
                   </div>
                 </div>
                 <button
-                  onClick={handleCopyCoupon}
+                  onClick={handleApplyDiscount}
                   className={`w-full sm:w-auto px-5 py-2.5 sm:py-3 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 shrink-0 ${
                     copiedCoupon
                       ? "bg-emerald-500 text-white shadow-lg scale-105"
@@ -1430,7 +1533,7 @@ export default function SoftwareFunnelPage({ params }: { params?: { slug?: strin
                     </>
                   ) : (
                     <>
-                      <Copy className="h-4 w-4" /> Copy Coupon Code
+                      <Sparkles className="h-4 w-4" /> Apply 50% OFF (₹{discountedPrice})
                     </>
                   )}
                 </button>
@@ -1449,19 +1552,16 @@ export default function SoftwareFunnelPage({ params }: { params?: { slug?: strin
               {/* Action Buttons */}
               <div className="pt-1 flex flex-col gap-2">
                 <button
-                  onClick={() => {
-                    handleCopyCoupon();
+                  onClick={(e) => {
+                    handleApplyDiscount(e);
                     setShowPromoModal(false);
-                    const cta = document.querySelector<HTMLButtonElement>("button.animate-shake-cta");
-                    if (cta) {
-                      cta.click();
-                    } else {
-                      window.scrollTo({ top: 700, behavior: "smooth" });
-                    }
+                    handleBuyClick(e, true);
+                    return;
+
                   }}
                   className="w-full py-3 px-4 rounded-xl text-xs font-black text-black bg-gradient-to-r from-[#FFC800] to-[#afff3d] shadow-[0_4px_15px_rgba(255,200,0,0.35)] hover:scale-[1.02] active:scale-95 transition-all uppercase tracking-wider"
                 >
-                  Claim 50% OFF & Buy Now 🚀
+                  Claim 50% OFF & Buy Now @ ₹{discountedPrice} 🚀
                 </button>
                 <button
                   onClick={() => setShowPromoModal(false)}
@@ -1543,7 +1643,7 @@ export default function SoftwareFunnelPage({ params }: { params?: { slug?: strin
 }
 
 /* Helper Component: Sticky Bottom Checkout Bar */
-function StickyCheckoutBar({ onBuy, price, originalPrice }: { onBuy: (e: React.MouseEvent) => void; price: number; originalPrice: number | null }) {
+function StickyCheckoutBar({ onBuy, price, basePrice, isDiscountClaimed, originalPrice }: { onBuy: (e: React.MouseEvent) => void; price: number; basePrice: number; isDiscountClaimed: boolean; originalPrice: number | null }) {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -1568,16 +1668,20 @@ function StickyCheckoutBar({ onBuy, price, originalPrice }: { onBuy: (e: React.M
             ⚡ Adobe CC Premium 2026 + Bonuses
           </p>
           <div className="flex items-center gap-2">
-            <span className="text-white/40 line-through text-[11px] sm:text-xs font-bold">₹{(originalPrice || 2499).toLocaleString('en-IN')}</span>
-            <span className="text-[#05FF00] font-black text-sm sm:text-lg">₹{price}</span>
-            <span className="bg-red-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider">90% OFF</span>
+            <span className="text-white/40 line-through text-[11px] sm:text-xs font-bold">₹{isDiscountClaimed ? basePrice : (originalPrice || 2499).toLocaleString('en-IN')}</span>
+            <span className="text-[#05FF00] font-black text-sm sm:text-lg">₹{isDiscountClaimed ? price : basePrice}</span>
+            {isDiscountClaimed ? (
+              <span className="bg-emerald-500 text-slate-950 text-[9px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider">50% OFF</span>
+            ) : (
+              <span className="bg-amber-400 text-slate-950 text-[9px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider animate-pulse">SAVE50 Available</span>
+            )}
           </div>
         </div>
         <button 
           onClick={onBuy}
           className="bg-gradient-to-r from-[#FFC800] to-[#afff3d] text-black font-black uppercase text-xs sm:text-sm px-4 sm:px-8 py-2.5 sm:py-3.5 rounded-xl shadow-[0_4px_15px_rgba(255,200,0,0.35)] hover:scale-105 active:scale-95 transition-all duration-150 shrink-0 whitespace-nowrap animate-shake-cta"
         >
-          Buy Now 🚀
+          {isDiscountClaimed ? `Buy Now @ ₹${price} 🚀` : `Get 50% OFF (₹${price}) 🚀`}
         </button>
       </div>
     </div>
