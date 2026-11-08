@@ -11,6 +11,7 @@ import { CartDrawer } from "./cart-drawer"
 import { useAuth } from "@/contexts/auth-context"
 import { useCart } from "@/contexts/cart-context"
 import { ADMIN_EMAIL } from "@/lib/auth"
+import { fetchCategories } from "@/lib/d1-client"
 import { Logo } from "@/components/logo"
 import { useTheme } from "next-themes"
 import {
@@ -33,12 +34,18 @@ export function StoreHeader() {
     setMounted(true)
   }, [])
 
-  const categories = [
-    { name: "All Categories", icon: LayoutGrid, href: "/products" },
-    { name: "Electronics", icon: Monitor, href: "/products?category=electronics" },
-    { name: "Fashion", icon: Package, href: "/products?category=fashion" },
-    { name: "Home & Kitchen", icon: BookOpen, href: "/products?category=home" },
-  ]
+  const [categories, setCategories] = useState<any[]>([])
+
+  useEffect(() => {
+    setMounted(true)
+    fetchCategories()
+      .then((cats) => {
+        if (Array.isArray(cats) && cats.length > 0) {
+          setCategories(cats.filter((c: any) => c.isActive !== 0))
+        }
+      })
+      .catch(() => {})
+  }, [])
 
   // Check if user is admin (either by Role OR by Email)
   const isAdmin = userProfile?.role === "admin" || (user?.email && user.email.toLowerCase() === ADMIN_EMAIL.toLowerCase());
@@ -262,23 +269,65 @@ export function StoreHeader() {
                     )}
                   </div>
 
-                  <div className="space-y-4">
-                    <h3 className="font-semibold text-lg border-b pb-2">Categories</h3>
-                    {categories.map((cat) => (
-                      <Link
-                        key={cat.name}
-                        href={cat.href}
-                        className="flex items-center gap-3 text-muted-foreground hover:text-blue-600 transition-colors"
-                      >
-                        <cat.icon className="h-4 w-4" />
-                        {cat.name}
+                  <div className="space-y-3">
+                    <h3 className="font-semibold text-base border-b dark:border-slate-800 pb-2 flex items-center justify-between">
+                      <span>Categories</span>
+                      <Link href="/products" className="text-xs text-primary font-medium hover:underline">
+                        All ({categories.length || '10+'}) →
                       </Link>
-                    ))}
+                    </h3>
+                    <Link
+                      href="/products"
+                      className="flex items-center gap-3 text-slate-800 dark:text-slate-200 hover:text-primary transition-colors text-sm font-semibold"
+                    >
+                      <LayoutGrid className="h-4 w-4 text-primary shrink-0" />
+                      All Digital Products
+                    </Link>
+                    {categories.length > 0 ? (
+                      categories.slice(0, 10).map((cat) => (
+                        <Link
+                          key={cat.id || cat.slug || cat.name}
+                          href={`/products?category=${cat.slug || cat.name.toLowerCase().replace(/\s+/g, '-')}`}
+                          className="flex items-center gap-3 text-slate-650 dark:text-slate-350 hover:text-primary transition-colors text-sm"
+                        >
+                          {cat.imageUrl ? (
+                            <img src={cat.imageUrl} alt={cat.name} className="h-4 w-4 rounded-full object-cover shrink-0" />
+                          ) : (
+                            <span className="h-2 w-2 rounded-full bg-violet-500 shrink-0" />
+                          )}
+                          <span className="truncate">{cat.name}</span>
+                        </Link>
+                      ))
+                    ) : (
+                      <>
+                        <Link
+                          href="/products?category=video-editing"
+                          className="flex items-center gap-3 text-slate-650 dark:text-slate-350 hover:text-primary transition-colors text-sm"
+                        >
+                          <span className="h-2 w-2 rounded-full bg-purple-500 shrink-0" />
+                          Video Editing Assets
+                        </Link>
+                        <Link
+                          href="/products?category=graphic-templates"
+                          className="flex items-center gap-3 text-slate-650 dark:text-slate-350 hover:text-primary transition-colors text-sm"
+                        >
+                          <span className="h-2 w-2 rounded-full bg-pink-500 shrink-0" />
+                          Graphic & Canva Packs
+                        </Link>
+                        <Link
+                          href="/products?category=software"
+                          className="flex items-center gap-3 text-slate-650 dark:text-slate-350 hover:text-primary transition-colors text-sm"
+                        >
+                          <span className="h-2 w-2 rounded-full bg-blue-500 shrink-0" />
+                          Software & Web Tools
+                        </Link>
+                      </>
+                    )}
                     <Link
                       href="/blog"
-                      className="flex items-center gap-3 text-purple-600 dark:text-purple-400 font-semibold transition-colors"
+                      className="flex items-center gap-3 text-purple-600 dark:text-purple-400 font-semibold transition-colors text-sm pt-1"
                     >
-                      <BookOpen className="h-4 w-4" />
+                      <BookOpen className="h-4 w-4 shrink-0" />
                       Digital Products Blog & Guides
                     </Link>
                   </div>
@@ -304,8 +353,8 @@ export function StoreHeader() {
                         )}
                       </>
                     ) : (
-                      <Button asChild className="w-full">
-                        <Link href="/auth/login">Login</Link>
+                      <Button asChild className="w-full bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white font-bold h-11 rounded-xl shadow-md">
+                        <Link href="/auth/login">Sign In / Register</Link>
                       </Button>
                     )}
                   </div>

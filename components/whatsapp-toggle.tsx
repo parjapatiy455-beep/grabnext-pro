@@ -34,7 +34,7 @@ export function WhatsAppToggle({
   const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`
 
   return (
-    <div className="fixed bottom-5 right-5 z-[9999]">
+    <div className="fixed bottom-18 md:bottom-5 right-3 md:right-5 z-[9999]">
       <a
         href={whatsappUrl}
         target="_blank"

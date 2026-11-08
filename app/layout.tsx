@@ -7,6 +7,7 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/toaster"
 import { CartDrawer } from "@/components/cart-drawer"
 import { WhatsAppToggle } from "@/components/whatsapp-toggle"
+import { MobileBottomNav } from "@/components/mobile-bottom-nav"
 import { TopProgressBar } from "@/components/top-progress-bar"
 import { FacebookPixelScript, FacebookPixelRouteTracker } from "@/components/facebook-pixel"
 import { GoogleAnalyticsRouteTracker } from "@/components/google-analytics"
@@ -242,6 +243,7 @@ html {
               <CartDrawer />
               <Toaster />
               <WhatsAppToggle />
+              <MobileBottomNav />
             </CartProvider>
           </AuthProvider>
         </ThemeProvider>

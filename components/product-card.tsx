@@ -95,7 +95,7 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
   return (
     <Link href={href} className="block h-full select-none" onClick={handleCardClick}>
       <Card
-        className="group relative bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 hover:border-blue-300 dark:hover:border-blue-500 shadow-sm hover:shadow-md product-card-interactive transition-all duration-200 overflow-hidden h-full flex flex-col cursor-pointer"
+        className="group relative bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-2xl hover:border-violet-400 dark:hover:border-violet-500 shadow-xs hover:shadow-xl hover:shadow-violet-500/10 hover:-translate-y-1 transition-all duration-300 overflow-hidden h-full flex flex-col cursor-pointer"
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
       >
@@ -109,30 +109,34 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
           </div>
         )}
 
-        {/* Badges */}
+        {/* Badges - Modern Rounded Glass/Gradient Pills */}
         {discount > 0 && (
-          <div className="absolute top-2 left-2 z-10 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">-{discount}%</div>
+          <div className="absolute top-2.5 left-2.5 z-10 bg-gradient-to-r from-red-600 to-rose-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-sm">
+            -{discount}%
+          </div>
         )}
         {product.salesCount > 100 && (
-          <div className="absolute top-2 right-2 z-10 bg-blue-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">Bestseller</div>
+          <div className="absolute top-2.5 right-2.5 z-10 bg-slate-900/85 backdrop-blur-md text-amber-300 text-[10px] font-bold px-2 py-0.5 rounded-full border border-amber-400/30 flex items-center gap-1 shadow-sm">
+            <span>🔥 Popular</span>
+          </div>
         )}
 
-        {/* Image with smooth crossfade */}
-        <div className="relative h-44 w-full bg-gray-50 dark:bg-slate-950 overflow-hidden flex items-center justify-center p-1 transition-colors">
+        {/* Image with smooth crossfade and modern aspect ratio */}
+        <div className="relative aspect-[4/3] sm:aspect-[16/11] w-full bg-slate-50 dark:bg-slate-950 overflow-hidden flex items-center justify-center p-3 transition-colors">
           <img
             src={currentImg}
             alt={product?.title || "product"}
             decoding="async"
             loading={priority ? "eager" : "lazy"}
             fetchPriority={priority ? "high" : "auto"}
-            className="h-full w-full object-contain transition-transform duration-300 group-hover:scale-105"
+            className="h-full w-full object-contain transition-transform duration-500 group-hover:scale-105"
             style={{
               opacity: fade ? 1 : 0,
-              transition: "opacity 0.18s ease-in-out, transform 0.3s ease",
+              transition: "opacity 0.18s ease-in-out, transform 0.5s ease",
             }}
           />
           {images.length > 1 && (
-            <div className="absolute bottom-1 left-1/2 -translate-x-1/2 flex gap-1">
+            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
               {images.map((_, i) => (
                 <div key={i} className={`h-1 rounded-full transition-all duration-300 ${i === imgIdx ? "w-4 bg-primary" : "w-1 bg-gray-300 dark:bg-gray-700"}`} />
               ))}
@@ -141,41 +145,48 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
         </div>
 
         {/* Content */}
-        <CardContent className="p-3 flex-1 flex flex-col gap-1">
-          <h3 className="font-medium text-slate-800 dark:text-slate-200 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-2 text-sm leading-snug whitespace-pre-line">
+        <CardContent className="p-3.5 flex-1 flex flex-col gap-1.5">
+          <h3 className="font-semibold text-slate-850 dark:text-slate-100 group-hover:text-violet-600 dark:group-hover:text-violet-400 transition-colors line-clamp-2 text-sm leading-snug whitespace-pre-line">
             {product.title}
           </h3>
 
           {avgRating > 0 ? (
-            <div className="flex items-center gap-1">
-              <div className="flex items-center gap-0.5 bg-green-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
+            <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-0.5 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 text-[10px] font-bold px-1.5 py-0.5 rounded-md">
                 {avgRating.toFixed(1)} <Star className="h-2.5 w-2.5 fill-current ml-0.5" />
               </div>
-              <span className="text-xs text-gray-400 dark:text-slate-500">({reviewCount})</span>
+              <span className="text-[11px] text-slate-400 dark:text-slate-500">({reviewCount})</span>
             </div>
           ) : (
-            <div className="text-xs text-gray-400 dark:text-slate-500">No reviews yet</div>
+            <div className="text-[11px] text-slate-400 dark:text-slate-500 font-medium">⭐ New Release</div>
           )}
 
           <div className="mt-auto pt-1">
             <div className="flex items-baseline gap-1.5 flex-wrap">
-              <span className="text-base font-bold text-slate-900 dark:text-white">{formatPrice(product.price)}</span>
+              <span className="text-base sm:text-lg font-black text-slate-900 dark:text-white">{formatPrice(product.price)}</span>
               {origPrice && origPrice > product.price && (
                 <>
-                  <span className="text-xs text-gray-400 dark:text-slate-500 line-through">{formatPrice(origPrice)}</span>
-                  <span className="text-xs font-semibold text-green-600">{discount}% off</span>
+                  <span className="text-xs text-slate-400 dark:text-slate-500 line-through">{formatPrice(origPrice)}</span>
+                  <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">{discount}% off</span>
                 </>
               )}
             </div>
-            <div className="text-[10px] text-green-700 dark:text-green-500 font-medium mt-0.5">Instant Delivery</div>
+            <div className="flex items-center gap-1 text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold mt-0.5">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              Instant Delivery
+            </div>
           </div>
 
           <Button
-            className={`w-full mt-1.5 h-8 text-xs font-semibold transition-all active:scale-95 ${added ? "bg-green-500 hover:bg-green-600 text-white" : "bg-yellow-400 hover:bg-yellow-500 text-slate-900"}`}
+            className={`w-full mt-2 h-9 rounded-xl text-xs font-bold transition-all active:scale-95 shadow-xs flex items-center justify-center gap-1.5 ${
+              added
+                ? "bg-emerald-600 hover:bg-emerald-700 text-white"
+                : "bg-slate-900 hover:bg-slate-800 text-white dark:bg-violet-600 dark:hover:bg-violet-700"
+            }`}
             onClick={handleAddToCart}
           >
-            <ShoppingCart className="h-3.5 w-3.5 mr-1.5" />
-            {added ? "✓ Added!" : "Download"}
+            <ShoppingCart className="h-3.5 w-3.5" />
+            {added ? "✓ Added to Cart!" : "Download"}
           </Button>
         </CardContent>
       </Card>

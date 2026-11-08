@@ -206,7 +206,7 @@ export function ProductDetailView({ product: initialProduct, id }: { product: Pr
         <div className="min-h-screen bg-gray-50 dark:bg-slate-950 flex flex-col text-slate-900 dark:text-slate-100 transition-colors">
             <StoreHeader />
 
-            <main className="flex-1 w-full max-w-6xl mx-auto px-3 sm:px-5 lg:px-8 py-4 sm:py-6 space-y-4">
+            <main className="flex-1 w-full max-w-6xl mx-auto px-3 sm:px-5 lg:px-8 pt-4 pb-28 md:py-6 space-y-4">
 
                 {/* ── Hero Card ─────────────────────────────────────────── */}
                 <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 overflow-hidden transition-colors">
@@ -740,6 +740,71 @@ export function ProductDetailView({ product: initialProduct, id }: { product: Pr
                     onClose={() => setZoomModalData(null)} 
                 />
             )}
+
+            {/* ── Mobile Sticky Buy Bar (2026 High-Converting E-Commerce Standard) ── */}
+            <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-slate-950/95 backdrop-blur-md border-t border-slate-200/90 dark:border-slate-800 p-2.5 sm:p-3 shadow-[0_-4px_25px_rgba(0,0,0,0.12)] pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+                <div className="flex items-center justify-between gap-3 max-w-md mx-auto">
+                    {/* Price + Discount Info */}
+                    <div className="flex flex-col shrink-0">
+                        <div className="flex items-center gap-1 text-[10px] text-emerald-600 dark:text-emerald-400 font-bold uppercase tracking-wider">
+                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                            Instant Access
+                        </div>
+                        <div className="flex items-baseline gap-1.5">
+                            <span className="text-xl font-black text-slate-900 dark:text-white">
+                                {formatPrice(product.price)}
+                            </span>
+                            {originalPrice > product.price && (
+                                <span className="text-[11px] text-slate-400 line-through">
+                                    {formatPrice(originalPrice)}
+                                </span>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex items-center gap-2 flex-1 justify-end">
+                        <button
+                            type="button"
+                            aria-label="Add to cart"
+                            onClick={(e) => {
+                                e.stopPropagation()
+                                addToCart(product)
+                                trackAddToCart({
+                                    content_name: product.title,
+                                    content_ids: [product.id || id],
+                                    contents: [{ id: product.id || id, quantity: 1, item_price: product.price }],
+                                    value: product.price,
+                                })
+                                toast({ title: "✓ Added to Cart!" })
+                            }}
+                            className="h-11 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-semibold text-xs flex items-center justify-center active:scale-95 transition-all"
+                        >
+                            + Cart
+                        </button>
+                        <button
+                            type="button"
+                            disabled={buyingNow}
+                            onClick={() => {
+                                setBuyingNow(true)
+                                addToCart(product)
+                                trackAddToCart({
+                                    content_name: product.title,
+                                    content_ids: [product.id || id],
+                                    contents: [{ id: product.id || id, quantity: 1, item_price: product.price }],
+                                    value: product.price,
+                                })
+                                router.push("/checkout")
+                            }}
+                            className="flex-1 h-11 px-4 rounded-xl font-extrabold text-sm text-white bg-gradient-to-r from-orange-500 via-orange-600 to-red-600 hover:from-orange-600 hover:to-red-700 shadow-md shadow-orange-500/25 active:scale-95 transition-all flex items-center justify-center gap-1.5 disabled:opacity-70"
+                        >
+                            <Zap className="h-4 w-4 fill-current shrink-0" />
+                            <span>{buyingNow ? "Opening..." : "Buy Now"}</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             <Footer />
         </div>
     )

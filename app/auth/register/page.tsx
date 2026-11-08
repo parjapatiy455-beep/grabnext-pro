@@ -7,8 +7,11 @@ import { signUpWithEmail } from "@/lib/auth"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
 import Link from "next/link"
-import { Eye, EyeOff, Loader2, UserPlus, ShoppingBag } from "lucide-react"
+import { Eye, EyeOff, Loader2, UserPlus, ShieldCheck } from "lucide-react"
 import { trackCompleteRegistration } from "@/lib/pixel"
+import { StoreHeader } from "@/components/store-header"
+import { Footer } from "@/components/footer"
+import { Logo } from "@/components/logo"
 
 export default function SignUpPage() {
   const [email, setEmail] = useState("")
@@ -26,6 +29,21 @@ export default function SignUpPage() {
     setLoading(true)
     try {
       await signUpWithEmail(email, password, displayName)
+
+      // Store credentials in Google Password Manager / Browser Credential Store if supported
+      if (typeof window !== "undefined" && (window as any).PasswordCredential) {
+        try {
+          const cred = new (window as any).PasswordCredential({
+            id: email,
+            password: password,
+            name: displayName || email,
+          })
+          if (navigator.credentials && navigator.credentials.store) {
+            navigator.credentials.store(cred).catch(() => {})
+          }
+        } catch {}
+      }
+
       await refreshUser()
       trackCompleteRegistration(
         { content_name: "Grabnext Account", status: true },
@@ -37,138 +55,178 @@ export default function SignUpPage() {
       )
       router.push("/dashboard")
     } catch (err: any) {
-      setError(err.message)
+      setError(err.message || "Failed to create account. Please check details.")
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700 p-4">
-      {/* Background pattern */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -left-40 w-96 h-96 rounded-full bg-white/5 blur-3xl" />
-        <div className="absolute -bottom-40 -right-40 w-96 h-96 rounded-full bg-white/5 blur-3xl" />
-      </div>
+    <div className="min-h-screen bg-[#fdfaf6] dark:bg-slate-950 flex flex-col text-slate-900 dark:text-slate-100 transition-colors">
+      <StoreHeader />
 
-      <div className="relative w-full max-w-md">
-        {/* Card */}
-        <div className="bg-white rounded-3xl shadow-2xl p-8 md:p-10">
-          {/* Logo */}
-          <div className="flex flex-col items-center mb-8">
-            <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg mb-4">
-              <ShoppingBag className="h-8 w-8 text-white" />
-            </div>
-            <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">
-              Grab<span className="text-blue-600">next</span>
-            </h1>
-            <p className="text-gray-500 text-sm mt-1">Create your account and start shopping</p>
-          </div>
-
-          <form onSubmit={handleSignUp} className="space-y-5">
-            {/* Name */}
-            <div className="space-y-1.5">
-              <label className="text-sm font-semibold text-gray-700" htmlFor="displayName">
-                Full Name
-              </label>
-              <input
-                id="displayName"
-                type="text"
-                placeholder="Your full name"
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-gray-900 placeholder:text-gray-400"
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                required
-              />
-            </div>
-
-            {/* Email */}
-            <div className="space-y-1.5">
-              <label className="text-sm font-semibold text-gray-700" htmlFor="email">
-                Email Address
-              </label>
-              <input
-                id="email"
-                type="email"
-                placeholder="you@example.com"
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-gray-900 placeholder:text-gray-400"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-            </div>
-
-            {/* Password */}
-            <div className="space-y-1.5">
-              <label className="text-sm font-semibold text-gray-700" htmlFor="password">
-                Password
-              </label>
-              <div className="relative">
-                <input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  placeholder="Min. 6 characters"
-                  className="w-full px-4 py-3 pr-12 rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-gray-900 placeholder:text-gray-400"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  minLength={6}
-                />
-                <button
-                  type="button"
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                </button>
+      <main className="flex-1 flex items-center justify-center px-4 py-8 sm:py-12">
+        <div className="relative w-full max-w-md">
+          
+          {/* Card */}
+          <div className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-3xl shadow-xl shadow-slate-200/50 dark:shadow-none p-6 sm:p-10 transition-colors">
+            
+            {/* Logo & Headline */}
+            <div className="flex flex-col items-center text-center mb-6">
+              <div className="mb-3 scale-110">
+                <Logo />
               </div>
+              <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight mt-1">
+                Create Account
+              </h1>
+              <p className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm mt-1">
+                Get lifetime access to your digital purchases & templates
+              </p>
             </div>
 
-            {/* Error */}
-            {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-xl">
-                {error}
-              </div>
-            )}
-
-            {/* Submit */}
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:opacity-60 text-white py-3.5 rounded-xl font-bold shadow-lg hover:shadow-blue-500/40 transition-all duration-200 flex items-center justify-center gap-2 text-base"
+            {/* Registration Form with standard browser autofill attributes */}
+            <form
+              method="POST"
+              action="#"
+              autoComplete="on"
+              onSubmit={handleSignUp}
+              className="space-y-4"
             >
-              {loading ? (
-                <><Loader2 className="h-5 w-5 animate-spin" /> Creating account…</>
-              ) : (
-                <><UserPlus className="h-5 w-5" /> Create Account</>
-              )}
-            </button>
-          </form>
+              {/* Full Name */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-750 dark:text-slate-300" htmlFor="displayName">
+                  Full Name
+                </label>
+                <input
+                  id="displayName"
+                  name="name"
+                  type="text"
+                  autoComplete="name"
+                  placeholder="Your full name"
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-800 focus:bg-white dark:focus:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent transition-all text-slate-900 dark:text-white placeholder:text-slate-400 text-sm"
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  required
+                />
+              </div>
 
-          {/* Divider */}
-          <div className="relative my-6">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-200" />
+              {/* Email */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-750 dark:text-slate-300" htmlFor="email">
+                  Email Address
+                </label>
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  autoComplete="username email"
+                  autoCapitalize="none"
+                  spellCheck="false"
+                  placeholder="you@example.com"
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-800 focus:bg-white dark:focus:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent transition-all text-slate-900 dark:text-white placeholder:text-slate-400 text-sm"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+              </div>
+
+              {/* Password */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-750 dark:text-slate-300" htmlFor="password">
+                  Password (min. 6 characters)
+                </label>
+                <div className="relative">
+                  <input
+                    id="password"
+                    name="password"
+                    type={showPassword ? "text" : "password"}
+                    autoComplete="new-password"
+                    placeholder="Create a strong password"
+                    minLength={6}
+                    className="w-full px-4 py-3 pr-12 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-800 focus:bg-white dark:focus:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent transition-all text-slate-900 dark:text-white placeholder:text-slate-400 text-sm"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                  />
+                  <button
+                    type="button"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors p-1"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? <EyeOff className="h-4.5 w-4.5" /> : <Eye className="h-4.5 w-4.5" />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Error Alert */}
+              {error && (
+                <div className="bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 text-red-700 dark:text-red-400 text-xs px-3.5 py-2.5 rounded-xl">
+                  {error}
+                </div>
+              )}
+
+              {/* Submit Button */}
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 disabled:opacity-60 text-white py-3.5 rounded-xl font-bold shadow-lg shadow-violet-500/25 active:scale-[0.99] transition-all duration-200 flex items-center justify-center gap-2 text-sm mt-2"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>Creating account…</span>
+                  </>
+                ) : (
+                  <>
+                    <UserPlus className="h-4 w-4" />
+                    <span>Create Free Account</span>
+                  </>
+                )}
+              </button>
+            </form>
+
+            {/* Divider */}
+            <div className="relative my-5">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-slate-200 dark:border-slate-800" />
+              </div>
+              <div className="relative flex justify-center">
+                <span className="bg-white dark:bg-slate-900 px-3 text-slate-400 text-xs font-medium">
+                  Already have an account?
+                </span>
+              </div>
             </div>
-            <div className="relative flex justify-center">
-              <span className="bg-white px-4 text-gray-400 text-sm">Already have an account?</span>
+
+            {/* Login Link */}
+            <Link
+              href="/auth/login"
+              className="block w-full text-center py-3 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-850 dark:text-slate-200 font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition-all duration-200 text-xs sm:text-sm active:scale-[0.99]"
+            >
+              Sign In Instead
+            </Link>
+
+            {/* Security Badge */}
+            <div className="mt-5 pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400">
+              <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
+              <span>Instant Digital Access • 100% Privacy Protected</span>
             </div>
           </div>
 
-          <Link
-            href="/auth/login"
-            className="block w-full text-center py-3 rounded-xl border-2 border-blue-600 text-blue-700 font-bold hover:bg-blue-50 transition-all duration-200"
-          >
-            Sign in instead
-          </Link>
+          <p className="text-center text-slate-500 dark:text-slate-400 text-xs mt-5">
+            By signing up, you agree to our{" "}
+            <Link href="/terms" className="text-violet-600 dark:text-violet-400 underline hover:text-violet-700">
+              Terms
+            </Link>{" "}
+            and{" "}
+            <Link href="/privacy" className="text-violet-600 dark:text-violet-400 underline hover:text-violet-700">
+              Privacy Policy
+            </Link>
+          </p>
         </div>
+      </main>
 
-        <p className="text-center text-white/70 text-sm mt-6">
-          By creating an account, you agree to our{" "}
-          <Link href="/terms" className="text-white underline hover:text-blue-200">Terms</Link>{" "}and{" "}
-          <Link href="/privacy" className="text-white underline hover:text-blue-200">Privacy Policy</Link>
-        </p>
-      </div>
+      <Footer />
     </div>
   )
 }

@@ -127,47 +127,47 @@ export function HomePageClient({
       {/* SEO & Conversion Hero Section (DigiGrowPro Style) */}
       <HeroSection customBanner={banners && banners.length > 0 ? banners[0] : null} />
 
-      {/* Category Quick-Nav */}
+      {/* Category Quick-Nav (Modern 2026 Horizontal Pill Chips) */}
       {categories.length > 0 ? (
-        <div className="bg-white dark:bg-slate-900 border-b dark:border-slate-800 shadow-sm transition-colors">
-          <div className="container mx-auto px-4 py-2 overflow-x-auto scrollbar-hide">
-            <div className="flex gap-5 min-w-max">
-              {categories.slice(0, 12).map((cat) => (
+        <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 transition-colors py-2.5">
+          <div className="container mx-auto px-3 sm:px-4 overflow-x-auto scrollbar-hide">
+            <div className="flex items-center gap-2 min-w-max">
+              <Link
+                href="/products"
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold bg-slate-900 text-white dark:bg-violet-600 dark:text-white shadow-xs active:scale-95 transition-all"
+              >
+                <span>✨ All Products</span>
+              </Link>
+              {categories.slice(0, 14).map((cat) => (
                 <Link
                   key={cat.id}
                   href={`/products?category=${cat.slug}`}
-                  className="flex flex-col items-center gap-1 group min-w-[56px]"
+                  className="flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-slate-100 hover:bg-slate-200/80 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200/60 dark:border-slate-700/60 active:scale-95 transition-all group"
                 >
-                  <div className="h-11 w-11 rounded-full bg-slate-50 dark:bg-slate-800 border-2 border-transparent group-hover:border-primary transition-all overflow-hidden flex items-center justify-center">
-                    {cat.imageUrl
-                      ? <img src={cat.imageUrl} alt={cat.name} className="h-full w-full object-cover" />
-                      : <span className="text-lg font-bold text-slate-300">{cat.name[0]}</span>
-                    }
-                  </div>
-                  <span className="text-[10px] font-semibold text-slate-650 dark:text-slate-400 group-hover:text-primary text-center leading-tight">
-                    {cat.name}
-                  </span>
+                  {cat.imageUrl ? (
+                    <img src={cat.imageUrl} alt={cat.name} className="h-4 w-4 rounded-full object-cover shrink-0" />
+                  ) : (
+                    <span className="h-2 w-2 rounded-full bg-violet-500 shrink-0" />
+                  )}
+                  <span>{cat.name}</span>
                 </Link>
               ))}
             </div>
           </div>
         </div>
       ) : loading ? (
-        <div className="bg-white dark:bg-slate-900 border-b dark:border-slate-800 shadow-sm">
-          <div className="container mx-auto px-4 py-2 overflow-x-auto scrollbar-hide">
-            <div className="flex gap-5 min-w-max">
-              {Array.from({ length: 8 }).map((_, i) => (
-                <div key={i} className="flex flex-col items-center gap-1.5 min-w-[56px]">
-                  <Skeleton className="h-11 w-11 rounded-full" />
-                  <Skeleton className="h-2.5 w-12 rounded" />
-                </div>
+        <div className="bg-white dark:bg-slate-900 border-b dark:border-slate-800 py-2.5">
+          <div className="container mx-auto px-4 overflow-x-auto scrollbar-hide">
+            <div className="flex gap-2 min-w-max">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <Skeleton key={i} className="h-7 w-24 rounded-full" />
               ))}
             </div>
           </div>
         </div>
       ) : null}
 
-      <main className="flex-1 container mx-auto px-3 md:px-4 py-4 space-y-6">
+      <main className="flex-1 container mx-auto px-3 md:px-4 pt-4 pb-20 md:py-6 space-y-6">
 
         {/* Banner Carousel — only if admin added banners */}
         {banners.length > 0 && (

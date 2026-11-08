@@ -166,6 +166,32 @@ export default function CheckoutPage() {
     setCouponError("")
   }
 
+  const applyQuickCode = async (code: string) => {
+    const clean = code.toUpperCase().trim()
+    setCouponCode(clean)
+    setIsApplyingCoupon(true)
+    setCouponError("")
+    try {
+      const res = await fetch('/api/coupons/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: clean, cartTotal: totalAmount })
+      })
+      const data = await res.json()
+      if (data.valid) {
+        setAppliedCoupon(data)
+        toast({ title: `🎉 Coupon ${clean} Applied!`, description: `Discount of ${formatPrice(data.discountAmount)} deducted.` })
+      } else {
+        setCouponError(data.message || "Coupon not applicable")
+        setAppliedCoupon(null)
+      }
+    } catch {
+      setCouponError("Failed to apply coupon.")
+    } finally {
+      setIsApplyingCoupon(false)
+    }
+  }
+
   const finalAmount = appliedCoupon ? Math.max(0, totalAmount - appliedCoupon.discountAmount) : totalAmount
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) =>
@@ -591,6 +617,22 @@ export default function CheckoutPage() {
                         </button>
                       )}
                     </div>
+
+                    {/* Quick 1-Tap Coupon Pill */}
+                    {!appliedCoupon && (
+                      <div className="flex items-center gap-1.5 pt-0.5">
+                        <span className="text-[10px] text-slate-500 font-medium">Available:</span>
+                        <button
+                          type="button"
+                          disabled={isApplyingCoupon}
+                          onClick={() => applyQuickCode("SAVE50")}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-amber-100/80 hover:bg-amber-200 text-amber-900 border border-amber-300 font-mono text-[10px] font-black active:scale-95 transition-all cursor-pointer shadow-xs"
+                        >
+                          SAVE50 <span className="font-sans font-medium text-[9px] text-amber-800 underline">Tap to Apply</span>
+                        </button>
+                      </div>
+                    )}
+
                     {couponError && <p className="text-red-500 text-xs mt-1">{couponError}</p>}
                   </div>
                 </div>
@@ -615,6 +657,31 @@ export default function CheckoutPage() {
                       </>
                     )}
                   </button>
+
+                  {/* Indian Fast UPI Trust Strip */}
+                  <div className="pt-3 pb-1 flex flex-col items-center justify-center gap-1.5 text-center">
+                    <div className="flex items-center gap-1 text-[11px] font-semibold text-slate-600">
+                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 inline" />
+                      <span>Supported 1-Click UPI & Secure Payment</span>
+                    </div>
+                    <div className="flex items-center justify-center gap-1.5 flex-wrap">
+                      <span className="px-2 py-0.5 bg-white border border-slate-200 rounded font-bold text-[10px] text-slate-800 shadow-xs flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block"></span> GPay
+                      </span>
+                      <span className="px-2 py-0.5 bg-white border border-slate-200 rounded font-bold text-[10px] text-purple-700 shadow-xs flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-purple-600 inline-block"></span> PhonePe
+                      </span>
+                      <span className="px-2 py-0.5 bg-white border border-slate-200 rounded font-bold text-[10px] text-sky-600 shadow-xs flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-sky-500 inline-block"></span> Paytm
+                      </span>
+                      <span className="px-2 py-0.5 bg-white border border-slate-200 rounded font-bold text-[10px] text-slate-800 shadow-xs">
+                        BHIM UPI
+                      </span>
+                      <span className="px-2 py-0.5 bg-white border border-slate-200 rounded font-medium text-[10px] text-slate-500 shadow-xs">
+                        Cards & NetBanking
+                      </span>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Trust & Confidence Section */}
