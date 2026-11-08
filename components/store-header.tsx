@@ -2,14 +2,14 @@
 
 import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
-import { Search, ShoppingCart, User, ChevronDown, BookOpen, AlertTriangle, Sun, Moon, ArrowRight, Zap, X } from "lucide-react"
+import { Search, ShoppingCart, User, ChevronDown, BookOpen, AlertTriangle, Sun, Moon, ArrowRight, Zap, X, LayoutDashboard, Download, LogOut, Key, ShieldCheck, ShoppingBag } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { CartDrawer } from "./cart-drawer"
 import { useAuth } from "@/contexts/auth-context"
 import { useCart } from "@/contexts/cart-context"
-import { ADMIN_EMAIL } from "@/lib/auth"
+import { ADMIN_EMAIL, signOutUser } from "@/lib/auth"
 import { fetchCategories, fetchProducts } from "@/lib/d1-client"
 import { Logo } from "@/components/logo"
 import { useTheme } from "next-themes"
@@ -25,7 +25,7 @@ import {
 export function StoreHeader() {
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [mounted, setMounted] = useState(false)
-  const { user, userProfile } = useAuth()
+  const { user, userProfile, refreshUser } = useAuth()
   const { totalItems } = useCart()
   const { theme, setTheme } = useTheme()
 
@@ -235,57 +235,107 @@ export function StoreHeader() {
               <Search className="h-5 w-5" />
             </Button>
 
-            {/* User Account Dropdown (Desktop) */}
+            {/* User Account Dropdown (Desktop & Mobile) */}
             {mounted && user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="hidden md:flex gap-1 text-slate-700 dark:text-slate-300 hover:bg-black/5 dark:hover:bg-white/10 font-medium relative">
-                    <User className="h-4 w-4 text-primary" />
-                    <span className="max-w-[100px] truncate">{user.displayName || "Account"}</span>
-                    {isGuest && (
-                      <span className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-red-500 border-2 border-primary"></span>
-                    )}
-                    <ChevronDown className="h-3 w-3" />
+                  <Button
+                    variant="ghost"
+                    className="flex items-center gap-2 h-10 px-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200/60 dark:border-slate-800 transition-all cursor-pointer"
+                  >
+                    <div className="h-7 w-7 rounded-lg bg-gradient-to-tr from-violet-600 to-purple-600 text-white font-black text-xs flex items-center justify-center shadow-xs shrink-0">
+                      {(user.displayName || user.email || "Y")[0].toUpperCase()}
+                    </div>
+                    <span className="hidden md:inline max-w-[100px] truncate text-xs font-bold text-slate-850 dark:text-slate-100">
+                      {user.displayName || user.email?.split("@")[0] || "Account"}
+                    </span>
+                    <ChevronDown className="h-3.5 w-3.5 text-slate-400 hidden md:inline" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <DropdownMenuLabel>
-                    {isGuest ? (
-                      <span className="text-red-600 flex items-center gap-1">
-                        <AlertTriangle className="h-3 w-3" /> Guest Account
-                      </span>
-                    ) : "My Account"}
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <Link href="/dashboard">My Dashboard</Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/dashboard">My Orders</Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/dashboard">Downloads</Link>
+                <DropdownMenuContent align="end" className="w-64 rounded-2xl p-1.5 shadow-2xl border border-slate-200 dark:border-slate-800 bg-white/98 dark:bg-slate-900/98 backdrop-blur-md">
+                  
+                  {/* User Profile Card */}
+                  <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl mb-1 flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-xl bg-gradient-to-tr from-violet-600 to-purple-600 text-white font-black text-sm flex items-center justify-center shadow-sm shrink-0">
+                      {(user.displayName || user.email || "Y")[0].toUpperCase()}
+                    </div>
+                    <div className="flex-1 min-w-0 text-left">
+                      <p className="text-xs font-black text-slate-900 dark:text-white truncate">
+                        {user.displayName || user.email?.split("@")[0]}
+                      </p>
+                      <p className="text-[11px] text-slate-400 truncate">
+                        {user.email || "Registered User"}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Menu Items with Icons */}
+                  <DropdownMenuItem asChild className="rounded-xl p-2 text-xs font-bold cursor-pointer">
+                    <Link href="/dashboard" className="flex items-center gap-2.5 text-slate-700 dark:text-slate-200">
+                      <LayoutDashboard className="h-4 w-4 text-violet-600" />
+                      <span>My Dashboard</span>
+                    </Link>
                   </DropdownMenuItem>
 
-                  {/* Guest: show password set link */}
-                  {isGuest && (
-                    <>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem asChild className="text-red-600 font-medium bg-red-50">
-                        <Link href="/dashboard/confirm-account">🔑 Set Permanent Password</Link>
-                      </DropdownMenuItem>
-                    </>
-                  )}
+                  <DropdownMenuItem asChild className="rounded-xl p-2 text-xs font-bold cursor-pointer">
+                    <Link href="/dashboard" className="flex items-center gap-2.5 text-slate-700 dark:text-slate-200">
+                      <ShoppingBag className="h-4 w-4 text-emerald-600" />
+                      <span>My Orders &amp; Receipts</span>
+                    </Link>
+                  </DropdownMenuItem>
 
-                  {/* Explicit Admin Link for Admin Email */}
+                  <DropdownMenuItem asChild className="rounded-xl p-2 text-xs font-bold cursor-pointer">
+                    <Link href="/dashboard" className="flex items-center gap-2.5 text-slate-700 dark:text-slate-200">
+                      <Download className="h-4 w-4 text-blue-600" />
+                      <span>Instant Downloads</span>
+                    </Link>
+                  </DropdownMenuItem>
+
+                  {/* Admin Panel Link */}
                   {isAdmin && (
                     <>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem asChild className="text-blue-600 font-medium bg-blue-50">
-                        <Link href="/admin">Admin Panel</Link>
+                      <DropdownMenuSeparator className="my-1 dark:bg-slate-800" />
+                      <DropdownMenuItem asChild className="rounded-xl p-2 text-xs font-bold cursor-pointer bg-violet-50 dark:bg-violet-950/40 text-violet-700 dark:text-violet-300">
+                        <Link href="/admin" className="flex items-center justify-between w-full">
+                          <span className="flex items-center gap-2.5">
+                            <ShieldCheck className="h-4 w-4 text-violet-600" />
+                            <span>Admin Panel</span>
+                          </span>
+                          <span className="text-[9px] font-black uppercase tracking-wider bg-violet-600 text-white px-1.5 py-0.2 rounded">
+                            PRO
+                          </span>
+                        </Link>
                       </DropdownMenuItem>
                     </>
                   )}
+
+                  {/* Guest: Set Permanent Password */}
+                  {isGuest && (
+                    <>
+                      <DropdownMenuSeparator className="my-1 dark:bg-slate-800" />
+                      <DropdownMenuItem asChild className="rounded-xl p-2 text-xs font-bold cursor-pointer bg-red-50 text-red-600">
+                        <Link href="/dashboard/confirm-account" className="flex items-center gap-2">
+                          <Key className="h-4 w-4" />
+                          <span>Set Permanent Password</span>
+                        </Link>
+                      </DropdownMenuItem>
+                    </>
+                  )}
+
+                  <DropdownMenuSeparator className="my-1 dark:bg-slate-800" />
+
+                  {/* Sign Out Option */}
+                  <DropdownMenuItem
+                    onClick={async () => {
+                      await signOutUser()
+                      await refreshUser()
+                      window.location.href = "/auth/login"
+                    }}
+                    className="rounded-xl p-2 text-xs font-bold text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 cursor-pointer flex items-center gap-2.5"
+                  >
+                    <LogOut className="h-4 w-4 text-red-600" />
+                    <span>Sign Out</span>
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (

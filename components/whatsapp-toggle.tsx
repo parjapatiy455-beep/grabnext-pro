@@ -26,8 +26,8 @@ export function WhatsAppToggle({
     return () => clearInterval(interval)
   }, [])
 
-  // Hide on admin panel or software landing page (which has its own dedicated left-side WhatsApp widget)
-  if (pathname?.startsWith("/admin") || pathname?.startsWith("/software")) {
+  // Hide on admin panel, software landing page, or when cart drawer is open to prevent covering checkout buttons
+  if (pathname?.startsWith("/admin") || pathname?.startsWith("/software") || isDrawerOpen) {
     return null
   }
 
