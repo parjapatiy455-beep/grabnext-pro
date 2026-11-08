@@ -393,13 +393,13 @@ export default function DashboardPage() {
 
     const updateOrder = async (orderId: string, paymentId: string) => {
         try {
-            await fetch("/api/orders", {
-                method: "PATCH",
+            const res = await fetch("/api/xpay/verify", {
+                method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    id: orderId,
-                    status: "failed",
-                    paymentId,
+                    orderId,
+                    utr: paymentId,
+
                 }),
             })
             toast({ title: "🎉 Payment Successful!" })
@@ -474,6 +474,7 @@ export default function DashboardPage() {
                 api_key: xpayApiKey || "xp_live_wtm5vj64kseuylg9cfmsl9",
                 amount: Math.round(order.totalAmount),
                 title: `Order ${orderId}`,
+                order_id: orderId,
                 onSuccess: async (data: { utr: string }) => {
                     await updateOrder(orderId, data.utr)
                     setCompletingPayment(false)

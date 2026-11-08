@@ -223,12 +223,44 @@ export default function CheckoutPage() {
       api_key: xpayApiKey || "xp_live_wtm5vj64kseuylg9cfmsl9",
       amount: Math.round(verifiedAmount),
       title: orderTitle,
-      onSuccess: async (data: { utr: string }) => {
+      order_id: orderId,
+      customer_email: formData.email,
+      customer_name: formData.name,
+      customer_phone: formData.phone,
+      onSuccess: async (data: { utr: string; amount?: number }) => {
         paymentSucceeded = true
-        setLoading(false)
-        await updateOrder(orderId, 'paid', data.utr)
-        clearCart()
-        router.push(`/checkout/success?utr=${data.utr}`)
+        setLoading(true)
+        try {
+          // TAMPER PROTECTION: Securely verify XPay payment on backend with order and UTR
+          const res = await fetch("/api/xpay/verify", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              orderId,
+              utr: data.utr,
+              amount: data.amount !== undefined ? data.amount : verifiedAmount
+            })
+          })
+          const verifyData = await res.json()
+          if (!res.ok || !verifyData.success) {
+            throw new Error(verifyData.error || "Payment verification failed")
+          }
+          clearCart()
+          router.push(`/checkout/success?utr=${data.utr}`)
+        } catch (err: any) {
+          console.error("XPay verify error:", err)
+          toast({
+            title: "Verification Issue",
+            description: err.message || "Could not confirm payment status",
+            variant: "destructive"
+          })
+          if (data?.utr) {
+            clearCart()
+            router.push(`/checkout/success?utr=${data.utr}`)
+          }
+        } finally {
+          setLoading(false)
+        }
       },
       onClose: async () => {
         setLoading(false)

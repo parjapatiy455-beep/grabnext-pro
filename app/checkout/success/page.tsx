@@ -20,12 +20,22 @@ export default function CheckoutSuccessPage() {
   const hasFiredPurchase = useRef(false)
 
   useEffect(() => {
-    if (utr) {
-      fetch(`/api/orders/by-payment/${utr}`)
-        .then(r => r.json())
-        .then(data => {
-          if (!data.error) {
+    if (!utr) {
+      setLoading(false)
+      return
+    }
+
+    let attempts = 0
+    let isCancelled = false
+
+    const fetchOrder = async () => {
+      try {
+        const res = await fetch(`/api/orders/by-payment/${encodeURIComponent(utr)}`)
+        const data = await res.json()
+        if (!data.error && data.id) {
+          if (!isCancelled) {
             setOrder(data)
+            setLoading(false)
             if (!hasFiredPurchase.current) {
               hasFiredPurchase.current = true
               trackPurchase(
@@ -48,11 +58,22 @@ export default function CheckoutSuccessPage() {
               )
             }
           }
-        })
-        .finally(() => setLoading(false))
-    } else {
-      setLoading(false)
+          return
+        }
+      } catch (e) {
+        console.warn("Order fetch attempt failed:", e)
+      }
+
+      attempts++
+      if (attempts < 4 && !isCancelled) {
+        setTimeout(fetchOrder, 1200)
+      } else if (!isCancelled) {
+        setLoading(false)
+      }
     }
+
+    fetchOrder()
+    return () => { isCancelled = true }
   }, [utr])
 
   const digitalItems = order?.items?.filter((i: any) => i.downloadUrl) || []

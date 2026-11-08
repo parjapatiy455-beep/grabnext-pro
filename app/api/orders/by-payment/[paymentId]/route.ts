@@ -11,10 +11,10 @@ export async function GET(
     try {
         const { paymentId } = params
 
-        // Query by paymentId (UTR) - TAMPER PROTECTION: strictly allow only confirmed paid orders
+        // Query by paymentId (UTR) or order id - TAMPER PROTECTION: strictly allow only confirmed paid orders
         const results = await executeQuery(
-            "SELECT * FROM orders WHERE paymentId = ? AND (status = 'paid' OR status = 'completed') LIMIT 1",
-            [paymentId]
+            "SELECT * FROM orders WHERE (paymentId = ? OR id = ?) AND (status = 'paid' OR status = 'completed') LIMIT 1",
+            [paymentId, paymentId]
         )
 
         if (!Array.isArray(results) || results.length === 0) {

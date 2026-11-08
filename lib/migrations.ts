@@ -121,4 +121,14 @@ export async function runMigrations() {
       updatedAt INTEGER
     );
   `)
+
+  await executeQuery(`
+    INSERT OR IGNORE INTO coupons (code, type, value, isActive, createdAt, updatedAt)
+    VALUES ('SAVE50', 'percentage', 50, 1, 1700000000000, 1700000000000);
+  `).catch(() => {})
+
+  await executeQuery(`
+    INSERT OR IGNORE INTO coupons (code, type, value, isActive, createdAt, updatedAt)
+    VALUES ('SAVE40', 'percentage', 40, 1, 1700000000000, 1700000000000);
+  `).catch(() => {})
 }

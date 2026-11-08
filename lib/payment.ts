@@ -87,6 +87,32 @@ export const verifyRazorpayPayment = async (paymentData: {
   }
 }
 
+export const verifyXPayPayment = async (data: {
+  orderId: string
+  utr: string
+  amount?: number
+}) => {
+  try {
+    const response = await fetch("/api/xpay/verify", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    })
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}))
+      throw new Error(err.error || "XPay verification failed")
+    }
+
+    return await response.json()
+  } catch (error) {
+    console.error("Error verifying XPay payment:", error)
+    throw error
+  }
+}
+
 export const createStripeCheckoutSession = async (items: any[], customerEmail: string) => {
   try {
     const response = await fetch("/api/payments/stripe/create-checkout-session", {

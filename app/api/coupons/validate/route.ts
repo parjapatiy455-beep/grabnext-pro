@@ -41,8 +41,8 @@ export async function POST(request: NextRequest) {
                 const discountAmount = Math.round(total * (percentage / 100))
                 // Asynchronously attempt to seed into database
                 executeQuery(
-                    'INSERT INTO coupons (id, code, type, value, isActive, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?)',
-                    ['cpn_' + crypto.randomUUID().slice(0, 8), cleanCode, 'percentage', percentage, 1, Date.now(), Date.now()]
+                    'INSERT OR IGNORE INTO coupons (code, type, value, isActive, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?)',
+                    [cleanCode, 'percentage', percentage, 1, Date.now(), Date.now()]
                 ).catch(() => {})
 
                 return NextResponse.json({
