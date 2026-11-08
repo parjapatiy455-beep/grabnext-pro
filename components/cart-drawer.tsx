@@ -90,14 +90,14 @@ export function CartDrawer({ children }: CartDrawerProps) {
                     className="flex gap-3 p-3 bg-slate-50/80 dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-2xl transition-all"
                   >
                     {/* Thumbnail */}
-                    <div className="h-18 w-18 sm:h-20 sm:w-20 rounded-xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 overflow-hidden shrink-0 flex items-center justify-center p-1">
+                    <div className="w-16 h-16 min-w-[64px] min-h-[64px] max-w-[64px] max-h-[64px] sm:w-20 sm:h-20 sm:min-w-[80px] sm:min-h-[80px] rounded-xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 overflow-hidden shrink-0 flex items-center justify-center p-1">
                       <img
                         src={
                           item.product.imageUrl ||
                           `/placeholder.svg?height=80&width=80&query=${encodeURIComponent(item.product.category || "product")}`
                         }
                         alt={item.product.title}
-                        className="h-full w-full object-contain"
+                        className="w-full h-full max-w-full max-h-full object-contain aspect-square"
                       />
                     </div>
 
