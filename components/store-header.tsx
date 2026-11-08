@@ -252,10 +252,10 @@ export function StoreHeader() {
                     <ChevronDown className="h-3.5 w-3.5 text-slate-400 hidden md:inline" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-64 rounded-2xl p-1.5 shadow-2xl border border-slate-200 dark:border-slate-800 bg-white/98 dark:bg-slate-900/98 backdrop-blur-md">
+                <DropdownMenuContent align="end" className="w-64 rounded-2xl p-2 shadow-2xl border border-slate-200 dark:border-slate-800 !bg-white dark:!bg-slate-900 opacity-100 z-50 text-slate-900 dark:text-white">
                   
                   {/* User Profile Card */}
-                  <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl mb-1 flex items-center gap-3">
+                  <div className="p-3 bg-slate-50 dark:bg-slate-800/80 rounded-xl mb-1.5 flex items-center gap-3 border border-slate-100 dark:border-slate-700/60">
                     <div className="h-10 w-10 rounded-xl bg-gradient-to-tr from-violet-600 to-purple-600 text-white font-black text-sm flex items-center justify-center shadow-sm shrink-0">
                       {(user.displayName || user.email || "Y")[0].toUpperCase()}
                     </div>
@@ -263,29 +263,29 @@ export function StoreHeader() {
                       <p className="text-xs font-black text-slate-900 dark:text-white truncate">
                         {user.displayName || user.email?.split("@")[0]}
                       </p>
-                      <p className="text-[11px] text-slate-400 truncate">
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
                         {user.email || "Registered User"}
                       </p>
                     </div>
                   </div>
 
                   {/* Menu Items with Icons */}
-                  <DropdownMenuItem asChild className="rounded-xl p-2 text-xs font-bold cursor-pointer">
-                    <Link href="/dashboard" className="flex items-center gap-2.5 text-slate-700 dark:text-slate-200">
+                  <DropdownMenuItem asChild className="rounded-xl p-2 text-xs font-bold cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 focus:bg-slate-100 dark:focus:bg-slate-800">
+                    <Link href="/dashboard" className="flex items-center gap-2.5 text-slate-800 dark:text-slate-100">
                       <LayoutDashboard className="h-4 w-4 text-violet-600" />
                       <span>My Dashboard</span>
                     </Link>
                   </DropdownMenuItem>
 
-                  <DropdownMenuItem asChild className="rounded-xl p-2 text-xs font-bold cursor-pointer">
-                    <Link href="/dashboard" className="flex items-center gap-2.5 text-slate-700 dark:text-slate-200">
+                  <DropdownMenuItem asChild className="rounded-xl p-2 text-xs font-bold cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 focus:bg-slate-100 dark:focus:bg-slate-800">
+                    <Link href="/dashboard" className="flex items-center gap-2.5 text-slate-800 dark:text-slate-100">
                       <ShoppingBag className="h-4 w-4 text-emerald-600" />
                       <span>My Orders &amp; Receipts</span>
                     </Link>
                   </DropdownMenuItem>
 
-                  <DropdownMenuItem asChild className="rounded-xl p-2 text-xs font-bold cursor-pointer">
-                    <Link href="/dashboard" className="flex items-center gap-2.5 text-slate-700 dark:text-slate-200">
+                  <DropdownMenuItem asChild className="rounded-xl p-2 text-xs font-bold cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 focus:bg-slate-100 dark:focus:bg-slate-800">
+                    <Link href="/dashboard" className="flex items-center gap-2.5 text-slate-800 dark:text-slate-100">
                       <Download className="h-4 w-4 text-blue-600" />
                       <span>Instant Downloads</span>
                     </Link>
@@ -294,8 +294,8 @@ export function StoreHeader() {
                   {/* Admin Panel Link */}
                   {isAdmin && (
                     <>
-                      <DropdownMenuSeparator className="my-1 dark:bg-slate-800" />
-                      <DropdownMenuItem asChild className="rounded-xl p-2 text-xs font-bold cursor-pointer bg-violet-50 dark:bg-violet-950/40 text-violet-700 dark:text-violet-300">
+                      <DropdownMenuSeparator className="my-1.5 bg-slate-100 dark:bg-slate-800" />
+                      <DropdownMenuItem asChild className="rounded-xl p-2 text-xs font-bold cursor-pointer bg-violet-50 dark:bg-violet-950/40 text-violet-700 dark:text-violet-300 hover:bg-violet-100 dark:hover:bg-violet-900/50">
                         <Link href="/admin" className="flex items-center justify-between w-full">
                           <span className="flex items-center gap-2.5">
                             <ShieldCheck className="h-4 w-4 text-violet-600" />
@@ -312,8 +312,8 @@ export function StoreHeader() {
                   {/* Guest: Set Permanent Password */}
                   {isGuest && (
                     <>
-                      <DropdownMenuSeparator className="my-1 dark:bg-slate-800" />
-                      <DropdownMenuItem asChild className="rounded-xl p-2 text-xs font-bold cursor-pointer bg-red-50 text-red-600">
+                      <DropdownMenuSeparator className="my-1.5 bg-slate-100 dark:bg-slate-800" />
+                      <DropdownMenuItem asChild className="rounded-xl p-2 text-xs font-bold cursor-pointer bg-red-50 text-red-600 hover:bg-red-100">
                         <Link href="/dashboard/confirm-account" className="flex items-center gap-2">
                           <Key className="h-4 w-4" />
                           <span>Set Permanent Password</span>
@@ -322,7 +322,7 @@ export function StoreHeader() {
                     </>
                   )}
 
-                  <DropdownMenuSeparator className="my-1 dark:bg-slate-800" />
+                  <DropdownMenuSeparator className="my-1.5 bg-slate-100 dark:bg-slate-800" />
 
                   {/* Sign Out Option */}
                   <DropdownMenuItem
@@ -331,7 +331,7 @@ export function StoreHeader() {
                       await refreshUser()
                       window.location.href = "/auth/login"
                     }}
-                    className="rounded-xl p-2 text-xs font-bold text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 cursor-pointer flex items-center gap-2.5"
+                    className="rounded-xl p-2 text-xs font-bold text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 focus:bg-red-50 dark:focus:bg-red-950/40 cursor-pointer flex items-center gap-2.5"
                   >
                     <LogOut className="h-4 w-4 text-red-600" />
                     <span>Sign Out</span>
