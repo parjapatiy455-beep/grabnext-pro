@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button"
 import { fetchProducts, fetchCategories } from "@/lib/d1-client"
 import type { Product } from "@/lib/types"
 import type { HomeCategory, HomeBanner } from "@/lib/home-data"
-import { ArrowRight, ChevronLeft, ChevronRight, ShieldCheck, Zap, Award, HelpCircle, BookOpen } from "lucide-react"
+import { ArrowRight, ChevronLeft, ChevronRight, ShieldCheck, Zap, Award, HelpCircle, BookOpen, Lock, Headphones, Flame } from "lucide-react"
 import { BLOG_POSTS } from "@/lib/blog-data"
 import { HeroSection } from "@/components/hero-section"
 
@@ -58,6 +58,7 @@ export function HomePageClient({
   const [categories, setCategories] = useState<HomeCategory[]>(initialCategories)
   const [banners, setBanners] = useState<HomeBanner[]>(initialBanners)
   const [loading, setLoading] = useState(initialProducts.length === 0)
+  const [selectedTag, setSelectedTag] = useState("all")
 
   const { idx, next, prev, setIdx } = useBannerCarousel(banners.length)
 
@@ -98,7 +99,16 @@ export function HomePageClient({
     return () => document.removeEventListener('visibilitychange', onVisible)
   }, [initialProducts.length, loadFreshData])
 
-  const featured = products
+  const featured = products.filter((p) => {
+    if (selectedTag === "all") return true
+    if (selectedTag === "bestseller") return p.salesCount > 50 || p.price < 500
+    const cat = (p.category || "").toLowerCase()
+    const title = (p.title || "").toLowerCase()
+    if (selectedTag === "video") return cat.includes("video") || title.includes("premiere") || title.includes("effects") || title.includes("lut") || title.includes("reels")
+    if (selectedTag === "graphics") return cat.includes("graphic") || cat.includes("design") || title.includes("canva") || title.includes("template")
+    if (selectedTag === "software") return cat.includes("software") || cat.includes("app") || title.includes("tool") || title.includes("suite")
+    return true
+  })
 
   return (
     <div className="min-h-screen bg-slate-100 dark:bg-slate-950 flex flex-col text-slate-900 dark:text-slate-100 transition-colors">
@@ -214,16 +224,85 @@ export function HomePageClient({
           </div>
         )}
 
+        {/* Modern 2026 Trust & Guarantee Strip */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-4">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-3 sm:p-4 flex items-center gap-3 shadow-xs">
+            <div className="h-10 w-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+              <Zap className="h-5 w-5 fill-current" />
+            </div>
+            <div>
+              <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white leading-tight">Instant Delivery</h4>
+              <p className="text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Direct Drive &amp; Email access</p>
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-3 sm:p-4 flex items-center gap-3 shadow-xs">
+            <div className="h-10 w-10 rounded-xl bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0">
+              <ShieldCheck className="h-5 w-5" />
+            </div>
+            <div>
+              <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white leading-tight">100% Genuine</h4>
+              <p className="text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Lifetime validity &amp; updates</p>
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-3 sm:p-4 flex items-center gap-3 shadow-xs">
+            <div className="h-10 w-10 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+              <Lock className="h-5 w-5" />
+            </div>
+            <div>
+              <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white leading-tight">Secure UPI / Cards</h4>
+              <p className="text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">GPay, PhonePe, Paytm, BHIM</p>
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-3 sm:p-4 flex items-center gap-3 shadow-xs">
+            <div className="h-10 w-10 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+              <Headphones className="h-5 w-5" />
+            </div>
+            <div>
+              <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white leading-tight">Creator Support</h4>
+              <p className="text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Instant WhatsApp assistance</p>
+            </div>
+          </div>
+        </div>
+
         {/* All Products */}
         <section className="bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-2xl p-5 shadow-sm transition-colors">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h2 className="text-lg font-bold text-slate-900 dark:text-white">All Digital Products & Software</h2>
-              <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Explore best-selling templates, courses, assets & software</p>
+          <div className="space-y-3 mb-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-slate-900 dark:text-white">All Digital Products &amp; Software</h2>
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Explore best-selling templates, courses, assets &amp; software</p>
+              </div>
+              <Button asChild variant="outline" size="sm" className="text-xs h-8">
+                <Link href="/products">View All ({products.length}) <ArrowRight className="ml-1 h-3 w-3" /></Link>
+              </Button>
             </div>
-            <Button asChild variant="outline" size="sm" className="text-xs h-8">
-              <Link href="/products">View All <ArrowRight className="ml-1 h-3 w-3" /></Link>
-            </Button>
+
+            {/* Quick Filter Pill Chips */}
+            <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide py-1">
+              {[
+                { id: "all", label: "🔥 All Items" },
+                { id: "bestseller", label: "⚡ Best Sellers" },
+                { id: "video", label: "🎬 Video Editing" },
+                { id: "graphics", label: "🎨 Canva & Graphics" },
+                { id: "software", label: "💻 Software & Tools" }
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setSelectedTag(tab.id)}
+                  className={`px-3 py-1 rounded-full text-xs font-bold transition-all shrink-0 active:scale-95 ${
+                    selectedTag === tab.id
+                      ? "bg-violet-600 text-white shadow-xs"
+                      : "bg-slate-100 hover:bg-slate-200/80 dark:bg-slate-800 text-slate-650 dark:text-slate-350"
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
           </div>
           {loading ? (
             <ProductGridSkeleton count={8} />

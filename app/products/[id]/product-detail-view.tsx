@@ -687,7 +687,10 @@ export function ProductDetailView({ product: initialProduct, id }: { product: Pr
                                                 </div>
                                                 <div className="flex-1 min-w-0">
                                                     <div className="flex items-center gap-2 flex-wrap mb-1">
-                                                        <span className="font-semibold text-sm text-gray-900 dark:text-white">{review.userName}</span>
+                                                        <span className="font-bold text-sm text-gray-900 dark:text-white">{review.userName}</span>
+                                                        <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.2 rounded border border-emerald-200 dark:border-emerald-900/60">
+                                                            <ShieldCheck className="h-2.5 w-2.5" /> Verified Purchase
+                                                        </span>
                                                         <StarRating rating={review.rating} />
                                                     </div>
                                                     <p className="text-[11px] text-gray-400 dark:text-slate-500 mb-1">
