@@ -1,17 +1,16 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
-import { Search, ShoppingCart, User, Menu, ChevronDown, Package, LayoutGrid, Monitor, BookOpen, AlertTriangle, Sun, Moon } from "lucide-react"
+import { Search, ShoppingCart, User, ChevronDown, BookOpen, AlertTriangle, Sun, Moon, ArrowRight, Zap, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { CartDrawer } from "./cart-drawer"
 import { useAuth } from "@/contexts/auth-context"
 import { useCart } from "@/contexts/cart-context"
 import { ADMIN_EMAIL } from "@/lib/auth"
-import { fetchCategories } from "@/lib/d1-client"
+import { fetchCategories, fetchProducts } from "@/lib/d1-client"
 import { Logo } from "@/components/logo"
 import { useTheme } from "next-themes"
 import {
@@ -30,26 +29,87 @@ export function StoreHeader() {
   const { totalItems } = useCart()
   const { theme, setTheme } = useTheme()
 
+  // Dynamic products and categories
+  const [allProducts, setAllProducts] = useState<any[]>([])
+  const [searchQuery, setSearchQuery] = useState("")
+  const [mobileSearchQuery, setMobileSearchQuery] = useState("")
+  const [desktopResults, setDesktopResults] = useState<any[]>([])
+  const [mobileResults, setMobileResults] = useState<any[]>([])
+  const [isDesktopFocused, setIsDesktopFocused] = useState(false)
+  const searchContainerRef = useRef<HTMLDivElement>(null)
+
   useEffect(() => {
     setMounted(true)
-  }, [])
-
-  const [categories, setCategories] = useState<any[]>([])
-
-  useEffect(() => {
-    setMounted(true)
-    fetchCategories()
-      .then((cats) => {
-        if (Array.isArray(cats) && cats.length > 0) {
-          setCategories(cats.filter((c: any) => c.isActive !== 0))
+    fetchProducts()
+      .then((prods) => {
+        if (Array.isArray(prods) && prods.length > 0) {
+          setAllProducts(prods.filter((p: any) => p.isActive))
         }
       })
       .catch(() => {})
   }, [])
 
+  // Auto-search for desktop when typing 3+ letters
+  useEffect(() => {
+    const q = searchQuery.trim().toLowerCase()
+    if (q.length >= 3) {
+      const matches = allProducts.filter((p) =>
+        (p.title || "").toLowerCase().includes(q) ||
+        (p.category || "").toLowerCase().includes(q) ||
+        (p.description || "").toLowerCase().includes(q) ||
+        (Array.isArray(p.tags) && p.tags.some((t: string) => t.toLowerCase().includes(q)))
+      ).slice(0, 5)
+      setDesktopResults(matches)
+    } else {
+      setDesktopResults([])
+    }
+  }, [searchQuery, allProducts])
+
+  // Auto-search for mobile when typing 3+ letters
+  useEffect(() => {
+    const q = mobileSearchQuery.trim().toLowerCase()
+    if (q.length >= 3) {
+      const matches = allProducts.filter((p) =>
+        (p.title || "").toLowerCase().includes(q) ||
+        (p.category || "").toLowerCase().includes(q) ||
+        (p.description || "").toLowerCase().includes(q) ||
+        (Array.isArray(p.tags) && p.tags.some((t: string) => t.toLowerCase().includes(q)))
+      ).slice(0, 5)
+      setMobileResults(matches)
+    } else {
+      setMobileResults([])
+    }
+  }, [mobileSearchQuery, allProducts])
+
+  // Close desktop search dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target as Node)) {
+        setIsDesktopFocused(false)
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [])
+
   // Check if user is admin (either by Role OR by Email)
   const isAdmin = userProfile?.role === "admin" || (user?.email && user.email.toLowerCase() === ADMIN_EMAIL.toLowerCase());
   const isGuest = mounted && user?.isGuest === true;
+
+  const handleDesktopSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsDesktopFocused(false)
+    const q = searchQuery.trim()
+    if (q) window.location.href = `/products?q=${encodeURIComponent(q)}`
+    else window.location.href = '/products'
+  }
+
+  const handleMobileSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    const q = mobileSearchQuery.trim()
+    if (q) window.location.href = `/products?q=${encodeURIComponent(q)}`
+    else window.location.href = '/products'
+  }
 
   return (
     <div className="sticky top-0 z-50 w-full flex flex-col shadow-md">
@@ -77,32 +137,92 @@ export function StoreHeader() {
           {/* Logo */}
           <Logo />
 
-          {/* Search Bar - Wide & Central */}
-          <div className="hidden md:flex flex-1 max-w-2xl mx-4">
+          {/* Search Bar - Wide & Central with Instant 3-Letter Autocomplete */}
+          <div ref={searchContainerRef} className="hidden md:flex flex-1 max-w-2xl mx-4 relative">
             <form
               className="relative w-full flex shadow-sm"
-              onSubmit={(e) => {
-                e.preventDefault()
-                const q = (e.currentTarget.querySelector('input') as HTMLInputElement)?.value?.trim()
-                if (q) window.location.href = `/products?q=${encodeURIComponent(q)}`
-                else window.location.href = '/products'
-              }}
+              onSubmit={handleDesktopSearchSubmit}
             >
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <Search className="h-4 w-4 text-gray-400" />
               </div>
               <Input
                 name="q"
-                placeholder="Search for products, brands and more"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onFocus={() => setIsDesktopFocused(true)}
+                placeholder="Search products, software, bundles (min 3 letters)..."
                 className="pl-10 rounded-r-none bg-white dark:bg-slate-900 text-gray-900 dark:text-gray-100 border-r-0 dark:border-slate-800 focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-gray-500 dark:placeholder:text-gray-400 h-10"
               />
-              <Button type="submit" className="rounded-l-none bg-yellow-400 dark:bg-yellow-500 text-gray-900 dark:text-slate-950 hover:bg-yellow-500 dark:hover:bg-yellow-600 border border-l-0 dark:border-slate-800 font-medium px-6 h-10">
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-24 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+              <Button type="submit" className="rounded-l-none bg-yellow-400 dark:bg-yellow-500 text-gray-900 dark:text-slate-950 hover:bg-yellow-500 dark:hover:bg-yellow-600 border border-l-0 dark:border-slate-800 font-bold px-6 h-10">
                 Search
               </Button>
             </form>
+
+            {/* Desktop Autocomplete Live Dropdown Panel */}
+            {isDesktopFocused && searchQuery.trim().length >= 3 && (
+              <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl z-50 overflow-hidden divide-y divide-slate-100 dark:divide-slate-800 animate-in fade-in zoom-in-95 duration-150">
+                <div className="p-2.5 text-[11px] font-semibold text-slate-500 dark:text-slate-400 bg-slate-50/80 dark:bg-slate-800/60 flex items-center justify-between">
+                  <span>Related Products ({desktopResults.length})</span>
+                  <span className="text-[10px] text-slate-400">Click to view product</span>
+                </div>
+                {desktopResults.length > 0 ? (
+                  <>
+                    {desktopResults.map((prod) => (
+                      <Link
+                        key={prod.id}
+                        href={`/products/${prod.slug || prod.id}`}
+                        onClick={() => setIsDesktopFocused(false)}
+                        className="flex items-center gap-3 p-3 hover:bg-violet-50 dark:hover:bg-slate-800/80 transition-colors group"
+                      >
+                        <div className="h-10 w-10 rounded-lg bg-slate-100 dark:bg-slate-800 overflow-hidden shrink-0 border border-slate-200 dark:border-slate-700 flex items-center justify-center p-1">
+                          <img
+                            src={prod.imageUrl || "/placeholder.svg"}
+                            alt={prod.title}
+                            className="h-full w-full object-contain"
+                          />
+                        </div>
+                        <div className="flex-1 min-w-0 text-left">
+                          <p className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-violet-600 dark:group-hover:text-violet-400 truncate">
+                            {prod.title}
+                          </p>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className="text-[10px] capitalize text-slate-400">{prod.category}</span>
+                            <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">• Instant Delivery</span>
+                          </div>
+                        </div>
+                        <div className="text-xs font-black text-slate-900 dark:text-white shrink-0">
+                          ₹{prod.price}
+                        </div>
+                      </Link>
+                    ))}
+                    <Link
+                      href={`/products?q=${encodeURIComponent(searchQuery)}`}
+                      onClick={() => setIsDesktopFocused(false)}
+                      className="block p-2.5 text-center text-xs font-bold text-violet-600 dark:text-violet-400 bg-violet-50/50 dark:bg-slate-850 hover:bg-violet-100 dark:hover:bg-slate-800 transition-colors"
+                    >
+                      View all results for &ldquo;{searchQuery}&rdquo; →
+                    </Link>
+                  </>
+                ) : (
+                  <div className="p-4 text-center text-xs text-slate-500">
+                    No digital products found matching &ldquo;{searchQuery}&rdquo;
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
-          {/* Mobile Search Toggle & Right Actions */}
+          {/* Right Actions (Desktop & Mobile) */}
           <div className="flex items-center space-x-2 md:space-x-6 shrink-0">
             {/* Mobile Search Toggle Button */}
             <Button
@@ -115,7 +235,7 @@ export function StoreHeader() {
               <Search className="h-5 w-5" />
             </Button>
 
-            {/* User Account Dropdown */}
+            {/* User Account Dropdown (Desktop) */}
             {mounted && user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -202,7 +322,7 @@ export function StoreHeader() {
               </Button>
             )}
 
-            {/* Blog Link */}
+            {/* Blog Link (Desktop) */}
             <Link
               href="/blog"
               className="hidden lg:flex items-center gap-1.5 text-slate-700 dark:text-slate-300 hover:text-purple-600 dark:hover:text-purple-400 font-medium text-sm px-2.5 py-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
@@ -211,7 +331,7 @@ export function StoreHeader() {
               <span>Blog</span>
             </Link>
 
-            {/* Cart */}
+            {/* Cart Trigger */}
             <CartDrawer>
               <Button variant="ghost" className="flex items-center gap-2 text-slate-700 dark:text-slate-300 hover:bg-black/5 dark:hover:bg-white/10">
                 <div className="relative">
@@ -226,156 +346,18 @@ export function StoreHeader() {
               </Button>
             </CartDrawer>
 
-            {/* Mobile Menu Trigger */}
-            <Sheet>
-              <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="md:hidden text-slate-700 hover:bg-black/5">
-                  <Menu className="h-5 w-5" />
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="right">
-                <div className="flex flex-col space-y-6 mt-6">
-                  {isGuest && (
-                    <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                      <p className="text-red-700 text-sm font-medium flex items-center gap-2">
-                        <AlertTriangle className="h-4 w-4" />
-                        Guest Account
-                      </p>
-                      <p className="text-red-600 text-xs mt-1">Please set a permanent password to secure your account.</p>
-                      <Link href="/dashboard/confirm-account" className="text-xs text-red-700 underline font-semibold mt-1 block">
-                        Set Password →
-                      </Link>
-                    </div>
-                  )}
-                  
-                  {/* Mobile Theme Switcher */}
-                  <div className="space-y-2">
-                    <h3 className="font-semibold text-lg border-b pb-2 flex items-center justify-between">
-                      <span>Theme</span>
-                      <span className="text-[10px] font-black bg-yellow-400 text-slate-900 px-2 py-0.5 rounded-full uppercase tracking-wider scale-90">Beta</span>
-                    </h3>
-                    {mounted && (
-                      <Button 
-                        variant="outline" 
-                        className="w-full justify-between font-semibold"
-                        onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                      >
-                        <span className="flex items-center gap-2">
-                          {theme === "dark" ? <Sun className="h-4 w-4 text-amber-500" /> : <Moon className="h-4 w-4 text-slate-700" />}
-                          {theme === "dark" ? "Light Mode" : "Dark Mode"}
-                        </span>
-                        <span className="text-[11px] text-muted-foreground">Switch</span>
-                      </Button>
-                    )}
-                  </div>
+            {/* Note: 3-line hamburger menu removed on mobile as requested (Mobile Bottom Nav is active) */}
 
-                  <div className="space-y-3">
-                    <h3 className="font-semibold text-base border-b dark:border-slate-800 pb-2 flex items-center justify-between">
-                      <span>Categories</span>
-                      <Link href="/products" className="text-xs text-primary font-medium hover:underline">
-                        All ({categories.length || '10+'}) →
-                      </Link>
-                    </h3>
-                    <Link
-                      href="/products"
-                      className="flex items-center gap-3 text-slate-800 dark:text-slate-200 hover:text-primary transition-colors text-sm font-semibold"
-                    >
-                      <LayoutGrid className="h-4 w-4 text-primary shrink-0" />
-                      All Digital Products
-                    </Link>
-                    {categories.length > 0 ? (
-                      categories.slice(0, 10).map((cat) => (
-                        <Link
-                          key={cat.id || cat.slug || cat.name}
-                          href={`/products?category=${cat.slug || cat.name.toLowerCase().replace(/\s+/g, '-')}`}
-                          className="flex items-center gap-3 text-slate-650 dark:text-slate-350 hover:text-primary transition-colors text-sm"
-                        >
-                          {cat.imageUrl ? (
-                            <img src={cat.imageUrl} alt={cat.name} className="h-4 w-4 rounded-full object-cover shrink-0" />
-                          ) : (
-                            <span className="h-2 w-2 rounded-full bg-violet-500 shrink-0" />
-                          )}
-                          <span className="truncate">{cat.name}</span>
-                        </Link>
-                      ))
-                    ) : (
-                      <>
-                        <Link
-                          href="/products?category=video-editing"
-                          className="flex items-center gap-3 text-slate-650 dark:text-slate-350 hover:text-primary transition-colors text-sm"
-                        >
-                          <span className="h-2 w-2 rounded-full bg-purple-500 shrink-0" />
-                          Video Editing Assets
-                        </Link>
-                        <Link
-                          href="/products?category=graphic-templates"
-                          className="flex items-center gap-3 text-slate-650 dark:text-slate-350 hover:text-primary transition-colors text-sm"
-                        >
-                          <span className="h-2 w-2 rounded-full bg-pink-500 shrink-0" />
-                          Graphic & Canva Packs
-                        </Link>
-                        <Link
-                          href="/products?category=software"
-                          className="flex items-center gap-3 text-slate-650 dark:text-slate-350 hover:text-primary transition-colors text-sm"
-                        >
-                          <span className="h-2 w-2 rounded-full bg-blue-500 shrink-0" />
-                          Software & Web Tools
-                        </Link>
-                      </>
-                    )}
-                    <Link
-                      href="/blog"
-                      className="flex items-center gap-3 text-purple-600 dark:text-purple-400 font-semibold transition-colors text-sm pt-1"
-                    >
-                      <BookOpen className="h-4 w-4 shrink-0" />
-                      Digital Products Blog & Guides
-                    </Link>
-                  </div>
-                  <div className="space-y-2">
-                    <h3 className="font-semibold text-lg border-b pb-2">Account</h3>
-                    {mounted && user ? (
-                      <>
-                        <Button asChild variant="ghost" className="w-full justify-start">
-                          <Link href="/dashboard">My Dashboard</Link>
-                        </Button>
-                        <Button asChild variant="ghost" className="w-full justify-start">
-                          <Link href="/dashboard">My Orders</Link>
-                        </Button>
-                        {isGuest && (
-                          <Button asChild variant="destructive" className="w-full">
-                            <Link href="/dashboard/confirm-account">🔑 Set Permanent Password</Link>
-                          </Button>
-                        )}
-                        {isAdmin && (
-                          <Button asChild variant="default" className="w-full">
-                            <Link href="/admin">Admin Panel</Link>
-                          </Button>
-                        )}
-                      </>
-                    ) : (
-                      <Button asChild className="w-full bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white font-bold h-11 rounded-xl shadow-md">
-                        <Link href="/auth/login">Sign In / Register</Link>
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              </SheetContent>
-            </Sheet>
           </div>
         </div>
       </header>
 
-      {/* Expandable Mobile Search Bar */}
+      {/* Expandable Mobile Search Bar with Instant 3-Letter Autocomplete */}
       {isSearchOpen && (
-        <div className="md:hidden bg-[#fdfaf6] dark:bg-slate-900 border-b border-orange-100/50 dark:border-slate-800 p-2.5 transition-all">
+        <div className="md:hidden bg-[#fdfaf6] dark:bg-slate-900 border-b border-orange-100/50 dark:border-slate-800 p-2.5 transition-all relative">
           <form
             className="relative w-full flex shadow-sm"
-            onSubmit={(e) => {
-              e.preventDefault()
-              const q = (e.currentTarget.querySelector('input') as HTMLInputElement)?.value?.trim()
-              if (q) window.location.href = `/products?q=${encodeURIComponent(q)}`
-              else window.location.href = '/products'
-            }}
+            onSubmit={handleMobileSearchSubmit}
           >
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <Search className="h-4 w-4 text-gray-400" />
@@ -383,13 +365,74 @@ export function StoreHeader() {
             <Input
               autoFocus
               name="q"
-              placeholder="Search products, templates, bundles..."
-              className="pl-10 rounded-r-none bg-white dark:bg-slate-950 text-gray-900 dark:text-gray-100 border-r-0 dark:border-slate-800 focus-visible:ring-0 placeholder:text-gray-500 h-10 text-sm"
+              value={mobileSearchQuery}
+              onChange={(e) => setMobileSearchQuery(e.target.value)}
+              placeholder="Search (type min 3 letters)..."
+              className="pl-10 pr-9 rounded-r-none bg-white dark:bg-slate-950 text-gray-900 dark:text-gray-100 border-r-0 dark:border-slate-800 focus-visible:ring-0 placeholder:text-gray-500 h-10 text-sm"
             />
-            <Button type="submit" className="rounded-l-none bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-semibold px-4 h-10">
+            {mobileSearchQuery && (
+              <button
+                type="button"
+                onClick={() => setMobileSearchQuery("")}
+                className="absolute right-20 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+            <Button type="submit" className="rounded-l-none bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-bold px-4 h-10 text-xs">
               Search
             </Button>
           </form>
+
+          {/* Mobile Autocomplete Live Results */}
+          {mobileSearchQuery.trim().length >= 3 && (
+            <div className="mt-2 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl overflow-hidden divide-y divide-slate-100 dark:divide-slate-800">
+              <div className="p-2 text-[10px] font-bold text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900 flex justify-between">
+                <span>Matching Products ({mobileResults.length})</span>
+                <span className="text-violet-600">Tap to open</span>
+              </div>
+              {mobileResults.length > 0 ? (
+                <>
+                  {mobileResults.map((prod) => (
+                    <Link
+                      key={prod.id}
+                      href={`/products/${prod.slug || prod.id}`}
+                      onClick={() => setIsSearchOpen(false)}
+                      className="flex items-center gap-2.5 p-2.5 hover:bg-violet-50 dark:hover:bg-slate-900 transition-colors"
+                    >
+                      <div className="h-9 w-9 rounded-md bg-slate-100 dark:bg-slate-800 overflow-hidden shrink-0 border border-slate-200 dark:border-slate-700 flex items-center justify-center p-0.5">
+                        <img
+                          src={prod.imageUrl || "/placeholder.svg"}
+                          alt={prod.title}
+                          className="h-full w-full object-contain"
+                        />
+                      </div>
+                      <div className="flex-1 min-w-0 text-left">
+                        <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                          {prod.title}
+                        </p>
+                        <p className="text-[10px] text-emerald-600 font-semibold">
+                          ₹{prod.price} • Instant Download
+                        </p>
+                      </div>
+                      <ArrowRight className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                    </Link>
+                  ))}
+                  <Link
+                    href={`/products?q=${encodeURIComponent(mobileSearchQuery)}`}
+                    onClick={() => setIsSearchOpen(false)}
+                    className="block p-2 text-center text-xs font-bold text-violet-600 bg-violet-50 dark:bg-slate-900"
+                  >
+                    View all results for &ldquo;{mobileSearchQuery}&rdquo; →
+                  </Link>
+                </>
+              ) : (
+                <div className="p-3 text-center text-xs text-slate-400">
+                  No products found for &ldquo;{mobileSearchQuery}&rdquo;
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>
