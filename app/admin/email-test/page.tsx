@@ -224,7 +224,7 @@ export default function EmailTestPage() {
                   <Input
                     id="senderEmail"
                     type="email"
-                    placeholder="support@yourdomain.com"
+                    placeholder="grabnext.pages.dev@gmail.com"
                     value={senderEmailInput}
                     onChange={(e) => setSenderEmailInput(e.target.value)}
                     className="bg-white mt-1"

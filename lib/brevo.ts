@@ -47,7 +47,7 @@ export async function getBrevoSettings() {
 
   // Precedence: ENV variable > Database Setting > Default
   const apiKey = envApiKey || dbApiKey || ''
-  const senderEmail = envSenderEmail || dbSenderEmail || ''
+  const senderEmail = envSenderEmail || dbSenderEmail || 'grabnext.pages.dev@gmail.com'
   const senderName = envSenderName || dbSenderName || 'Grabnext'
   const appUrl = envAppUrl || dbAppUrl || 'https://grabnext.in'
   const whatsappNumber = (envWhatsapp || dbWhatsapp || '917500167987').replace(/[^0-9]/g, '')
@@ -128,38 +128,7 @@ export async function sendBrevoEmail({
   }
 
   try {
-    // 1. Check if key is a Resend.com API Key (starts with 're_')
-    if (apiKey.startsWith('re_')) {
-      const resendSender = senderEmail && !senderEmail.endsWith('@gmail.com')
-        ? `${senderName} <${senderEmail}>`
-        : `${senderName} <onboarding@resend.dev>`
-
-      const response = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          from: resendSender,
-          to: [toEmail.trim()],
-          subject,
-          html: htmlContent,
-          headers: defaultHeaders,
-        }),
-      })
-
-      const data = await response.json()
-      if (!response.ok) {
-        console.error('[Resend API Error Response]', data)
-        return { success: false, error: data.message || data.name || JSON.stringify(data) }
-      }
-
-      console.log(`[Resend Email Sent] Message ID: ${data.id} to ${toEmail}`)
-      return { success: true, messageId: data.id }
-    }
-
-    // 2. Standard Brevo API Call
+    // Standard Brevo v3 Transactional Email API Call
     const response = await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST',
       headers: {
@@ -192,11 +161,11 @@ export async function sendBrevoEmail({
       const lower = errMsg.toLowerCase()
 
       if (lower.includes('key not found') || data.code === 'unauthorized' || response.status === 401) {
-        errMsg = "Brevo API Key Invalid or Account Suspended. Check Brevo account status or switch to Resend.com key."
+        errMsg = "Brevo API Key is invalid or expired. Please generate a new API Key from Brevo Dashboard -> SMTP & API -> API Keys."
       } else if (lower.includes('sender') || lower.includes('unauthorized sender')) {
-        errMsg = `Sender Email (${senderEmail}) is not verified on Brevo. Verify this email on Brevo.com -> Senders & IPs -> Senders.`
+        errMsg = `Sender Email (${senderEmail}) is not verified on your Brevo account. Please verify grabnext.pages.dev@gmail.com on Brevo -> Senders & IPs -> Senders.`
       } else if (lower.includes('quota') || lower.includes('limit')) {
-        errMsg = "Brevo email sending limit/quota reached for your account."
+        errMsg = "Brevo email sending limit/quota reached for your account (Free tier allows 300 emails/day)."
       }
 
       return { success: false, error: errMsg }
@@ -205,7 +174,7 @@ export async function sendBrevoEmail({
     console.log(`[Brevo Email Sent] Message ID: ${data.messageId} to ${toEmail}`)
     return { success: true, messageId: data.messageId }
   } catch (err: any) {
-    console.error('[Email Dispatch Exception]', err)
+    console.error('[Brevo Dispatch Exception]', err)
     return { success: false, error: err.message || 'Failed to send email due to network exception' }
   }
 }
