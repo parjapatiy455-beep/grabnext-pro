@@ -2,6 +2,7 @@ export const runtime = 'edge'
 
 import { NextResponse } from "next/server"
 import { hashData } from "@/lib/hash"
+import { executeQuery } from "@/lib/db"
 
 const DEFAULT_PIXEL_IDS = [
   "1004524488604833",
@@ -76,9 +77,23 @@ export async function POST(req: Request) {
       ...(TEST_EVENT_CODE ? { test_event_code: TEST_EVENT_CODE } : {})
     }
 
-    // 5. Dispatch to Meta Graph API for all configured pixels
+    // 5. Dispatch to Meta Graph API for all configured pixels (DB + Env)
+    let dbPixelIds: string[] = []
+    try {
+      const rows = (await executeQuery(
+        "SELECT pixelId FROM pixels WHERE type = 'facebook' AND isActive = 1 AND pixelId IS NOT NULL"
+      )) as any[]
+      if (Array.isArray(rows)) {
+        dbPixelIds = rows.map((r) => String(r.pixelId).trim()).filter(Boolean)
+      }
+    } catch {
+      // ignore table fallback
+    }
+
+    const targetPixelIds = Array.from(new Set([...dbPixelIds, ...ALL_PIXEL_IDS].filter(Boolean)))
+
     await Promise.allSettled(
-      ALL_PIXEL_IDS.map(async (pId) => {
+      targetPixelIds.map(async (pId) => {
         const metaUrl = `https://graph.facebook.com/v19.0/${pId}/events?access_token=${ACCESS_TOKEN}`
         try {
           const response = await fetch(metaUrl, {

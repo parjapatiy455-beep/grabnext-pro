@@ -142,4 +142,21 @@ export async function runMigrations() {
       createdAt INTEGER NOT NULL
     );
   `).catch(() => {})
+
+  await executeQuery(`
+    CREATE TABLE IF NOT EXISTS pixels (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      type TEXT NOT NULL,
+      pixelId TEXT,
+      scriptCode TEXT,
+      placement TEXT DEFAULT 'head',
+      triggerPage TEXT DEFAULT 'all',
+      testEventCode TEXT,
+      description TEXT,
+      isActive INTEGER DEFAULT 1,
+      createdAt INTEGER,
+      updatedAt INTEGER
+    );
+  `).catch(() => {})
 }

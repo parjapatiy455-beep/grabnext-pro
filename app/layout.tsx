@@ -12,6 +12,7 @@ import { SocialProofToast } from "@/components/social-proof-toast"
 import { TopProgressBar } from "@/components/top-progress-bar"
 import { FacebookPixelScript, FacebookPixelRouteTracker } from "@/components/facebook-pixel"
 import { GoogleAnalyticsRouteTracker } from "@/components/google-analytics"
+import { DynamicPixelInjector } from "@/components/dynamic-pixel-injector"
 import { getSiteUrl, DEFAULT_SITE_TITLE, DEFAULT_SITE_DESCRIPTION, DEFAULT_SEO_KEYWORDS } from "@/lib/site"
 import "./globals.css"
 
@@ -238,6 +239,8 @@ html {
               <TopProgressBar />
               {/* Tracks PageView on every SPA route change */}
               <FacebookPixelRouteTracker />
+              {/* Dynamic admin-managed pixels & custom scripts */}
+              <DynamicPixelInjector />
               {/* Tracks GA4 PageView on every SPA route change */}
               <GoogleAnalyticsRouteTracker />
               {children}
