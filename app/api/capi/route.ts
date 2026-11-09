@@ -81,10 +81,16 @@ export async function POST(req: Request) {
     let dbPixelIds: string[] = []
     try {
       const rows = (await executeQuery(
-        "SELECT pixelId FROM pixels WHERE type = 'facebook' AND isActive = 1 AND pixelId IS NOT NULL"
+        "SELECT pixelId, scriptCode FROM pixels WHERE isActive = 1 AND (pixelId IS NOT NULL OR scriptCode LIKE '%fbq%')"
       )) as any[]
       if (Array.isArray(rows)) {
-        dbPixelIds = rows.map((r) => String(r.pixelId).trim()).filter(Boolean)
+        for (const r of rows) {
+          if (r.pixelId) dbPixelIds.push(String(r.pixelId).trim())
+          if (r.scriptCode) {
+            const m = String(r.scriptCode).match(/fbq\s*\(\s*['"]init['"]\s*,\s*['"](\d+)['"]/) || String(r.scriptCode).match(/tr\?id=(\d+)/)
+            if (m && m[1]) dbPixelIds.push(m[1])
+          }
+        }
       }
     } catch {
       // ignore table fallback
