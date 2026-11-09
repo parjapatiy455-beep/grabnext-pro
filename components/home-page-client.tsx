@@ -177,11 +177,11 @@ export function HomePageClient({
         </div>
       ) : null}
 
-      <main className="flex-1 container mx-auto px-3 md:px-4 pt-4 pb-20 md:py-6 space-y-6">
+      <main className="flex-1 container mx-auto px-0 sm:px-4 pt-3 pb-20 md:py-6 space-y-4 sm:space-y-6">
 
         {/* Banner Carousel — only if admin added banners */}
         {banners.length > 0 && (
-          <div className="relative rounded-2xl overflow-hidden w-full aspect-[2/1] md:max-h-[512px] shadow-md group">
+          <div className="mx-2 sm:mx-0 relative rounded-2xl overflow-hidden aspect-[2/1] md:max-h-[512px] shadow-md group">
             {banners.map((b, i) => {
               const isHex = b.bgColor?.startsWith("#")
               return (
@@ -225,7 +225,7 @@ export function HomePageClient({
         )}
 
         {/* Modern 2026 Trust & Guarantee Strip */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-4 px-2 sm:px-0">
           <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-3 sm:p-4 flex items-center gap-3 shadow-xs">
             <div className="h-10 w-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
               <Zap className="h-5 w-5 fill-current" />
@@ -268,8 +268,8 @@ export function HomePageClient({
         </div>
 
         {/* All Products */}
-        <section className="bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-2xl p-5 shadow-sm transition-colors">
-          <div className="space-y-3 mb-4">
+        <section className="bg-white dark:bg-slate-900 border-y sm:border dark:border-slate-800 rounded-none sm:rounded-2xl py-3.5 sm:p-5 px-0 sm:px-5 shadow-xs sm:shadow-sm transition-colors">
+          <div className="space-y-3 mb-4 px-2.5 sm:px-0">
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-lg font-bold text-slate-900 dark:text-white">All Digital Products &amp; Software</h2>
@@ -314,7 +314,7 @@ export function HomePageClient({
               </Button>
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-4 px-1.5 sm:px-0">
               {featured.map((p, i) => (
                 <ProductCard 
                   key={p.id} 
@@ -328,7 +328,7 @@ export function HomePageClient({
 
         {/* Category Cards */}
         {categories.length > 0 && (
-          <section className="bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-2xl p-5 shadow-sm transition-colors">
+          <section className="bg-white dark:bg-slate-900 border-y sm:border dark:border-slate-800 rounded-none sm:rounded-2xl py-4 px-2.5 sm:p-5 shadow-xs sm:shadow-sm transition-colors">
             <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-4">Shop by Category</h2>
             <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
               {categories.slice(0, 12).map((cat) => (
@@ -348,7 +348,7 @@ export function HomePageClient({
         )}
 
         {/* Latest Digital Products Guides & SEO Blog Section */}
-        <section className="bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-2xl p-5 shadow-sm transition-colors space-y-4">
+        <section className="bg-white dark:bg-slate-900 border-y sm:border dark:border-slate-800 rounded-none sm:rounded-2xl py-4 px-3 sm:p-5 shadow-xs sm:shadow-sm transition-colors space-y-4">
           <div className="flex items-center justify-between">
             <div>
               <div className="flex items-center gap-1.5 text-xs font-bold text-purple-600 dark:text-purple-400">
@@ -391,7 +391,7 @@ export function HomePageClient({
         </section>
 
         {/* Dedicated SEO Keyword Content Block for Googlebot Indexing */}
-        <section className="bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-2xl p-6 shadow-sm transition-colors space-y-4">
+        <section className="bg-white dark:bg-slate-900 border-y sm:border dark:border-slate-800 rounded-none sm:rounded-2xl py-5 px-3 sm:p-6 shadow-xs sm:shadow-sm transition-colors space-y-4">
           <h2 className="text-xl font-extrabold text-slate-900 dark:text-white">
             Why Choose Grabnext for Buying Digital Products in India?
           </h2>
@@ -415,7 +415,7 @@ export function HomePageClient({
         </section>
 
         {/* Visible FAQ Accordion for Search Crawlers */}
-        <section className="bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-2xl p-6 shadow-sm transition-colors">
+        <section className="bg-white dark:bg-slate-900 border-y sm:border dark:border-slate-800 rounded-none sm:rounded-2xl py-5 px-3 sm:p-6 shadow-xs sm:shadow-sm transition-colors">
           <div className="flex items-center gap-2 mb-4">
             <HelpCircle className="h-5 w-5 text-primary" />
             <h2 className="text-lg font-bold text-slate-900 dark:text-white">Frequently Asked Questions</h2>
