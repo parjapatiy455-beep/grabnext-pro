@@ -45,17 +45,17 @@ export async function getBrevoSettings() {
     console.warn('[Brevo] Could not fetch settings from DB:', e)
   }
 
-  // Precedence: ENV variable > Database Setting > Default
-  const apiKey = envApiKey || dbApiKey || ''
-  const senderEmail = envSenderEmail || dbSenderEmail || 'grabnext.pages.dev@gmail.com'
-  const senderName = envSenderName || dbSenderName || 'Grabnext'
-  const appUrl = envAppUrl || dbAppUrl || 'https://grabnext.in'
-  const whatsappNumber = (envWhatsapp || dbWhatsapp || '917500167987').replace(/[^0-9]/g, '')
+  // Precedence: Database Setting (Admin UI) > ENV variable (Cloudflare / .env) > Default
+  const apiKey = dbApiKey || envApiKey || ''
+  const senderEmail = dbSenderEmail || envSenderEmail || 'grabnext.pages.dev@gmail.com'
+  const senderName = dbSenderName || envSenderName || 'Grabnext'
+  const appUrl = dbAppUrl || envAppUrl || 'https://grabnext.in'
+  const whatsappNumber = (dbWhatsapp || envWhatsapp || '917500167987').replace(/[^0-9]/g, '')
 
-  const source = envApiKey
-    ? 'env'
-    : dbApiKey
+  const source = dbApiKey
     ? 'database'
+    : envApiKey
+    ? 'env'
     : 'none'
 
   return {
@@ -67,6 +67,37 @@ export async function getBrevoSettings() {
     source,
     isEnvConfigured: Boolean(envApiKey && envSenderEmail),
     isDbConfigured: Boolean(dbApiKey && dbSenderEmail),
+  }
+}
+
+/**
+ * Fetch account profile from Brevo API to verify which account is connected and its status
+ */
+export async function getBrevoAccountInfo(apiKey: string) {
+  if (!apiKey) return null
+  try {
+    const res = await fetch('https://api.brevo.com/v3/account', {
+      headers: {
+        accept: 'application/json',
+        'api-key': apiKey,
+      },
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      return { ok: false, error: err.message || `HTTP ${res.status}` }
+    }
+    const data = await res.json()
+    return {
+      ok: true,
+      email: data.email,
+      firstName: data.firstName,
+      lastName: data.lastName,
+      companyName: data.companyName,
+      plan: data.plan,
+      relayData: data.relay_data,
+    }
+  } catch (err: any) {
+    return { ok: false, error: err.message || 'Failed to connect to Brevo API' }
   }
 }
 

@@ -1,19 +1,27 @@
 export const runtime = 'edge'
 import { NextRequest, NextResponse } from 'next/server'
-import { sendTestBrevoEmail, sendBrevoEmail, sendGuestAccountEmail, getBrevoSettings } from '@/lib/brevo'
+import { sendTestBrevoEmail, sendBrevoEmail, sendGuestAccountEmail, getBrevoSettings, getBrevoAccountInfo } from '@/lib/brevo'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET() {
   try {
     const settings = await getBrevoSettings()
+    let accountInfo: any = null
+    if (settings.apiKey) {
+      accountInfo = await getBrevoAccountInfo(settings.apiKey)
+    }
+
     return NextResponse.json({
       configured: Boolean(settings.apiKey && settings.senderEmail),
       hasApiKey: Boolean(settings.apiKey),
+      apiKeyMasked: settings.apiKey ? `${settings.apiKey.substring(0, 10)}••••••••${settings.apiKey.slice(-4)}` : null,
+      source: settings.source,
       senderEmail: settings.senderEmail || null,
       senderName: settings.senderName || 'Grabnext',
       appUrl: settings.appUrl,
       whatsappNumber: settings.whatsappNumber,
+      accountInfo,
     })
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 })

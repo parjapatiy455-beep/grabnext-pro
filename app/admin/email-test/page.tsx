@@ -16,9 +16,19 @@ export default function EmailTestPage() {
   const [status, setStatus] = useState<{
     configured: boolean
     hasApiKey: boolean
+    apiKeyMasked?: string | null
+    source?: string
     senderEmail: string | null
     senderName: string
     appUrl: string
+    accountInfo?: {
+      ok: boolean
+      email?: string
+      firstName?: string
+      lastName?: string
+      companyName?: string
+      error?: string
+    } | null
   } | null>(null)
   const [checkingStatus, setCheckingStatus] = useState(true)
 
@@ -45,7 +55,14 @@ export default function EmailTestPage() {
       setStatus(data)
       if (data.senderEmail) setSenderEmailInput(data.senderEmail)
       if (data.senderName) setSenderNameInput(data.senderName)
-      addLog(`Status checked: Brevo is ${data.configured ? 'Configured ✅' : 'Not Fully Configured ⚠️'}`, data.configured ? 'success' : 'info')
+      
+      if (data.accountInfo?.ok) {
+        addLog(`Connected Brevo Account: ${data.accountInfo.email} (${data.source?.toUpperCase() || 'DB'}) ✅`, 'success')
+      } else if (data.accountInfo?.error) {
+        addLog(`Brevo Account Check: ${data.accountInfo.error} ⚠️`, 'error')
+      } else {
+        addLog(`Status checked: Brevo is ${data.configured ? 'Configured ✅' : 'Not Fully Configured ⚠️'}`, data.configured ? 'success' : 'info')
+      }
     } catch (err: any) {
       addLog(`Failed to fetch status: ${err.message}`, 'error')
     } finally {
@@ -160,23 +177,50 @@ export default function EmailTestPage() {
             )}
           </div>
         </CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+        <CardContent className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
           <div className="p-3 bg-slate-50 border rounded-lg">
             <p className="text-xs text-slate-500 font-medium">Brevo API Key</p>
-            <p className="font-semibold text-slate-800 mt-1 flex items-center gap-1.5">
-              <Key className="h-4 w-4 text-slate-400" />
-              {status?.hasApiKey ? "•••••••••••• (Set)" : "Not Configured"}
+            <p className="font-semibold text-slate-800 mt-1 flex items-center gap-1.5 text-xs truncate">
+              <Key className="h-4 w-4 text-slate-400 shrink-0" />
+              {status?.apiKeyMasked || (status?.hasApiKey ? "•••••••••••• (Set)" : "Not Configured")}
             </p>
+            {status?.source && (
+              <span className="text-[10px] text-slate-400 block mt-0.5">
+                Source: <strong className="text-slate-600 uppercase">{status.source}</strong>
+              </span>
+            )}
+          </div>
+          <div className="p-3 bg-slate-50 border rounded-lg">
+            <p className="text-xs text-slate-500 font-medium">Connected Brevo Account</p>
+            <p className="font-semibold text-slate-800 mt-1 truncate text-xs">
+              {status?.accountInfo?.ok ? (
+                <span className="text-emerald-700 flex items-center gap-1">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                  {status.accountInfo.email}
+                </span>
+              ) : status?.accountInfo?.error ? (
+                <span className="text-red-600 text-xs truncate" title={status.accountInfo.error}>
+                  ⚠️ {status.accountInfo.error}
+                </span>
+              ) : (
+                <span className="text-slate-400">Verifying account...</span>
+              )}
+            </p>
+            {status?.accountInfo?.companyName && (
+              <span className="text-[10px] text-slate-400 block mt-0.5">
+                {status.accountInfo.companyName}
+              </span>
+            )}
           </div>
           <div className="p-3 bg-slate-50 border rounded-lg">
             <p className="text-xs text-slate-500 font-medium">Sender Email Address</p>
-            <p className="font-semibold text-slate-800 mt-1 truncate">
+            <p className="font-semibold text-slate-800 mt-1 truncate text-xs">
               {status?.senderEmail || "Not Configured"}
             </p>
           </div>
           <div className="p-3 bg-slate-50 border rounded-lg">
             <p className="text-xs text-slate-500 font-medium">Sender Store Name</p>
-            <p className="font-semibold text-slate-800 mt-1">
+            <p className="font-semibold text-slate-800 mt-1 text-xs">
               {status?.senderName || "Grabnext"}
             </p>
           </div>
