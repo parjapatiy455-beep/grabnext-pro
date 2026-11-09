@@ -772,7 +772,7 @@ export default function BulkEmailAdminPage() {
                 <div className="bg-slate-50 p-2.5 text-center border-t text-[10px] text-slate-400 space-y-0.5">
                   <div>© {new Date().getFullYear()} Grabnext. All rights reserved.</div>
                   <div className="text-[9px] text-slate-300">
-                    {isPrimaryMode ? "Transactional Account Update" : "Registered Promotional Email"}
+                    {isPrimaryMode ? "Transactional Account Update" : "Transactional Account Update  "}
                   </div>
                 </div>
               </div>
