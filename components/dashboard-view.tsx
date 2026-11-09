@@ -164,12 +164,12 @@ function DownloadAssetRow({ asset, secureUrl }: { asset: any; secureUrl: string 
           {downloading ? (
             <>
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              <span>Fetching...</span>
+              <span>Downloading...</span>
             </>
           ) : (
             <>
               <Download className="h-3.5 w-3.5" />
-              <span>{asset.type === "link" ? "Open Access" : "Download"}</span>
+              <span>Download</span>
             </>
           )}
         </button>
