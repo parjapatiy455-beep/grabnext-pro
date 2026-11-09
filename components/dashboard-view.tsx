@@ -43,36 +43,43 @@ import Link from "next/link"
 import { DigitalProductViewer } from "@/components/digital-product-viewer"
 import { fbq } from "@/lib/pixel"
 
-// ─── Simplified Status Badges ──────────────────────────────────────────────────
+// ─── High-Contrast Status Badges (Clean WCAG AA Design) ──────────────────────
 function StatusBadge({ status }: { status: string }) {
   const norm = (status || "").toLowerCase()
   if (norm === "paid" || norm === "completed") {
     return (
-      <span className="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse" />
-        Paid
+      <span className="inline-flex items-center gap-1.5 text-xs font-black px-3 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950/70 text-emerald-900 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 shadow-2xs">
+        <span className="h-2 w-2 rounded-full bg-emerald-600 dark:bg-emerald-400 animate-pulse" />
+        Paid &amp; Active
       </span>
     )
   }
   if (norm === "pending") {
     return (
-      <span className="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
-        <Clock className="h-3 w-3" />
-        Pending
+      <span className="inline-flex items-center gap-1.5 text-xs font-black px-3 py-1 rounded-full bg-amber-100 dark:bg-amber-950/70 text-amber-900 dark:text-amber-300 border border-amber-300 dark:border-amber-700 shadow-2xs">
+        <Clock className="h-3.5 w-3.5 text-amber-700 dark:text-amber-400" />
+        Payment Pending
       </span>
     )
   }
-  if (norm === "failed" || norm === "refunded") {
+  if (norm === "failed") {
     return (
-      <span className="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
-        <span className="h-1.5 w-1.5 rounded-full bg-slate-400" />
-        {norm === "refunded" ? "Refunded" : "Incomplete"}
+      <span className="inline-flex items-center gap-1.5 text-xs font-black px-3 py-1 rounded-full bg-rose-100 dark:bg-rose-950/70 text-rose-900 dark:text-rose-300 border border-rose-300 dark:border-rose-700 shadow-2xs">
+        <XCircle className="h-3.5 w-3.5 text-rose-700 dark:text-rose-400" />
+        Failed
+      </span>
+    )
+  }
+  if (norm === "refunded") {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-xs font-black px-3 py-1 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700">
+        Refunded
       </span>
     )
   }
   return (
-    <span className="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
-      <span className="h-1.5 w-1.5 rounded-full bg-slate-400" />
+    <span className="inline-flex items-center gap-1.5 text-xs font-black px-3 py-1 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700">
+      <span className="h-1.5 w-1.5 rounded-full bg-slate-500" />
       {norm ? norm.charAt(0).toUpperCase() + norm.slice(1) : "Unknown"}
     </span>
   )
@@ -229,7 +236,7 @@ function FreshDownloadCard({ item }: { item: any }) {
   )
 }
 
-// ─── Clean Simple Order Card ─────────────────────────────────────────────────
+// ─── Modern High-Contrast Order Card Component ──────────────────────────────
 function OrderCard({ order, onPay }: { order: any; onPay?: (order: any) => void }) {
   const [expanded, setExpanded] = useState(false)
   const [copied, setCopied] = useState(false)
@@ -243,13 +250,6 @@ function OrderCard({ order, onPay }: { order: any; onPay?: (order: any) => void 
   const isFailed = order.status === "failed"
   const isPending = order.status === "pending"
 
-  // Left-border color based on status
-  const leftBorderColor = isPaid
-    ? "border-l-emerald-500"
-    : isPending
-    ? "border-l-amber-400"
-    : "border-l-slate-300 dark:border-l-slate-600"
-
   const copyOrderId = (e: React.MouseEvent) => {
     e.stopPropagation()
     navigator.clipboard.writeText(order.id)
@@ -259,139 +259,180 @@ function OrderCard({ order, onPay }: { order: any; onPay?: (order: any) => void 
   }
 
   return (
-    <div className={`bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 border-l-4 ${leftBorderColor} rounded-2xl overflow-hidden shadow-xs hover:shadow-sm transition-all`}>
-      {/* Order Row — always stable, single layout */}
+    <div className="bg-white dark:bg-slate-900 border-2 border-slate-300 dark:border-slate-700 hover:border-violet-500/80 dark:hover:border-violet-500 rounded-2xl sm:rounded-3xl overflow-hidden shadow-sm hover:shadow-md transition-all">
+      {/* Order Header / Summary Row */}
       <div
-        className="p-4 sm:p-5 cursor-pointer flex items-center gap-3 hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors"
+        className="p-4 sm:p-5 cursor-pointer flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4 hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors"
         onClick={() => setExpanded(!expanded)}
       >
-        {/* Package Icon */}
-        <div className="h-10 w-10 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 flex items-center justify-center shrink-0">
-          <Package className="h-5 w-5" />
-        </div>
-
-        {/* Middle: Order info */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <span className="font-mono text-sm font-bold text-slate-900 dark:text-white truncate">
-              {order.id}
-            </span>
-            <button
-              type="button"
-              onClick={copyOrderId}
-              className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-0.5 rounded transition-colors shrink-0"
-              title="Copy Order ID"
-            >
-              {copied ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
-            </button>
+        {/* Left: ID & Date */}
+        <div className="flex items-start gap-3.5">
+          <div className="h-11 w-11 rounded-2xl bg-violet-100 text-violet-700 dark:bg-slate-800 dark:text-violet-400 border border-violet-200/80 dark:border-slate-700 flex items-center justify-center shrink-0">
+            <Package className="h-5 w-5" />
           </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 flex items-center gap-1">
-            <CalendarDays className="h-3 w-3 shrink-0" />
-            {formatDateTime(order.createdAt)}
-          </p>
+          <div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-[10px] sm:text-xs font-black uppercase tracking-wider bg-violet-100 text-violet-800 dark:bg-violet-950 dark:text-violet-300 px-2 py-0.5 rounded-md border border-violet-200 dark:border-violet-800">
+                Order
+              </span>
+              <span className="font-mono text-sm sm:text-base font-black text-slate-950 dark:text-white">
+                {order.id}
+              </span>
+              <button
+                type="button"
+                onClick={copyOrderId}
+                className="text-slate-600 hover:text-slate-950 dark:text-slate-400 dark:hover:text-white p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition-colors"
+                title="Copy Order ID"
+              >
+                {copied ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />}
+              </button>
+            </div>
+            <p className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5 mt-0.5">
+              <CalendarDays className="h-3.5 w-3.5 text-slate-500 dark:text-slate-400" />
+              <span>{formatDateTime(order.createdAt)}</span>
+            </p>
+          </div>
         </div>
 
-        {/* Right: Amount + Status + Chevron */}
-        <div className="flex items-center gap-2.5 shrink-0">
-          <div className="text-right hidden sm:block">
-            <span className="text-sm font-bold text-slate-900 dark:text-white block">
+        {/* Center: Total Price & Items count */}
+        <div className="flex items-center justify-between md:justify-center gap-6 border-y md:border-y-0 border-slate-200/80 dark:border-slate-800 py-2.5 md:py-0">
+          <div>
+            <span className="text-[10px] uppercase font-black text-slate-600 dark:text-slate-400 block tracking-wider">
+              Total Amount
+            </span>
+            <span className="text-lg sm:text-xl font-black text-slate-950 dark:text-white">
               ₹{Number(order.totalAmount || 0).toLocaleString("en-IN")}
             </span>
+          </div>
+
+          <div className="md:hidden">
             <StatusBadge status={order.status} />
           </div>
-          {/* Mobile: show amount inline */}
-          <div className="sm:hidden text-right">
-            <span className="text-sm font-bold text-slate-900 dark:text-white block">
-              ₹{Number(order.totalAmount || 0).toLocaleString("en-IN")}
+        </div>
+
+        {/* Right: Status badge & Toggle Details */}
+        <div className="flex items-center justify-between md:justify-end gap-3.5">
+          <div className="hidden md:flex flex-col items-end gap-1">
+            <StatusBadge status={order.status} />
+            <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
+              <Zap className="h-3 w-3 fill-current" /> Instant Digital Access
             </span>
           </div>
-          <div className="h-8 w-8 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 flex items-center justify-center transition-colors shrink-0">
+
+          <div className="flex items-center gap-1.5 text-xs font-bold text-violet-700 dark:text-violet-300 ml-auto md:ml-0 bg-violet-50 dark:bg-violet-950/60 px-3 py-1.5 rounded-xl border border-violet-200 dark:border-violet-800">
+            <span>{expanded ? "Hide Details" : "View Order"}</span>
             {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
           </div>
         </div>
       </div>
 
-      {/* Mobile status badge row */}
-      <div className="sm:hidden px-4 pb-3 flex items-center justify-between">
-        <StatusBadge status={order.status} />
-      </div>
-
       {/* Expanded Order Details */}
       {expanded && (
-        <div className="px-4 sm:px-5 pb-5 pt-1 border-t border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-950/50 space-y-4">
+        <div className="px-4 sm:px-6 pb-6 pt-3 border-t-2 border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950/70 space-y-4">
+          {/* Customer / Order Metadata Pills */}
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs text-slate-800 dark:text-slate-200 pt-3">
+            {order.userName && (
+              <span className="bg-white dark:bg-slate-900 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 font-bold shadow-2xs">
+                Customer: <strong className="text-slate-950 dark:text-white font-black">{order.userName}</strong>
+              </span>
+            )}
+            {order.userEmail && (
+              <span className="bg-white dark:bg-slate-900 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 font-bold shadow-2xs truncate max-w-xs">
+                Email: <strong className="text-slate-950 dark:text-white font-black">{order.userEmail}</strong>
+              </span>
+            )}
+            {order.userPhone && (
+              <span className="bg-white dark:bg-slate-900 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 font-bold shadow-2xs">
+                WhatsApp: <strong className="text-slate-950 dark:text-white font-black">{order.userPhone}</strong>
+              </span>
+            )}
+            {order.paymentId && (
+              <span className="bg-white dark:bg-slate-900 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 font-bold font-mono text-xs shadow-2xs">
+                UTR / Ref: <strong className="text-slate-950 dark:text-white font-black">{order.paymentId}</strong>
+              </span>
+            )}
+          </div>
 
-          {/* Action Callout if Pending / Failed — simple amber prompt */}
+          {/* Action Callout if Pending / Failed */}
           {(isPending || isFailed) && onPay && (
-            <div className="mt-3 p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <p className="text-xs font-semibold text-amber-900 dark:text-amber-200">
-                Payment not completed. Complete it to get instant access to your files.
-              </p>
+            <div className="p-4 rounded-2xl bg-amber-100/90 dark:bg-amber-950/60 border border-amber-300 dark:border-amber-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
+              <div className="flex items-center gap-3">
+                <AlertTriangle className="h-6 w-6 text-amber-800 dark:text-amber-400 shrink-0" />
+                <div>
+                  <p className="text-xs sm:text-sm font-black text-amber-950 dark:text-amber-200">
+                    {isFailed ? "Payment was incomplete or failed" : "Order is awaiting payment"}
+                  </p>
+                  <p className="text-xs font-bold text-amber-800 dark:text-amber-300 mt-0.5">
+                    Complete payment to instantly unlock your digital downloads &amp; license keys.
+                  </p>
+                </div>
+              </div>
               <Button
                 size="sm"
                 onClick={() => onPay(order)}
-                className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs px-5 h-9 rounded-xl shrink-0 cursor-pointer"
+                className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs px-5 h-10 rounded-xl shadow-md shrink-0 cursor-pointer"
               >
-                <CreditCard className="h-3.5 w-3.5 mr-1.5" />
-                Pay ₹{Number(order.totalAmount || 0).toLocaleString("en-IN")}
+                <CreditCard className="h-4 w-4 mr-1.5" />
+                <span>Pay ₹{Number(order.totalAmount || 0).toLocaleString("en-IN")} Now</span>
               </Button>
             </div>
           )}
 
           {/* Ordered Products List */}
-          <div className="space-y-2.5 mt-3">
-            <p className="text-xs font-bold text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-              <ShoppingBag className="h-3.5 w-3.5" />
-              Items in this order ({items.length})
+          <div className="space-y-3">
+            <p className="text-xs font-black uppercase text-slate-700 dark:text-slate-300 tracking-wider flex items-center gap-1.5">
+              <ShoppingBag className="h-4 w-4 text-violet-600" />
+              <span>Purchased Products ({items.length})</span>
             </p>
 
             {items.map((item: any, i: number) => (
               <div
                 key={i}
-                className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 sm:p-3.5 space-y-2.5"
+                className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3.5 sm:p-4 space-y-3 shadow-xs"
               >
-                <div className="flex gap-3 items-center">
-                  {/* Thumbnail */}
-                  <div className="w-12 h-12 min-w-[48px] min-h-[48px] max-w-[48px] max-h-[48px] rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 overflow-hidden shrink-0 flex items-center justify-center p-1">
+                <div className="flex gap-3.5 items-center">
+                  {/* Thumbnail strictly sized */}
+                  <div className="w-14 h-14 min-w-[56px] min-h-[56px] max-w-[56px] max-h-[56px] rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 overflow-hidden shrink-0 flex items-center justify-center p-1">
                     <img
                       src={item.imageUrl || "/placeholder.svg"}
                       alt={item.title}
-                      className="w-full h-full max-w-full max-h-full object-contain"
+                      className="w-full h-full max-w-full max-h-full object-contain aspect-square"
                     />
                   </div>
 
-                  {/* Title */}
+                  {/* Title & Qty */}
                   <div className="flex-1 min-w-0">
                     {item.id ? (
                       <Link
                         href={`/products/${item.id}`}
-                        className="font-semibold text-xs sm:text-sm text-slate-900 dark:text-white hover:text-violet-600 transition-colors line-clamp-2"
+                        className="font-black text-xs sm:text-sm text-slate-950 dark:text-white hover:text-violet-600 transition-colors line-clamp-2"
                       >
                         {item.title}
                       </Link>
                     ) : (
-                      <p className="font-semibold text-xs sm:text-sm text-slate-900 dark:text-white line-clamp-2">
+                      <p className="font-black text-xs sm:text-sm text-slate-950 dark:text-white line-clamp-2">
                         {item.title}
                       </p>
                     )}
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                      ₹{Number(item.price || 0).toLocaleString("en-IN")} × {item.quantity || 1}
+                    <p className="text-xs font-bold text-slate-700 dark:text-slate-300 mt-0.5">
+                      Qty: {item.quantity || 1} • ₹{Number(item.price || 0).toLocaleString("en-IN")} each
                     </p>
                   </div>
 
-                  {/* Total */}
+                  {/* Item Total */}
                   <div className="text-right shrink-0">
-                    <span className="font-bold text-sm text-slate-900 dark:text-white">
+                    <span className="font-black text-base text-slate-950 dark:text-white">
                       ₹{((item.price || 0) * (item.quantity || 1)).toLocaleString("en-IN")}
                     </span>
                   </div>
                 </div>
 
-                {/* Download Links (if paid) */}
+                {/* Digital Download Links (if paid) */}
                 {isPaid && (
-                  <div className="pt-2.5 border-t border-slate-100 dark:border-slate-800">
-                    <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400 mb-1.5">
-                      <CheckCircle2 className="h-3.5 w-3.5" />
-                      <span>Download Ready</span>
+                  <div className="pt-3 border-t border-slate-200/80 dark:border-slate-800">
+                    <div className="flex items-center gap-1.5 text-xs font-black text-emerald-700 dark:text-emerald-400 mb-1.5">
+                      <CheckCircle2 className="h-4 w-4" />
+                      <span>Ready for Instant Download</span>
                     </div>
                     <FreshDownloadCard item={item} />
                   </div>
@@ -690,33 +731,33 @@ export function DashboardView({ initialTab = "orders" }: { initialTab?: string }
 
       <main className="container mx-auto px-4 pt-6 sm:pt-8 max-w-5xl">
         {/* 1. Hero Profile Bento Card (High Contrast & Sharp Typography) */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 sm:p-7 shadow-lg shadow-slate-200/50 dark:shadow-none mb-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-sm mb-5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             {/* Left: Avatar + Details */}
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3.5">
               <div className="relative">
-                <div className="h-16 w-16 sm:h-18 sm:w-18 rounded-2xl bg-gradient-to-tr from-violet-600 via-purple-600 to-indigo-600 text-white font-black text-2xl flex items-center justify-center shadow-lg shadow-violet-500/25 shrink-0">
+                <div className="h-14 w-14 sm:h-16 sm:w-16 rounded-2xl bg-gradient-to-tr from-violet-600 via-purple-600 to-indigo-600 text-white font-black text-xl sm:text-2xl flex items-center justify-center shadow-md shadow-violet-500/25 shrink-0">
                   {initialLetter}
                 </div>
-                <span className="absolute -bottom-1 -right-1 h-4 w-4 rounded-full bg-emerald-500 border-2 border-white dark:border-slate-900" title="Online" />
+                <span className="absolute -bottom-1 -right-1 h-3.5 w-3.5 rounded-full bg-emerald-500 border-2 border-white dark:border-slate-900" title="Online" />
               </div>
 
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h1 className="text-xl sm:text-2xl font-black text-slate-950 dark:text-white tracking-tight">
+                  <h1 className="text-lg sm:text-xl font-black text-slate-950 dark:text-white tracking-tight">
                     {user.displayName || "Valued Customer"}
                   </h1>
-                  <span className="text-[11px] font-black uppercase tracking-wider bg-violet-100/90 dark:bg-violet-950 text-violet-800 dark:text-violet-200 px-2.5 py-0.5 rounded-full border border-violet-300 dark:border-violet-700 flex items-center gap-1 shadow-2xs">
-                    <ShieldCheck className="h-3.5 w-3.5 text-violet-700 dark:text-violet-400" /> Verified Member
+                  <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider bg-violet-100/90 dark:bg-violet-950 text-violet-800 dark:text-violet-200 px-2.5 py-0.5 rounded-full border border-violet-300 dark:border-violet-700 flex items-center gap-1 shadow-2xs">
+                    <ShieldCheck className="h-3 w-3 text-violet-700 dark:text-violet-400" /> Verified Member
                   </span>
                 </div>
-                <p className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 mt-1 flex items-center gap-1.5">
+                <p className="text-xs font-bold text-slate-700 dark:text-slate-300 mt-0.5 flex items-center gap-1.5">
                   <Mail className="h-3.5 w-3.5 text-slate-500 shrink-0" />
                   <span>{user.email}</span>
                 </p>
                 {(user as any).phone && (
-                  <div className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5 mt-1.5 bg-slate-100 dark:bg-slate-800/80 px-2.5 py-1 rounded-lg w-fit border border-slate-200 dark:border-slate-700 font-mono">
-                    <Phone className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                  <div className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5 mt-1 bg-slate-100 dark:bg-slate-800/80 px-2 py-0.5 rounded-lg w-fit border border-slate-200 dark:border-slate-700 font-mono">
+                    <Phone className="h-3 w-3 text-emerald-600 shrink-0" />
                     <span>WhatsApp: {(user as any).phone}</span>
                   </div>
                 )}
@@ -753,35 +794,6 @@ export function DashboardView({ initialTab = "orders" }: { initialTab?: string }
               </Button>
             </div>
           </div>
-
-          {/* Quick Metrics Strip with high-contrast text */}
-          <div className="grid grid-cols-3 gap-2.5 sm:gap-4 mt-6 pt-5 border-t border-slate-200 dark:border-slate-800">
-            <div className="bg-slate-50 dark:bg-slate-950 p-3.5 sm:p-4 rounded-2xl border border-slate-200 dark:border-slate-800">
-              <span className="text-[11px] font-black uppercase text-slate-700 dark:text-slate-300 tracking-wider block mb-1">
-                Total Orders
-              </span>
-              <span className="text-2xl sm:text-3xl font-black text-slate-950 dark:text-white block">
-                {orders.length}
-              </span>
-            </div>
-            <div className="bg-slate-50 dark:bg-slate-950 p-3.5 sm:p-4 rounded-2xl border border-slate-200 dark:border-slate-800">
-              <span className="text-[11px] font-black uppercase text-slate-700 dark:text-slate-300 tracking-wider block mb-1">
-                Downloads
-              </span>
-              <span className="text-2xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400 block">
-                {totalDownloadsCount}
-              </span>
-            </div>
-            <div className="bg-slate-50 dark:bg-slate-950 p-3.5 sm:p-4 rounded-2xl border border-slate-200 dark:border-slate-800">
-              <span className="text-[11px] font-black uppercase text-slate-700 dark:text-slate-300 tracking-wider block mb-1">
-                Access Status
-              </span>
-              <span className="text-xs sm:text-sm font-black text-violet-700 dark:text-violet-300 mt-1 flex items-center gap-1.5 truncate">
-                <Zap className="h-4 w-4 fill-current shrink-0 text-violet-600 dark:text-violet-400" />
-                <span className="truncate">Instant Active</span>
-              </span>
-            </div>
-          </div>
         </div>
 
         {/* 2. Navigation Tabs (High Contrast & Clear Inactive/Active states) */}
@@ -791,16 +803,16 @@ export function DashboardView({ initialTab = "orders" }: { initialTab?: string }
           const nextUrl = val === "downloads" ? "/dashboard/downloads" : `/dashboard${val === "orders" ? "" : `?tab=${val}`}`
           router.replace(nextUrl, { scroll: false })
         }} className="w-full">
-          <TabsList className="grid grid-cols-3 max-w-md w-full bg-slate-200/90 dark:bg-slate-800/90 p-1.5 rounded-2xl border border-slate-300 dark:border-slate-700 mb-6 shadow-inner">
+          <TabsList className="grid grid-cols-3 max-w-md w-full bg-slate-200/90 dark:bg-slate-800/90 p-1.5 rounded-2xl border border-slate-300 dark:border-slate-700 mb-6 shadow-inner h-auto min-h-[46px] items-stretch">
             {/* TAB 1: Orders */}
             <TabsTrigger
               value="orders"
-              className="rounded-xl flex items-center justify-center gap-1.5 py-2.5 text-xs font-extrabold text-slate-800 dark:text-slate-200 hover:text-slate-950 dark:hover:text-white data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:text-slate-950 dark:data-[state=active]:text-white data-[state=active]:shadow-md transition-all cursor-pointer"
+              className="h-10 sm:h-11 rounded-xl flex items-center justify-center gap-1.5 px-2 sm:px-3 text-xs sm:text-sm font-extrabold text-slate-800 dark:text-slate-200 hover:text-slate-950 dark:hover:text-white data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:text-slate-950 dark:data-[state=active]:text-white data-[state=active]:shadow-sm transition-all cursor-pointer"
             >
-              <ShoppingBag className="h-4 w-4" />
+              <ShoppingBag className="h-4 w-4 shrink-0" />
               <span>Orders</span>
               {orders.length > 0 && (
-                <span className="text-[11px] bg-slate-900 text-white dark:bg-violet-600 px-2 py-0.5 rounded-full font-black">
+                <span className="text-[10px] leading-tight bg-slate-900 text-white dark:bg-violet-600 px-1.5 py-0.5 rounded-full font-black">
                   {orders.length}
                 </span>
               )}
@@ -809,12 +821,12 @@ export function DashboardView({ initialTab = "orders" }: { initialTab?: string }
             {/* TAB 2: Downloads */}
             <TabsTrigger
               value="downloads"
-              className="rounded-xl flex items-center justify-center gap-1.5 py-2.5 text-xs font-extrabold text-slate-800 dark:text-slate-200 hover:text-slate-950 dark:hover:text-white data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:text-slate-950 dark:data-[state=active]:text-white data-[state=active]:shadow-md transition-all cursor-pointer"
+              className="h-10 sm:h-11 rounded-xl flex items-center justify-center gap-1.5 px-2 sm:px-3 text-xs sm:text-sm font-extrabold text-slate-800 dark:text-slate-200 hover:text-slate-950 dark:hover:text-white data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:text-slate-950 dark:data-[state=active]:text-white data-[state=active]:shadow-sm transition-all cursor-pointer"
             >
-              <Download className="h-4 w-4" />
+              <Download className="h-4 w-4 shrink-0" />
               <span>Downloads</span>
               {totalDownloadsCount > 0 && (
-                <span className="text-[11px] bg-emerald-600 text-white px-2 py-0.5 rounded-full font-black">
+                <span className="text-[10px] leading-tight bg-emerald-600 text-white px-1.5 py-0.5 rounded-full font-black">
                   {totalDownloadsCount}
                 </span>
               )}
@@ -823,9 +835,9 @@ export function DashboardView({ initialTab = "orders" }: { initialTab?: string }
             {/* TAB 3: Profile (MOVED TO POSITION 3 AS REQUESTED) */}
             <TabsTrigger
               value="profile"
-              className="rounded-xl flex items-center justify-center gap-1.5 py-2.5 text-xs font-extrabold text-slate-800 dark:text-slate-200 hover:text-slate-950 dark:hover:text-white data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:text-slate-950 dark:data-[state=active]:text-white data-[state=active]:shadow-md transition-all cursor-pointer"
+              className="h-10 sm:h-11 rounded-xl flex items-center justify-center gap-1.5 px-2 sm:px-3 text-xs sm:text-sm font-extrabold text-slate-800 dark:text-slate-200 hover:text-slate-950 dark:hover:text-white data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:text-slate-950 dark:data-[state=active]:text-white data-[state=active]:shadow-sm transition-all cursor-pointer"
             >
-              <User className="h-4 w-4" />
+              <User className="h-4 w-4 shrink-0" />
               <span>Profile</span>
             </TabsTrigger>
           </TabsList>
@@ -838,7 +850,7 @@ export function DashboardView({ initialTab = "orders" }: { initialTab?: string }
                 <p className="text-xs font-bold text-slate-700 dark:text-slate-300">Loading your orders...</p>
               </div>
             ) : orders.length === 0 ? (
-              <div className="text-center py-16 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-8">
+              <div className="text-center py-16 bg-white dark:bg-slate-900 border-2 border-slate-300 dark:border-slate-700 rounded-3xl p-8">
                 <div className="h-16 w-16 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-500 flex items-center justify-center mx-auto mb-4 border border-slate-200 dark:border-slate-700">
                   <Package className="h-8 w-8" />
                 </div>
@@ -861,28 +873,8 @@ export function DashboardView({ initialTab = "orders" }: { initialTab?: string }
 
           {/* ─── TAB 2 CONTENT: Downloads (Direct Slug / Direct Link Support) ──── */}
           <TabsContent value="downloads" className="space-y-4">
-            {/* Header banner explaining direct downloads */}
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-xl bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 flex items-center justify-center shrink-0 border border-emerald-200 dark:border-emerald-800">
-                  <Download className="h-5 w-5" />
-                </div>
-                <div>
-                  <h2 className="text-sm sm:text-base font-black text-slate-950 dark:text-white">
-                    Direct Downloads &amp; License Links
-                  </h2>
-                  <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">
-                    Instant access to all software files, drive links, and activation keys for your verified purchases.
-                  </p>
-                </div>
-              </div>
-              <span className="text-xs font-black text-emerald-800 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950/80 px-3 py-1 rounded-full border border-emerald-300 dark:border-emerald-800 w-fit shrink-0">
-                {totalDownloadsCount} {totalDownloadsCount === 1 ? "Product Unlocked" : "Products Unlocked"}
-              </span>
-            </div>
-
             {groupedDownloads.length === 0 ? (
-              <div className="text-center py-16 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-8">
+              <div className="text-center py-16 bg-white dark:bg-slate-900 border-2 border-slate-300 dark:border-slate-700 rounded-3xl p-8">
                 <div className="h-16 w-16 rounded-2xl bg-violet-100 dark:bg-violet-950/60 text-violet-700 dark:text-violet-300 border border-violet-200 dark:border-violet-800 flex items-center justify-center mx-auto mb-4">
                   <Download className="h-8 w-8" />
                 </div>
@@ -899,22 +891,21 @@ export function DashboardView({ initialTab = "orders" }: { initialTab?: string }
                 {groupedDownloads.map((group, groupIdx) => (
                   <div
                     key={groupIdx}
-                    className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl overflow-hidden shadow-xs hover:shadow-md transition-all"
+                    className="bg-white dark:bg-slate-900 border-2 border-slate-300 dark:border-slate-700 rounded-2xl sm:rounded-3xl overflow-hidden shadow-sm hover:shadow-md transition-all"
                   >
-                    <div className="bg-slate-100 dark:bg-slate-800/80 px-5 py-3.5 border-b border-slate-200 dark:border-slate-700 flex flex-wrap justify-between items-center gap-3">
+                    <div className="bg-slate-100/90 dark:bg-slate-800/80 px-4 sm:px-5 py-3 border-b-2 border-slate-200 dark:border-slate-700 flex flex-wrap justify-between items-center gap-2.5">
                       <div>
-                        <span className="text-[11px] uppercase font-black text-violet-700 dark:text-violet-300 tracking-wider">
-                          Verified Order
-                        </span>
-                        <div className="flex items-center gap-2 mt-0.5">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] sm:text-[11px] uppercase font-black text-violet-700 dark:text-violet-300 tracking-wider bg-violet-100 dark:bg-violet-950/80 px-2 py-0.5 rounded-md border border-violet-200 dark:border-violet-800">
+                            Order
+                          </span>
                           <span className="font-mono text-xs sm:text-sm font-black text-slate-950 dark:text-white">
                             {group.orderId}
                           </span>
-                          <span className="text-slate-400">•</span>
-                          <span className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">
-                            <CalendarDays className="h-3.5 w-3.5 text-slate-500" /> {formatDateTime(group.orderDate)}
-                          </span>
                         </div>
+                        <p className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1 mt-1">
+                          <CalendarDays className="h-3.5 w-3.5 text-slate-500" /> {formatDateTime(group.orderDate)}
+                        </p>
                       </div>
                       <span className="inline-flex items-center gap-1.5 text-xs font-black uppercase px-3 py-1 rounded-full bg-emerald-100 text-emerald-900 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 shadow-2xs">
                         <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
@@ -966,7 +957,7 @@ export function DashboardView({ initialTab = "orders" }: { initialTab?: string }
 
           {/* ─── TAB 3 CONTENT: Profile (MOVED TO POSITION 3) ────────────────── */}
           <TabsContent value="profile">
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 sm:p-7 shadow-xs">
+            <div className="bg-white dark:bg-slate-900 border-2 border-slate-300 dark:border-slate-700 rounded-2xl sm:rounded-3xl p-5 sm:p-7 shadow-xs">
               <div className="flex items-center gap-3 pb-4 mb-5 border-b border-slate-200 dark:border-slate-800">
                 <div className="h-10 w-10 rounded-xl bg-violet-100 dark:bg-violet-950/80 text-violet-700 dark:text-violet-300 border border-violet-200 dark:border-violet-800 flex items-center justify-center shrink-0">
                   <User className="h-5 w-5" />
