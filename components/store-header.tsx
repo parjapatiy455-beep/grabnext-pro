@@ -270,22 +270,22 @@ export function StoreHeader() {
                   </div>
 
                   {/* Menu Items with Icons */}
-                  <DropdownMenuItem asChild className="rounded-xl p-2 text-xs font-bold cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 focus:bg-slate-100 dark:focus:bg-slate-800">
-                    <Link href="/dashboard" className="flex items-center gap-2.5 text-slate-800 dark:text-slate-100">
+                  <DropdownMenuItem asChild className="rounded-xl p-2 text-xs font-bold cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 focus:bg-slate-100 dark:focus:bg-slate-800 focus:text-slate-950 dark:focus:text-white">
+                    <Link href="/dashboard" className="flex items-center gap-2.5 text-slate-900 dark:text-slate-100 hover:text-slate-950 dark:hover:text-white">
                       <LayoutDashboard className="h-4 w-4 text-violet-600" />
                       <span>My Dashboard</span>
                     </Link>
                   </DropdownMenuItem>
 
-                  <DropdownMenuItem asChild className="rounded-xl p-2 text-xs font-bold cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 focus:bg-slate-100 dark:focus:bg-slate-800">
-                    <Link href="/dashboard" className="flex items-center gap-2.5 text-slate-800 dark:text-slate-100">
+                  <DropdownMenuItem asChild className="rounded-xl p-2 text-xs font-bold cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 focus:bg-slate-100 dark:focus:bg-slate-800 focus:text-slate-950 dark:focus:text-white">
+                    <Link href="/dashboard" className="flex items-center gap-2.5 text-slate-900 dark:text-slate-100 hover:text-slate-950 dark:hover:text-white">
                       <ShoppingBag className="h-4 w-4 text-emerald-600" />
                       <span>My Orders &amp; Receipts</span>
                     </Link>
                   </DropdownMenuItem>
 
-                  <DropdownMenuItem asChild className="rounded-xl p-2 text-xs font-bold cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 focus:bg-slate-100 dark:focus:bg-slate-800">
-                    <Link href="/dashboard/downloads" className="flex items-center gap-2.5 text-slate-800 dark:text-slate-100">
+                  <DropdownMenuItem asChild className="rounded-xl p-2 text-xs font-bold cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 focus:bg-slate-100 dark:focus:bg-slate-800 focus:text-slate-950 dark:focus:text-white">
+                    <Link href="/dashboard/downloads" className="flex items-center gap-2.5 text-slate-900 dark:text-slate-100 hover:text-slate-950 dark:hover:text-white">
                       <Download className="h-4 w-4 text-blue-600" />
                       <span>Instant Downloads</span>
                     </Link>
@@ -295,7 +295,7 @@ export function StoreHeader() {
                   {isAdmin && (
                     <>
                       <DropdownMenuSeparator className="my-1.5 bg-slate-100 dark:bg-slate-800" />
-                      <DropdownMenuItem asChild className="rounded-xl p-2 text-xs font-bold cursor-pointer bg-violet-50 dark:bg-violet-950/40 text-violet-700 dark:text-violet-300 hover:bg-violet-100 dark:hover:bg-violet-900/50">
+                      <DropdownMenuItem asChild className="rounded-xl p-2 text-xs font-bold cursor-pointer bg-violet-50 dark:bg-violet-950/40 text-violet-700 dark:text-violet-300 hover:bg-violet-100 dark:hover:bg-violet-900/50 focus:bg-violet-100 dark:focus:bg-violet-900/50 focus:text-violet-900 dark:focus:text-white">
                         <Link href="/admin" className="flex items-center justify-between w-full">
                           <span className="flex items-center gap-2.5">
                             <ShieldCheck className="h-4 w-4 text-violet-600" />
@@ -313,7 +313,7 @@ export function StoreHeader() {
                   {isGuest && (
                     <>
                       <DropdownMenuSeparator className="my-1.5 bg-slate-100 dark:bg-slate-800" />
-                      <DropdownMenuItem asChild className="rounded-xl p-2 text-xs font-bold cursor-pointer bg-red-50 text-red-600 hover:bg-red-100">
+                      <DropdownMenuItem asChild className="rounded-xl p-2 text-xs font-bold cursor-pointer bg-red-50 text-red-600 hover:bg-red-100 focus:bg-red-100 focus:text-red-700">
                         <Link href="/dashboard/confirm-account" className="flex items-center gap-2">
                           <Key className="h-4 w-4" />
                           <span>Set Permanent Password</span>
@@ -331,7 +331,7 @@ export function StoreHeader() {
                       await refreshUser()
                       window.location.href = "/auth/login"
                     }}
-                    className="rounded-xl p-2 text-xs font-bold text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 focus:bg-red-50 dark:focus:bg-red-950/40 cursor-pointer flex items-center gap-2.5"
+                    className="rounded-xl p-2 text-xs font-bold text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 focus:bg-red-50 dark:focus:bg-red-950/40 focus:text-red-700 dark:focus:text-red-300 cursor-pointer flex items-center gap-2.5"
                   >
                     <LogOut className="h-4 w-4 text-red-600" />
                     <span>Sign Out</span>
