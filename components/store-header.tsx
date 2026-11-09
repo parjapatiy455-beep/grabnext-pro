@@ -285,7 +285,7 @@ export function StoreHeader() {
                   </DropdownMenuItem>
 
                   <DropdownMenuItem asChild className="rounded-xl p-2 text-xs font-bold cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 focus:bg-slate-100 dark:focus:bg-slate-800">
-                    <Link href="/dashboard" className="flex items-center gap-2.5 text-slate-800 dark:text-slate-100">
+                    <Link href="/dashboard/downloads" className="flex items-center gap-2.5 text-slate-800 dark:text-slate-100">
                       <Download className="h-4 w-4 text-blue-600" />
                       <span>Instant Downloads</span>
                     </Link>

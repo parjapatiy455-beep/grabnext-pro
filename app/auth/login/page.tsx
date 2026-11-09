@@ -22,6 +22,15 @@ export default function LoginPage() {
   const { refreshUser } = useAuth()
 
   const handleRedirect = (userEmail: string | null) => {
+    let nextUrl = ""
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search)
+      nextUrl = params.get("redirect") || ""
+    }
+    if (nextUrl) {
+      router.push(nextUrl)
+      return
+    }
     if (userEmail && userEmail.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
       router.push("/admin")
     } else {
