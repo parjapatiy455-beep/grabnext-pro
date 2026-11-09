@@ -43,43 +43,36 @@ import Link from "next/link"
 import { DigitalProductViewer } from "@/components/digital-product-viewer"
 import { fbq } from "@/lib/pixel"
 
-// ─── High-Contrast Status Badges (Clean WCAG AA Design) ──────────────────────
+// ─── Simplified Status Badges ──────────────────────────────────────────────────
 function StatusBadge({ status }: { status: string }) {
   const norm = (status || "").toLowerCase()
   if (norm === "paid" || norm === "completed") {
     return (
-      <span className="inline-flex items-center gap-1.5 text-xs font-black px-3 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950/70 text-emerald-900 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 shadow-2xs">
-        <span className="h-2 w-2 rounded-full bg-emerald-600 dark:bg-emerald-400 animate-pulse" />
-        Paid &amp; Active
+      <span className="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse" />
+        Paid
       </span>
     )
   }
   if (norm === "pending") {
     return (
-      <span className="inline-flex items-center gap-1.5 text-xs font-black px-3 py-1 rounded-full bg-amber-100 dark:bg-amber-950/70 text-amber-900 dark:text-amber-300 border border-amber-300 dark:border-amber-700 shadow-2xs">
-        <Clock className="h-3.5 w-3.5 text-amber-700 dark:text-amber-400" />
-        Payment Pending
+      <span className="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+        <Clock className="h-3 w-3" />
+        Pending
       </span>
     )
   }
-  if (norm === "failed") {
+  if (norm === "failed" || norm === "refunded") {
     return (
-      <span className="inline-flex items-center gap-1.5 text-xs font-black px-3 py-1 rounded-full bg-rose-100 dark:bg-rose-950/70 text-rose-900 dark:text-rose-300 border border-rose-300 dark:border-rose-700 shadow-2xs">
-        <XCircle className="h-3.5 w-3.5 text-rose-700 dark:text-rose-400" />
-        Failed
-      </span>
-    )
-  }
-  if (norm === "refunded") {
-    return (
-      <span className="inline-flex items-center gap-1.5 text-xs font-black px-3 py-1 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700">
-        Refunded
+      <span className="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
+        <span className="h-1.5 w-1.5 rounded-full bg-slate-400" />
+        {norm === "refunded" ? "Refunded" : "Incomplete"}
       </span>
     )
   }
   return (
-    <span className="inline-flex items-center gap-1.5 text-xs font-black px-3 py-1 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700">
-      <span className="h-1.5 w-1.5 rounded-full bg-slate-500" />
+    <span className="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
+      <span className="h-1.5 w-1.5 rounded-full bg-slate-400" />
       {norm ? norm.charAt(0).toUpperCase() + norm.slice(1) : "Unknown"}
     </span>
   )
@@ -236,7 +229,7 @@ function FreshDownloadCard({ item }: { item: any }) {
   )
 }
 
-// ─── Modern High-Contrast Order Card Component ──────────────────────────────
+// ─── Clean Simple Order Card ─────────────────────────────────────────────────
 function OrderCard({ order, onPay }: { order: any; onPay?: (order: any) => void }) {
   const [expanded, setExpanded] = useState(false)
   const [copied, setCopied] = useState(false)
@@ -250,6 +243,13 @@ function OrderCard({ order, onPay }: { order: any; onPay?: (order: any) => void 
   const isFailed = order.status === "failed"
   const isPending = order.status === "pending"
 
+  // Left-border color based on status
+  const leftBorderColor = isPaid
+    ? "border-l-emerald-500"
+    : isPending
+    ? "border-l-amber-400"
+    : "border-l-slate-300 dark:border-l-slate-600"
+
   const copyOrderId = (e: React.MouseEvent) => {
     e.stopPropagation()
     navigator.clipboard.writeText(order.id)
@@ -259,180 +259,139 @@ function OrderCard({ order, onPay }: { order: any; onPay?: (order: any) => void 
   }
 
   return (
-    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl overflow-hidden shadow-xs hover:shadow-md transition-all">
-      {/* Order Header / Summary Row */}
+    <div className={`bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 border-l-4 ${leftBorderColor} rounded-2xl overflow-hidden shadow-xs hover:shadow-sm transition-all`}>
+      {/* Order Row — always stable, single layout */}
       <div
-        className="p-4 sm:p-5 cursor-pointer flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+        className="p-4 sm:p-5 cursor-pointer flex items-center gap-3 hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors"
         onClick={() => setExpanded(!expanded)}
       >
-        {/* Left: ID & Date */}
-        <div className="flex items-start gap-3.5">
-          <div className="h-11 w-11 rounded-2xl bg-violet-100 text-violet-700 dark:bg-slate-800 dark:text-violet-400 border border-violet-200/80 dark:border-slate-700 flex items-center justify-center shrink-0">
-            <Package className="h-5 w-5" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="font-mono text-sm sm:text-base font-black text-slate-950 dark:text-white">
-                {order.id}
-              </span>
-              <button
-                type="button"
-                onClick={copyOrderId}
-                className="text-slate-600 hover:text-slate-950 dark:text-slate-400 dark:hover:text-white p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition-colors"
-                title="Copy Order ID"
-              >
-                {copied ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />}
-              </button>
-            </div>
-            <p className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5 mt-0.5">
-              <CalendarDays className="h-3.5 w-3.5 text-slate-500 dark:text-slate-400" />
-              <span>{formatDateTime(order.createdAt)}</span>
-            </p>
-          </div>
+        {/* Package Icon */}
+        <div className="h-10 w-10 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 flex items-center justify-center shrink-0">
+          <Package className="h-5 w-5" />
         </div>
 
-        {/* Center: Total Price & Items count */}
-        <div className="flex items-center justify-between md:justify-center gap-6 border-y md:border-y-0 border-slate-200/80 dark:border-slate-800 py-2.5 md:py-0">
-          <div>
-            <span className="text-[11px] uppercase font-black text-slate-600 dark:text-slate-400 block tracking-wider">
-              Total
+        {/* Middle: Order info */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="font-mono text-sm font-bold text-slate-900 dark:text-white truncate">
+              {order.id}
             </span>
-            <span className="text-lg sm:text-xl font-black text-slate-950 dark:text-white">
+            <button
+              type="button"
+              onClick={copyOrderId}
+              className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-0.5 rounded transition-colors shrink-0"
+              title="Copy Order ID"
+            >
+              {copied ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
+            </button>
+          </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 flex items-center gap-1">
+            <CalendarDays className="h-3 w-3 shrink-0" />
+            {formatDateTime(order.createdAt)}
+          </p>
+        </div>
+
+        {/* Right: Amount + Status + Chevron */}
+        <div className="flex items-center gap-2.5 shrink-0">
+          <div className="text-right hidden sm:block">
+            <span className="text-sm font-bold text-slate-900 dark:text-white block">
+              ₹{Number(order.totalAmount || 0).toLocaleString("en-IN")}
+            </span>
+            <StatusBadge status={order.status} />
+          </div>
+          {/* Mobile: show amount inline */}
+          <div className="sm:hidden text-right">
+            <span className="text-sm font-bold text-slate-900 dark:text-white block">
               ₹{Number(order.totalAmount || 0).toLocaleString("en-IN")}
             </span>
           </div>
-
-          <div className="md:hidden">
-            <StatusBadge status={order.status} />
+          <div className="h-8 w-8 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 flex items-center justify-center transition-colors shrink-0">
+            {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
           </div>
         </div>
+      </div>
 
-        {/* Right: Status badge & Chevron */}
-        <div className="flex items-center justify-between md:justify-end gap-3.5">
-          <div className="hidden md:flex flex-col items-end gap-1">
-            <StatusBadge status={order.status} />
-            <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
-              <Zap className="h-3 w-3 fill-current" /> Instant Digital Access
-            </span>
-          </div>
-
-          <button
-            type="button"
-            className="h-9 w-9 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors shrink-0 ml-auto md:ml-0"
-            aria-label="Toggle details"
-          >
-            {expanded ? <ChevronUp className="h-4.5 w-4.5" /> : <ChevronDown className="h-4.5 w-4.5" />}
-          </button>
-        </div>
+      {/* Mobile status badge row */}
+      <div className="sm:hidden px-4 pb-3 flex items-center justify-between">
+        <StatusBadge status={order.status} />
       </div>
 
       {/* Expanded Order Details */}
       {expanded && (
-        <div className="px-4 sm:px-6 pb-6 pt-2 border-t border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950/70 space-y-4">
-          {/* Customer / Order Metadata Pills */}
-          <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs text-slate-800 dark:text-slate-200 pt-3">
-            {order.userName && (
-              <span className="bg-white dark:bg-slate-900 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 font-bold shadow-2xs">
-                Customer: <strong className="text-slate-950 dark:text-white font-black">{order.userName}</strong>
-              </span>
-            )}
-            {order.userEmail && (
-              <span className="bg-white dark:bg-slate-900 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 font-bold shadow-2xs truncate max-w-xs">
-                Email: <strong className="text-slate-950 dark:text-white font-black">{order.userEmail}</strong>
-              </span>
-            )}
-            {order.userPhone && (
-              <span className="bg-white dark:bg-slate-900 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 font-bold shadow-2xs">
-                WhatsApp: <strong className="text-slate-950 dark:text-white font-black">{order.userPhone}</strong>
-              </span>
-            )}
-            {order.paymentId && (
-              <span className="bg-white dark:bg-slate-900 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 font-bold font-mono text-xs shadow-2xs">
-                UTR / Ref: <strong className="text-slate-950 dark:text-white font-black">{order.paymentId}</strong>
-              </span>
-            )}
-          </div>
+        <div className="px-4 sm:px-5 pb-5 pt-1 border-t border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-950/50 space-y-4">
 
-          {/* Action Callout if Pending / Failed */}
+          {/* Action Callout if Pending / Failed — simple amber prompt */}
           {(isPending || isFailed) && onPay && (
-            <div className="p-4 rounded-2xl bg-amber-100/90 dark:bg-amber-950/60 border border-amber-300 dark:border-amber-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
-              <div className="flex items-center gap-3">
-                <AlertTriangle className="h-6 w-6 text-amber-800 dark:text-amber-400 shrink-0" />
-                <div>
-                  <p className="text-xs sm:text-sm font-black text-amber-950 dark:text-amber-200">
-                    {isFailed ? "Payment was incomplete or failed" : "Order is awaiting payment"}
-                  </p>
-                  <p className="text-xs font-bold text-amber-800 dark:text-amber-300 mt-0.5">
-                    Complete payment to instantly unlock your digital downloads &amp; license keys.
-                  </p>
-                </div>
-              </div>
+            <div className="mt-3 p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <p className="text-xs font-semibold text-amber-900 dark:text-amber-200">
+                Payment not completed. Complete it to get instant access to your files.
+              </p>
               <Button
                 size="sm"
                 onClick={() => onPay(order)}
-                className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs px-5 h-10 rounded-xl shadow-md shrink-0 cursor-pointer"
+                className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs px-5 h-9 rounded-xl shrink-0 cursor-pointer"
               >
-                <CreditCard className="h-4 w-4 mr-1.5" />
-                <span>Pay ₹{Number(order.totalAmount || 0).toLocaleString("en-IN")} Now</span>
+                <CreditCard className="h-3.5 w-3.5 mr-1.5" />
+                Pay ₹{Number(order.totalAmount || 0).toLocaleString("en-IN")}
               </Button>
             </div>
           )}
 
           {/* Ordered Products List */}
-          <div className="space-y-3">
-            <p className="text-xs font-black uppercase text-slate-700 dark:text-slate-300 tracking-wider flex items-center gap-1.5">
-              <ShoppingBag className="h-4 w-4 text-violet-600" />
-              <span>Purchased Products ({items.length})</span>
+          <div className="space-y-2.5 mt-3">
+            <p className="text-xs font-bold text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+              <ShoppingBag className="h-3.5 w-3.5" />
+              Items in this order ({items.length})
             </p>
 
             {items.map((item: any, i: number) => (
               <div
                 key={i}
-                className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3.5 sm:p-4 space-y-3 shadow-xs"
+                className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 sm:p-3.5 space-y-2.5"
               >
-                <div className="flex gap-3.5 items-center">
-                  {/* Thumbnail strictly sized */}
-                  <div className="w-14 h-14 min-w-[56px] min-h-[56px] max-w-[56px] max-h-[56px] rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 overflow-hidden shrink-0 flex items-center justify-center p-1">
+                <div className="flex gap-3 items-center">
+                  {/* Thumbnail */}
+                  <div className="w-12 h-12 min-w-[48px] min-h-[48px] max-w-[48px] max-h-[48px] rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 overflow-hidden shrink-0 flex items-center justify-center p-1">
                     <img
                       src={item.imageUrl || "/placeholder.svg"}
                       alt={item.title}
-                      className="w-full h-full max-w-full max-h-full object-contain aspect-square"
+                      className="w-full h-full max-w-full max-h-full object-contain"
                     />
                   </div>
 
-                  {/* Title & Qty */}
+                  {/* Title */}
                   <div className="flex-1 min-w-0">
                     {item.id ? (
                       <Link
                         href={`/products/${item.id}`}
-                        className="font-black text-xs sm:text-sm text-slate-950 dark:text-white hover:text-violet-600 transition-colors line-clamp-2"
+                        className="font-semibold text-xs sm:text-sm text-slate-900 dark:text-white hover:text-violet-600 transition-colors line-clamp-2"
                       >
                         {item.title}
                       </Link>
                     ) : (
-                      <p className="font-black text-xs sm:text-sm text-slate-950 dark:text-white line-clamp-2">
+                      <p className="font-semibold text-xs sm:text-sm text-slate-900 dark:text-white line-clamp-2">
                         {item.title}
                       </p>
                     )}
-                    <p className="text-xs font-bold text-slate-700 dark:text-slate-300 mt-0.5">
-                      Qty: {item.quantity || 1} • ₹{Number(item.price || 0).toLocaleString("en-IN")} each
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                      ₹{Number(item.price || 0).toLocaleString("en-IN")} × {item.quantity || 1}
                     </p>
                   </div>
 
-                  {/* Item Total */}
+                  {/* Total */}
                   <div className="text-right shrink-0">
-                    <span className="font-black text-base text-slate-950 dark:text-white">
+                    <span className="font-bold text-sm text-slate-900 dark:text-white">
                       ₹{((item.price || 0) * (item.quantity || 1)).toLocaleString("en-IN")}
                     </span>
                   </div>
                 </div>
 
-                {/* Digital Download Links (if paid) */}
+                {/* Download Links (if paid) */}
                 {isPaid && (
-                  <div className="pt-3 border-t border-slate-200/80 dark:border-slate-800">
-                    <div className="flex items-center gap-1.5 text-xs font-black text-emerald-700 dark:text-emerald-400 mb-1.5">
-                      <CheckCircle2 className="h-4 w-4" />
-                      <span>Ready for Instant Download</span>
+                  <div className="pt-2.5 border-t border-slate-100 dark:border-slate-800">
+                    <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400 mb-1.5">
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                      <span>Download Ready</span>
                     </div>
                     <FreshDownloadCard item={item} />
                   </div>
