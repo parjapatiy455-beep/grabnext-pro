@@ -6,6 +6,14 @@ import { cookies } from 'next/headers';
 
 export const dynamic = 'force-dynamic';
 
+async function hashPassword(password: string): Promise<string> {
+  const encoder = new TextEncoder()
+  const data = encoder.encode(password)
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data)
+  const hashArray = Array.from(new Uint8Array(hashBuffer))
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { email, password } = await request.json();
@@ -14,16 +22,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Email and password are required' }, { status: 400 });
     }
 
-    const users = await executeQuery('SELECT * FROM users WHERE email = ?', [email]);
+    const cleanEmail = email.trim().toLowerCase();
+    const users = await executeQuery('SELECT * FROM users WHERE LOWER(email) = ?', [cleanEmail]);
     if (!users || users.length === 0) {
       return NextResponse.json({ error: 'Invalid email or password' }, { status: 401 });
     }
 
     const user = users[0] as any;
+    const hashed = await hashPassword(password);
 
-    // Simple plain text password check for demo purposes
-    // In production, use bcrypt or argon2
-    if (user.passwordHash !== password) {
+    // Support both plaintext and SHA-256 password hash for seamless backward compatibility
+    const isPasswordValid = user.passwordHash === password || user.passwordHash === hashed;
+    if (!isPasswordValid) {
       return NextResponse.json({ error: 'Invalid email or password' }, { status: 401 });
     }
 

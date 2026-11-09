@@ -1170,3 +1170,132 @@ export function generateOfferEmailHtml({
     </html>
   `
 }
+
+/**
+ * Sends a Secure Password Reset Link Email
+ */
+export async function sendPasswordResetEmail({
+  toEmail,
+  toName,
+  resetUrl,
+}: {
+  toEmail: string
+  toName?: string
+  resetUrl: string
+}) {
+  try {
+    const { appUrl, senderName, whatsappNumber } = await getBrevoSettings()
+    const logoUrl = `${appUrl}/logo.webp`
+    const recipientName = toName || toEmail.split('@')[0] || 'Valued User'
+
+    const responsiveStyle = `
+      @keyframes pulseGlow {
+        0% { box-shadow: 0 0 0 0 rgba(124, 58, 237, 0.4); }
+        50% { box-shadow: 0 0 16px 4px rgba(124, 58, 237, 0.5); }
+        100% { box-shadow: 0 0 0 0 rgba(124, 58, 237, 0.4); }
+      }
+      @keyframes shimmer {
+        0% { background-position: -200% 0; }
+        100% { background-position: 200% 0; }
+      }
+      .animated-header-bar {
+        height: 4px;
+        background: linear-gradient(90deg, #7c3aed, #a855f7, #6366f1, #7c3aed);
+        background-size: 200% 100%;
+        animation: shimmer 3s infinite linear;
+      }
+      .pulse-btn {
+        animation: pulseGlow 2.5s infinite ease-in-out;
+      }
+      @media only screen and (max-width: 600px) {
+        .email-body { padding: 0 !important; background-color: #ffffff !important; }
+        .email-card { width: 100% !important; max-width: 100% !important; border-radius: 0px !important; box-shadow: none !important; margin: 0 !important; }
+        .content-box { padding: 20px 14px !important; }
+        .header-box { padding: 22px 14px !important; }
+      }
+    `
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Reset Your Password - ${senderName}</title>
+        <style>${responsiveStyle}</style>
+      </head>
+      <body class="email-body" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f1f5f9; margin: 0; padding: 24px 0; -webkit-text-size-adjust: 100%;">
+        <div class="email-card" style="max-width: 580px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.08); border: 1px solid #e2e8f0;">
+          <div class="animated-header-bar"></div>
+          
+          <!-- Header -->
+          <div class="header-box" style="background-color: #ffffff; border-bottom: 1px solid #e2e8f0; padding: 20px 24px; text-align: center;">
+            <img src="${logoUrl}" alt="${senderName}" style="height: 40px; max-height: 40px; width: auto; margin: 0 auto; display: block; border: 0;" />
+          </div>
+
+          <!-- Content -->
+          <div class="content-box" style="padding: 28px 24px;">
+            <div style="text-align: center; margin-bottom: 24px;">
+              <div style="display: inline-block; width: 56px; height: 56px; line-height: 56px; background-color: #ede9fe; border-radius: 50%; font-size: 26px; text-align: center; margin-bottom: 12px;">
+                🔐
+              </div>
+              <h2 style="margin: 0; color: #0f172a; font-size: 22px; font-weight: 800; line-height: 1.3;">
+                Password Reset Request
+              </h2>
+              <p style="margin: 6px 0 0 0; color: #64748b; font-size: 13px;">
+                We received a request to reset the password for your ${senderName} account.
+              </p>
+            </div>
+
+            <p style="font-size: 14px; color: #334155; line-height: 1.6; margin-bottom: 20px;">
+              Hi <strong>${recipientName}</strong>,<br>
+              You can easily choose a new password by clicking the secure button below:
+            </p>
+
+            <!-- Reset Button -->
+            <div style="text-align: center; margin: 28px 0;">
+              <a href="${resetUrl}" target="_blank" class="pulse-btn" style="background: linear-gradient(135deg, #7c3aed 0%, #6366f1 100%); color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 12px; font-size: 15px; font-weight: 800; display: inline-block; box-shadow: 0 4px 14px rgba(124, 58, 237, 0.35);">
+                🔑 Reset My Password
+              </a>
+            </div>
+
+            <!-- Expiry Warning Box -->
+            <div style="background-color: #fffbeb; border: 1px solid #fde68a; border-radius: 12px; padding: 14px 18px; margin-bottom: 20px;">
+              <p style="margin: 0; font-size: 12px; color: #92400e; line-height: 1.5;">
+                ⏱️ <strong>Note:</strong> This password reset link is valid for <strong>1 hour</strong> and can only be used once. If you did not request this, you can safely ignore this email — your account remains 100% secure.
+              </p>
+            </div>
+
+            <!-- Fallback URL -->
+            <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 16px; margin-bottom: 20px; font-size: 12px; color: #64748b; word-break: break-all;">
+              <p style="margin: 0 0 4px 0; font-weight: 600; color: #475569;">If the button above does not work, copy and paste this link into your browser:</p>
+              <a href="${resetUrl}" style="color: #7c3aed; text-decoration: underline;">${resetUrl}</a>
+            </div>
+
+            ${getWhatsAppBoxHtml(whatsappNumber, senderName, 'password reset help')}
+          </div>
+
+          <!-- Footer -->
+          <div style="background-color: #f8fafc; padding: 18px 20px; text-align: center; border-top: 1px solid #e2e8f0; font-size: 12px; color: #94a3b8;">
+            © ${new Date().getFullYear()} ${senderName}. All rights reserved.<br>
+            <span style="font-size: 11px; color: #cbd5e1;">Sent with secure encryption from ${senderName} Security Team.</span>
+          </div>
+        </div>
+      </body>
+      </html>
+    `
+
+    const result = await sendBrevoEmail({
+      toEmail,
+      toName: recipientName,
+      subject: `Reset Your Password - ${senderName}`,
+      htmlContent,
+      tags: ['password-reset'],
+    })
+
+    return result
+  } catch (error: any) {
+    console.error('[Send Password Reset Email Error]', error)
+    return { success: false, error: error.message || 'Error processing password reset email' }
+  }
+}

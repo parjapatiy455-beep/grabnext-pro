@@ -126,7 +126,7 @@ export default function LoginPage() {
                     Password
                   </label>
                   <Link
-                    href="/dashboard/confirm-account"
+                    href="/auth/forgot-password"
                     className="text-[11px] font-semibold text-violet-600 dark:text-violet-400 hover:underline"
                   >
                     Forgot password?
