@@ -45,6 +45,11 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       originalPrice: row.originalPrice ? Number(row.originalPrice) : null,
       salesCount: Number(row.salesCount),
       displayOrder: Number(row.displayOrder || 0),
+      enableDiscountPopup: Boolean(row.enableDiscountPopup),
+      discountPopupPercent: Number(row.discountPopupPercent || 50),
+      discountPopupCoupon: row.discountPopupCoupon || 'SAVE50',
+      discountPopupTimerMinutes: Number(row.discountPopupTimerMinutes || 10),
+      discountPopupHeadline: row.discountPopupHeadline || '',
     }, {
       headers: {
         'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300',
@@ -73,24 +78,35 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     const displayOrder = typeof data.displayOrder === 'number' ? data.displayOrder : (parseInt(data.displayOrder, 10) || 0)
     const videoUrl = data.videoUrl !== undefined ? (data.videoUrl ? String(data.videoUrl).trim() : null) : null
     const proofImages = Array.isArray(data.proofImages) ? data.proofImages : []
+    const enableDiscountPopup = data.enableDiscountPopup !== undefined ? (data.enableDiscountPopup ? 1 : 0) : 0
+    const discountPopupPercent = typeof data.discountPopupPercent === 'number' ? data.discountPopupPercent : (parseInt(data.discountPopupPercent, 10) || 50)
+    const discountPopupCoupon = (data.discountPopupCoupon || 'SAVE50').trim().toUpperCase()
+    const discountPopupTimerMinutes = typeof data.discountPopupTimerMinutes === 'number' ? data.discountPopupTimerMinutes : (parseInt(data.discountPopupTimerMinutes, 10) || 10)
+    const discountPopupHeadline = data.discountPopupHeadline ? String(data.discountPopupHeadline).trim() : null
 
     // Ensure columns exist
     await executeQuery('ALTER TABLE products ADD COLUMN displayOrder INTEGER DEFAULT 0').catch(() => {})
     await executeQuery('ALTER TABLE products ADD COLUMN videoUrl TEXT').catch(() => {})
     await executeQuery('ALTER TABLE products ADD COLUMN proofImages TEXT').catch(() => {})
+    await executeQuery('ALTER TABLE products ADD COLUMN enableDiscountPopup INTEGER DEFAULT 0').catch(() => {})
+    await executeQuery('ALTER TABLE products ADD COLUMN discountPopupPercent INTEGER DEFAULT 50').catch(() => {})
+    await executeQuery("ALTER TABLE products ADD COLUMN discountPopupCoupon TEXT DEFAULT 'SAVE50'").catch(() => {})
+    await executeQuery('ALTER TABLE products ADD COLUMN discountPopupTimerMinutes INTEGER DEFAULT 10').catch(() => {})
+    await executeQuery('ALTER TABLE products ADD COLUMN discountPopupHeadline TEXT').catch(() => {})
 
     try {
+      await executeQuery(
+        `UPDATE products SET title=?, description=?, price=?, originalPrice=?, category=?, tags=?, imageUrl=?, images=?, videoUrl=?, proofImages=?, slug=?, downloadUrl=?, isActive=?, pageCode=?, pageType=?, displayOrder=?, enableDiscountPopup=?, discountPopupPercent=?, discountPopupCoupon=?, discountPopupTimerMinutes=?, discountPopupHeadline=?, updatedAt=? WHERE id=?`,
+        [data.title, data.description || '', data.price, data.originalPrice || null, data.category,
+        JSON.stringify(data.tags || []), imageUrl, JSON.stringify(images), videoUrl, JSON.stringify(proofImages), slug,
+        data.downloadUrl || '', data.isActive ? 1 : 0, data.pageCode || null, data.pageType || 'shop', displayOrder,
+        enableDiscountPopup, discountPopupPercent, discountPopupCoupon, discountPopupTimerMinutes, discountPopupHeadline, now, params.id]
+      )
+    } catch (err: any) {
       await executeQuery(
         `UPDATE products SET title=?, description=?, price=?, originalPrice=?, category=?, tags=?, imageUrl=?, images=?, videoUrl=?, proofImages=?, slug=?, downloadUrl=?, isActive=?, pageCode=?, pageType=?, displayOrder=?, updatedAt=? WHERE id=?`,
         [data.title, data.description || '', data.price, data.originalPrice || null, data.category,
         JSON.stringify(data.tags || []), imageUrl, JSON.stringify(images), videoUrl, JSON.stringify(proofImages), slug,
-        data.downloadUrl || '', data.isActive ? 1 : 0, data.pageCode || null, data.pageType || 'shop', displayOrder, now, params.id]
-      )
-    } catch (err: any) {
-      await executeQuery(
-        `UPDATE products SET title=?, description=?, price=?, originalPrice=?, category=?, tags=?, imageUrl=?, images=?, slug=?, downloadUrl=?, isActive=?, pageCode=?, pageType=?, displayOrder=?, updatedAt=? WHERE id=?`,
-        [data.title, data.description || '', data.price, data.originalPrice || null, data.category,
-        JSON.stringify(data.tags || []), imageUrl, JSON.stringify(images), slug,
         data.downloadUrl || '', data.isActive ? 1 : 0, data.pageCode || null, data.pageType || 'shop', displayOrder, now, params.id]
       ).catch(async () => {
         await executeQuery(
@@ -102,6 +118,26 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       })
     }
     return NextResponse.json({ success: true, slug })
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+}
+
+// PATCH /api/products/[id] — Quick toggle of fields (e.g. discount popup)
+export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
+  try {
+    const data = await request.json()
+    const now = Date.now()
+
+    await executeQuery('ALTER TABLE products ADD COLUMN enableDiscountPopup INTEGER DEFAULT 0').catch(() => {})
+
+    if (data.enableDiscountPopup !== undefined) {
+      const val = data.enableDiscountPopup ? 1 : 0
+      await executeQuery('UPDATE products SET enableDiscountPopup = ?, updatedAt = ? WHERE id = ?', [val, now, params.id])
+      return NextResponse.json({ success: true, enableDiscountPopup: val })
+    }
+
+    return NextResponse.json({ success: true })
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }

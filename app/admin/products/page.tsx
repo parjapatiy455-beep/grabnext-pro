@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
-import { fetchProducts, createD1Product, updateD1Product, deleteD1Product, fetchCategories, reorderD1Products } from "@/lib/d1-client"
+import { fetchProducts, createD1Product, updateD1Product, deleteD1Product, fetchCategories, reorderD1Products, toggleProductDiscountPopup } from "@/lib/d1-client"
 import { Plus, Search, Trash2, Edit, Loader2, Upload, ImageIcon, FileText, Video, Link as LinkIcon, File as FileIcon, X, ArrowUp, ArrowDown, ArrowUpDown, Save, Check, Zap } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 import type { Product, DigitalAsset } from "@/lib/types"
@@ -598,15 +598,16 @@ export default function ProductsPage() {
               <TableHead>Name</TableHead>
               <TableHead>Category</TableHead>
               <TableHead>Price</TableHead>
+              <TableHead>50% Off Popup</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
-              <TableRow><TableCell colSpan={7} className="text-center py-10"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></TableCell></TableRow>
+              <TableRow><TableCell colSpan={8} className="text-center py-10"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></TableCell></TableRow>
             ) : filtered.length === 0 ? (
-              <TableRow><TableCell colSpan={7} className="text-center py-10 text-gray-500">No products found</TableCell></TableRow>
+              <TableRow><TableCell colSpan={8} className="text-center py-10 text-gray-500">No products found</TableCell></TableRow>
             ) : (
               filtered.map((product, index) => (
                 <TableRow key={product.id} className="hover:bg-slate-50/80 transition-colors">
@@ -665,6 +666,29 @@ export default function ProductsPage() {
                   </TableCell>
                   <TableCell className="capitalize">{product.category}</TableCell>
                   <TableCell>₹{product.price.toLocaleString("en-IN")}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        checked={Boolean(product.enableDiscountPopup)}
+                        onCheckedChange={async (checked) => {
+                          setProducts(prev => prev.map(p => p.id === product.id ? { ...p, enableDiscountPopup: checked } : p))
+                          try {
+                            await toggleProductDiscountPopup(product.id, checked)
+                            toast({
+                              title: checked ? "⚡ 50% Popup Enabled" : "50% Popup Disabled",
+                              description: `${product.title.substring(0, 30)}... popup is now ${checked ? "Active" : "Disabled"}.`,
+                            })
+                          } catch (err: any) {
+                            setProducts(prev => prev.map(p => p.id === product.id ? { ...p, enableDiscountPopup: !checked } : p))
+                            toast({ title: "Failed to update", description: err.message, variant: "destructive" })
+                          }
+                        }}
+                      />
+                      <span className={`text-[11px] font-bold ${product.enableDiscountPopup ? "text-amber-600 bg-amber-50 px-2 py-0.5 rounded border border-amber-200" : "text-gray-400"}`}>
+                        {product.enableDiscountPopup ? "ON (50%)" : "OFF"}
+                      </span>
+                    </div>
+                  </TableCell>
                   <TableCell>
                     <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${product.isActive ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
                       {product.isActive ? "Active" : "Hidden"}

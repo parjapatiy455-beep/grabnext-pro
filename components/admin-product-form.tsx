@@ -38,6 +38,11 @@ const EMPTY = {
     videoUrl: "",
     proofImages: [] as string[],
     displayOrder: "0",
+    enableDiscountPopup: false,
+    discountPopupPercent: "50",
+    discountPopupCoupon: "SAVE50",
+    discountPopupTimerMinutes: "10",
+    discountPopupHeadline: "",
 }
 
 export function AdminProductForm({ mode, productId }: ProductFormProps) {
@@ -87,6 +92,11 @@ export function AdminProductForm({ mode, productId }: ProductFormProps) {
                     videoUrl: p.videoUrl || "",
                     proofImages: Array.isArray(p.proofImages) ? p.proofImages : [],
                     displayOrder: p.displayOrder ? p.displayOrder.toString() : "0",
+                    enableDiscountPopup: Boolean(p.enableDiscountPopup),
+                    discountPopupPercent: p.discountPopupPercent ? p.discountPopupPercent.toString() : "50",
+                    discountPopupCoupon: p.discountPopupCoupon || "SAVE50",
+                    discountPopupTimerMinutes: p.discountPopupTimerMinutes ? p.discountPopupTimerMinutes.toString() : "10",
+                    discountPopupHeadline: p.discountPopupHeadline || "",
                 })
                 setDigitalAssets(parsedAssets)
                 setLoading(false)
@@ -237,6 +247,11 @@ export function AdminProductForm({ mode, productId }: ProductFormProps) {
                 isActive: form.isActive,
                 displayOrder: parseInt(form.displayOrder, 10) || 0,
                 pageType: "shop",
+                enableDiscountPopup: form.enableDiscountPopup,
+                discountPopupPercent: parseInt(form.discountPopupPercent, 10) || 50,
+                discountPopupCoupon: (form.discountPopupCoupon || "SAVE50").trim().toUpperCase(),
+                discountPopupTimerMinutes: parseInt(form.discountPopupTimerMinutes, 10) || 10,
+                discountPopupHeadline: form.discountPopupHeadline?.trim() || null,
             }
             const url = mode === "edit" ? `/api/products/${productId}` : "/api/products"
             const method = mode === "edit" ? "PUT" : "POST"
@@ -696,6 +711,91 @@ export function AdminProductForm({ mode, productId }: ProductFormProps) {
                                         </div>
                                     )}
                                 </div>
+                            </div>
+
+                            {/* Flash 50% Off Discount Popup Card */}
+                            <div className="bg-gradient-to-br from-amber-50/70 via-orange-50/40 to-purple-50/40 rounded-2xl p-6 border border-amber-200/80 shadow-sm space-y-4">
+                                <div className="flex items-center justify-between border-b border-amber-200/60 pb-3">
+                                    <div className="flex items-center gap-2">
+                                        <div className="h-8 w-8 rounded-lg bg-amber-500 text-white flex items-center justify-center font-bold shadow-sm">
+                                            ⚡
+                                        </div>
+                                        <div>
+                                            <h2 className="font-semibold text-gray-900 text-sm">Flash 50% Deal Popup</h2>
+                                            <p className="text-[11px] text-gray-500">Urgency countdown popup on product page</p>
+                                        </div>
+                                    </div>
+                                    <Switch
+                                        checked={form.enableDiscountPopup}
+                                        onCheckedChange={(checked) => setForm((f) => ({ ...f, enableDiscountPopup: checked }))}
+                                    />
+                                </div>
+
+                                {form.enableDiscountPopup ? (
+                                    <div className="space-y-3 pt-1 text-xs">
+                                        <div className="p-2.5 bg-amber-100/60 border border-amber-200 rounded-xl text-amber-900 text-[11px]">
+                                            <p className="font-semibold">🔥 High-Converting Flash Deal Active!</p>
+                                            <p className="mt-0.5 text-amber-800">
+                                                Visitors on this product page will see a timed popup offering <strong>{form.discountPopupPercent}% OFF</strong> with a <strong>{form.discountPopupTimerMinutes}-minute</strong> countdown. Claiming immediately cuts the price on-page and in checkout!
+                                            </p>
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <div>
+                                                <Label className="text-[11px] font-semibold text-slate-700">Coupon Code</Label>
+                                                <Input
+                                                    value={form.discountPopupCoupon}
+                                                    onChange={(e) => setForm((f) => ({ ...f, discountPopupCoupon: e.target.value.toUpperCase() }))}
+                                                    placeholder="SAVE50"
+                                                    className="h-9 mt-1 text-xs font-mono font-bold uppercase bg-white border-amber-200"
+                                                />
+                                            </div>
+                                            <div>
+                                                <Label className="text-[11px] font-semibold text-slate-700">Discount %</Label>
+                                                <div className="relative mt-1">
+                                                    <Input
+                                                        type="number"
+                                                        min="5"
+                                                        max="95"
+                                                        value={form.discountPopupPercent}
+                                                        onChange={(e) => setForm((f) => ({ ...f, discountPopupPercent: e.target.value }))}
+                                                        placeholder="50"
+                                                        className="h-9 text-xs bg-white border-amber-200 pr-6"
+                                                    />
+                                                    <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 font-bold">%</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <div>
+                                                <Label className="text-[11px] font-semibold text-slate-700">Timer (Minutes)</Label>
+                                                <Input
+                                                    type="number"
+                                                    min="1"
+                                                    max="120"
+                                                    value={form.discountPopupTimerMinutes}
+                                                    onChange={(e) => setForm((f) => ({ ...f, discountPopupTimerMinutes: e.target.value }))}
+                                                    placeholder="10"
+                                                    className="h-9 mt-1 text-xs bg-white border-amber-200"
+                                                />
+                                            </div>
+                                            <div>
+                                                <Label className="text-[11px] font-semibold text-slate-700">Custom Title (Optional)</Label>
+                                                <Input
+                                                    value={form.discountPopupHeadline}
+                                                    onChange={(e) => setForm((f) => ({ ...f, discountPopupHeadline: e.target.value }))}
+                                                    placeholder="Special Deal: Flat 50% Off"
+                                                    className="h-9 mt-1 text-xs bg-white border-amber-200 truncate"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <p className="text-[11px] text-gray-400 italic">
+                                        Toggle switch ON to enable the 10-minute 50% discount popup on this product.
+                                    </p>
+                                )}
                             </div>
 
                             {/* Status Card */}

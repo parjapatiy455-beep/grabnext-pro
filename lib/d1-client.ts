@@ -126,6 +126,25 @@ export async function updateD1Product(id: string, productData: any) {
   }
 }
 
+export async function toggleProductDiscountPopup(id: string, enable: boolean) {
+  try {
+    clearProductsCache()
+    const res = await fetch(`/api/products/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ enableDiscountPopup: enable ? 1 : 0 }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || "Failed to toggle discount popup");
+    }
+    return res.json();
+  } catch (error) {
+    console.error("[v0] Toggle Discount Popup Error:", error);
+    throw error;
+  }
+}
+
 export async function deleteD1Product(id: string) {
   try {
     clearProductsCache()

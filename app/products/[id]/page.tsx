@@ -57,6 +57,11 @@ async function getProduct(id: string): Promise<Product | null> {
             originalPrice: row.originalPrice ? Number(row.originalPrice) : null,
             salesCount: Number(row.salesCount),
             pageType: row.pageType || 'shop',
+            enableDiscountPopup: Boolean(row.enableDiscountPopup),
+            discountPopupPercent: Number(row.discountPopupPercent || 50),
+            discountPopupCoupon: row.discountPopupCoupon || 'SAVE50',
+            discountPopupTimerMinutes: Number(row.discountPopupTimerMinutes || 10),
+            discountPopupHeadline: row.discountPopupHeadline || '',
         } as Product
     } catch (error) {
         console.error("Error fetching product:", error)

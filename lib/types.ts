@@ -79,6 +79,11 @@ export interface Product {
   pageType?: "shop" | "landing"
   createdBy: string // Admin user ID who created this product
   displayOrder?: number
+  enableDiscountPopup?: boolean | number
+  discountPopupPercent?: number
+  discountPopupCoupon?: string
+  discountPopupTimerMinutes?: number
+  discountPopupHeadline?: string
 }
 
 export interface CartItem {

@@ -6,8 +6,9 @@ import Link from "next/link"
 import {
     Star, Zap, Shield,
     Heart, Share2, Loader2, X, ChevronLeft, ChevronRight, Clock, CheckCircle2,
-    Play, Video, ShieldCheck, ZoomIn, ImageIcon
+    Play, Video, ShieldCheck, ZoomIn, ImageIcon, Sparkles, Tag
 } from "lucide-react"
+import { ProductDiscountPopup } from "@/components/product-discount-popup"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Textarea } from "@/components/ui/textarea"
@@ -115,6 +116,105 @@ export function ProductDetailView({ product: initialProduct, id }: { product: Pr
     const [imgFade, setImgFade] = useState(true)
     const [activeMediaType, setActiveMediaType] = useState<"image" | "video">("image")
     const [zoomModalData, setZoomModalData] = useState<{ images: string[]; startIdx: number } | null>(null)
+
+    // ── 50% Off Flash Deal Popup State & Timer ──
+    const [showDiscountPopup, setShowDiscountPopup] = useState(false)
+    const [appliedDiscount, setAppliedDiscount] = useState<{
+        code: string
+        percent: number
+        discountedPrice: number
+        savings: number
+    } | null>(null)
+    const [discountTimerStr, setDiscountTimerStr] = useState<string>("")
+
+    // Check discount status & launch popup with a short smart delay
+    useEffect(() => {
+        if (!product?.enableDiscountPopup) return
+
+        const prodId = product.id || id
+        const claimedKey = `discount_claimed_${prodId}`
+        const timerKey = `discount_timer_end_${prodId}`
+        const dismissedKey = `discount_dismissed_${prodId}`
+
+        const percent = Number(product.discountPopupPercent || 50)
+        const code = (product.discountPopupCoupon || "SAVE50").trim().toUpperCase()
+
+        // Check if already claimed and still active
+        const isClaimed = typeof window !== "undefined" && sessionStorage.getItem(claimedKey) === "true"
+        const savedEndTime = typeof window !== "undefined" ? localStorage.getItem(timerKey) : null
+
+        if (isClaimed && savedEndTime) {
+            const remaining = Math.floor((parseInt(savedEndTime, 10) - Date.now()) / 1000)
+            if (remaining > 0) {
+                const discPrice = Math.max(1, Math.round(product.price * (1 - percent / 100)))
+                setAppliedDiscount({
+                    code,
+                    percent,
+                    discountedPrice: discPrice,
+                    savings: product.price - discPrice,
+                })
+                return
+            }
+        }
+
+        // If not dismissed in this session, trigger popup after 2.5s
+        const isDismissed = typeof window !== "undefined" && sessionStorage.getItem(dismissedKey) === "true"
+        if (!isDismissed) {
+            const t = setTimeout(() => {
+                setShowDiscountPopup(true)
+            }, 2500)
+            return () => clearTimeout(t)
+        }
+    }, [product?.id, product?.enableDiscountPopup, product?.price, id])
+
+    // Live ticking countdown when discount is applied
+    useEffect(() => {
+        if (!appliedDiscount || !product?.id) return
+        const prodId = product.id || id
+        const timerKey = `discount_timer_end_${prodId}`
+
+        const tick = () => {
+            const savedEndTime = localStorage.getItem(timerKey)
+            if (!savedEndTime) return
+            const remaining = Math.max(0, Math.floor((parseInt(savedEndTime, 10) - Date.now()) / 1000))
+            const m = Math.floor(remaining / 60)
+            const s = remaining % 60
+            setDiscountTimerStr(`${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`)
+            if (remaining <= 0) {
+                setAppliedDiscount(null)
+                try {
+                    sessionStorage.removeItem(`discount_claimed_${prodId}`)
+                    localStorage.removeItem(timerKey)
+                } catch {}
+            }
+        }
+
+        tick()
+        const interval = setInterval(tick, 1000)
+        return () => clearInterval(interval)
+    }, [appliedDiscount, product?.id, id])
+
+    const handleClaimDiscount = (info: { code: string; percent: number; discountedPrice: number; savings: number }) => {
+        const prodId = product.id || id
+        setAppliedDiscount(info)
+        setShowDiscountPopup(false)
+        try {
+            sessionStorage.setItem(`discount_claimed_${prodId}`, "true")
+            sessionStorage.setItem("copiedCouponCode", info.code)
+        } catch {}
+        toast({
+            title: `🎉 Flat ${info.percent}% OFF Applied!`,
+            description: `Price cut from ${formatPrice(product.price)} to ${formatPrice(info.discountedPrice)}!`,
+        })
+    }
+
+    const handleDismissDiscountPopup = () => {
+        const prodId = product.id || id
+        setShowDiscountPopup(false)
+        try {
+            sessionStorage.setItem(`discount_dismissed_${prodId}`, "true")
+        } catch {}
+    }
 
     const changeActiveImg = (i: number) => {
         setImgFade(false)
@@ -354,16 +454,54 @@ export function ProductDetailView({ product: initialProduct, id }: { product: Pr
 
                             {/* Price block */}
                             <div>
+                                {appliedDiscount && (
+                                    <div className="mb-2 p-2.5 rounded-xl bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-amber-500/10 border border-emerald-500/30 flex items-center justify-between gap-2 text-xs">
+                                        <span className="flex items-center gap-1.5 font-bold text-emerald-700 dark:text-emerald-400">
+                                            <Sparkles className="h-4 w-4 fill-emerald-500" />
+                                            ⚡ Flat {appliedDiscount.percent}% Flash Deal Applied!
+                                        </span>
+                                        {discountTimerStr && (
+                                            <span className="font-mono font-bold text-red-600 dark:text-red-400 bg-red-500/10 px-2 py-0.5 rounded-full border border-red-500/20 text-[11px] animate-pulse">
+                                                ⏳ {discountTimerStr}
+                                            </span>
+                                        )}
+                                    </div>
+                                )}
+
                                 <div className="flex items-baseline gap-2 flex-wrap">
-                                    <span className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
-                                        {formatPrice(product.price)}
-                                    </span>
-                                    <span className="text-sm text-gray-400 dark:text-slate-500 line-through">{formatPrice(originalPrice)}</span>
-                                    <span className="text-xs font-bold text-green-700 dark:text-green-500 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900/40 px-2 py-0.5 rounded-full">
-                                        {discount}% off
-                                    </span>
+                                    {appliedDiscount ? (
+                                        <>
+                                            <span className="text-3xl sm:text-4xl font-black text-emerald-600 dark:text-emerald-400">
+                                                {formatPrice(appliedDiscount.discountedPrice)}
+                                            </span>
+                                            <span className="text-base sm:text-lg text-red-500 line-through font-bold">
+                                                {formatPrice(product.price)}
+                                            </span>
+                                            {originalPrice > product.price && (
+                                                <span className="text-xs text-gray-400 dark:text-slate-500 line-through">
+                                                    {formatPrice(originalPrice)}
+                                                </span>
+                                            )}
+                                            <span className="text-xs font-bold text-emerald-800 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-800 px-2.5 py-1 rounded-full flex items-center gap-1 shadow-sm animate-pulse">
+                                                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                                                {appliedDiscount.code} (-{appliedDiscount.percent}%)
+                                            </span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <span className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
+                                                {formatPrice(product.price)}
+                                            </span>
+                                            <span className="text-sm text-gray-400 dark:text-slate-500 line-through">{formatPrice(originalPrice)}</span>
+                                            <span className="text-xs font-bold text-green-700 dark:text-green-500 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900/40 px-2 py-0.5 rounded-full">
+                                                {discount}% off
+                                            </span>
+                                        </>
+                                    )}
                                 </div>
-                                <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">Inclusive of all taxes. Instant Delivery.</p>
+                                <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">
+                                    {appliedDiscount ? `You save ${formatPrice(appliedDiscount.savings)}! Inclusive of all taxes.` : "Inclusive of all taxes. Instant Delivery."}
+                                </p>
                             </div>
 
                             {/* ── BUY NOW BUTTON ── */}
@@ -378,14 +516,15 @@ export function ProductDetailView({ product: initialProduct, id }: { product: Pr
                                         trackAddToCart({
                                             content_name: product.title,
                                             content_ids: [product.id || id],
-                                            contents: [{ id: product.id || id, quantity: 1, item_price: product.price }],
-                                            value: product.price,
+                                            contents: [{ id: product.id || id, quantity: 1, item_price: appliedDiscount ? appliedDiscount.discountedPrice : product.price }],
+                                            value: appliedDiscount ? appliedDiscount.discountedPrice : product.price,
                                         })
-                                        router.push("/checkout")
+                                        const checkoutUrl = appliedDiscount ? `/checkout?coupon=${encodeURIComponent(appliedDiscount.code)}` : "/checkout"
+                                        router.push(checkoutUrl)
                                     }}
                                 >
                                     <Zap className="h-5 w-5 shrink-0" />
-                                    {buyingNow ? "Redirecting..." : "Pay and Download"}
+                                    {buyingNow ? "Redirecting..." : appliedDiscount ? `Pay ${formatPrice(appliedDiscount.discountedPrice)} & Download Now` : "Pay and Download"}
                                 </button>
                             </div>
 
@@ -751,13 +890,17 @@ export function ProductDetailView({ product: initialProduct, id }: { product: Pr
                     <div className="flex flex-col shrink-0">
                         <div className="flex items-center gap-1 text-[10px] text-emerald-600 dark:text-emerald-400 font-bold uppercase tracking-wider">
                             <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                            Instant Access
+                            {appliedDiscount ? `Flash ${appliedDiscount.percent}% Deal` : "Instant Access"}
                         </div>
                         <div className="flex items-baseline gap-1.5">
                             <span className="text-xl font-black text-slate-900 dark:text-white">
-                                {formatPrice(product.price)}
+                                {formatPrice(appliedDiscount ? appliedDiscount.discountedPrice : product.price)}
                             </span>
-                            {originalPrice > product.price && (
+                            {appliedDiscount ? (
+                                <span className="text-[11px] text-red-500 font-bold line-through">
+                                    {formatPrice(product.price)}
+                                </span>
+                            ) : originalPrice > product.price && (
                                 <span className="text-[11px] text-slate-400 line-through">
                                     {formatPrice(originalPrice)}
                                 </span>
@@ -776,8 +919,8 @@ export function ProductDetailView({ product: initialProduct, id }: { product: Pr
                                 trackAddToCart({
                                     content_name: product.title,
                                     content_ids: [product.id || id],
-                                    contents: [{ id: product.id || id, quantity: 1, item_price: product.price }],
-                                    value: product.price,
+                                    contents: [{ id: product.id || id, quantity: 1, item_price: appliedDiscount ? appliedDiscount.discountedPrice : product.price }],
+                                    value: appliedDiscount ? appliedDiscount.discountedPrice : product.price,
                                 })
                                 toast({ title: "✓ Added to Cart!" })
                             }}
@@ -794,19 +937,30 @@ export function ProductDetailView({ product: initialProduct, id }: { product: Pr
                                 trackAddToCart({
                                     content_name: product.title,
                                     content_ids: [product.id || id],
-                                    contents: [{ id: product.id || id, quantity: 1, item_price: product.price }],
-                                    value: product.price,
+                                    contents: [{ id: product.id || id, quantity: 1, item_price: appliedDiscount ? appliedDiscount.discountedPrice : product.price }],
+                                    value: appliedDiscount ? appliedDiscount.discountedPrice : product.price,
                                 })
-                                router.push("/checkout")
+                                const checkoutUrl = appliedDiscount ? `/checkout?coupon=${encodeURIComponent(appliedDiscount.code)}` : "/checkout"
+                                router.push(checkoutUrl)
                             }}
                             className="flex-1 h-11 px-4 rounded-xl font-extrabold text-sm text-white bg-gradient-to-r from-orange-500 via-orange-600 to-red-600 hover:from-orange-600 hover:to-red-700 shadow-md shadow-orange-500/25 active:scale-95 transition-all flex items-center justify-center gap-1.5 disabled:opacity-70"
                         >
                             <Zap className="h-4 w-4 fill-current shrink-0" />
-                            <span>{buyingNow ? "Opening..." : "Buy Now"}</span>
+                            <span>{buyingNow ? "Opening..." : appliedDiscount ? `Buy at ${formatPrice(appliedDiscount.discountedPrice)}` : "Buy Now"}</span>
                         </button>
                     </div>
                 </div>
             </div>
+
+            {/* ── 50% Off Flash Deal Popup Modal ── */}
+            {product?.enableDiscountPopup && (
+                <ProductDiscountPopup
+                    product={product}
+                    isOpen={showDiscountPopup}
+                    onClose={handleDismissDiscountPopup}
+                    onClaim={handleClaimDiscount}
+                />
+            )}
 
             <Footer />
         </div>
