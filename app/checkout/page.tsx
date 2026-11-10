@@ -53,6 +53,7 @@ export default function CheckoutPage() {
   const [appliedCoupon, setAppliedCoupon] = useState<any | null>(null)
   const [couponError, setCouponError] = useState("")
   const [isApplyingCoupon, setIsApplyingCoupon] = useState(false)
+  const [isCouponOpen, setIsCouponOpen] = useState(false)
 
   const [formData, setFormData] = useState({
     name: "",
@@ -193,6 +194,7 @@ export default function CheckoutPage() {
     setAppliedCoupon(null)
     setCouponCode("")
     setCouponError("")
+    setIsCouponOpen(false)
   }
 
   const finalAmount = appliedCoupon ? Math.max(0, totalAmount - appliedCoupon.discountAmount) : totalAmount
@@ -765,63 +767,93 @@ export default function CheckoutPage() {
                   <p className="text-[10px] text-slate-400 mt-1">Direct Google Drive / download access links sent directly to this email.</p>
                 </div>
 
-                {/* 4. Promo / Coupon Code Section (Dynamic Only - No Hardcoding) */}
+                {/* 4. Promo / Coupon Code Section */}
                 <div className="pt-1">
-                  <div className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 sm:p-3.5 space-y-2">
-                    <div className="flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-300">
-                      <span className="flex items-center gap-1.5">
-                        <Tag className="w-3.5 h-3.5 text-amber-500" /> Have a Coupon Code?
-                      </span>
-                      {appliedCoupon && (
-                        <span className="text-emerald-600 dark:text-emerald-400 font-extrabold">
-                          -{formatPrice(appliedCoupon.discountAmount)} OFF
-                        </span>
-                      )}
-                    </div>
-
+                  <div className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 sm:p-3.5 transition-all">
                     {appliedCoupon ? (
-                      <div className="flex items-center justify-between bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-xl p-2.5">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                          <div className="truncate">
-                            <span className="font-mono font-black text-xs text-emerald-950 dark:text-emerald-200 uppercase">
-                              {appliedCoupon.code}
-                            </span>
-                            <span className="text-[11px] text-emerald-700 dark:text-emerald-300 font-medium ml-1.5">
-                              ({formatPrice(appliedCoupon.discountAmount)} saved)
-                            </span>
-                          </div>
+                      /* When Coupon is Active */
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-300">
+                          <span className="flex items-center gap-1.5">
+                            <Tag className="w-3.5 h-3.5 text-amber-500" /> Have a Coupon Code?
+                          </span>
+                          <span className="text-emerald-600 dark:text-emerald-400 font-extrabold">
+                            -{formatPrice(appliedCoupon.discountAmount)} OFF
+                          </span>
                         </div>
-                        <button
-                          type="button"
-                          onClick={handleRemoveCoupon}
-                          className="text-xs text-red-600 dark:text-red-400 hover:text-red-700 font-bold px-2 py-1 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors shrink-0 cursor-pointer"
-                        >
-                          Remove
-                        </button>
+                        <div className="flex items-center justify-between bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-xl p-2.5">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                            <div className="truncate">
+                              <span className="font-mono font-black text-xs text-emerald-950 dark:text-emerald-200 uppercase">
+                                {appliedCoupon.code}
+                              </span>
+                              <span className="text-[11px] text-emerald-700 dark:text-emerald-300 font-medium ml-1.5">
+                                ({formatPrice(appliedCoupon.discountAmount)} saved)
+                              </span>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={handleRemoveCoupon}
+                            className="text-xs text-red-600 dark:text-red-400 hover:text-red-700 font-bold px-2 py-1 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors shrink-0 cursor-pointer"
+                          >
+                            Remove
+                          </button>
+                        </div>
                       </div>
+                    ) : !isCouponOpen ? (
+                      /* Default Collapsed: Clean single-line toggle */
+                      <button
+                        type="button"
+                        onClick={() => setIsCouponOpen(true)}
+                        className="w-full flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-300 hover:text-amber-600 dark:hover:text-amber-400 transition-colors group cursor-pointer text-left py-0.5"
+                      >
+                        <span className="flex items-center gap-1.5">
+                          <Tag className="w-3.5 h-3.5 text-amber-500 group-hover:rotate-12 transition-transform" />
+                          <span>Have a Coupon Code?</span>
+                        </span>
+                        <ChevronDown className="w-4 h-4 text-slate-400 group-hover:text-amber-500 transition-transform" />
+                      </button>
                     ) : (
-                      <div className="flex gap-2">
-                        <input
-                          type="text"
-                          placeholder="ENTER COUPON CODE"
-                          value={couponCode}
-                          onChange={(e) => setCouponCode(e.target.value.toUpperCase().replace(/\s+/g, ""))}
-                          disabled={isApplyingCoupon}
-                          className="flex-1 px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-mono font-bold text-slate-900 dark:text-white placeholder:text-slate-400 uppercase focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
-                        />
+                      /* Expanded when user clicks on "Have a Coupon Code?" */
+                      <div className="space-y-2">
                         <button
                           type="button"
-                          onClick={handleApplyCoupon}
-                          disabled={isApplyingCoupon || !couponCode.trim()}
-                          className="px-4 py-2 bg-slate-900 dark:bg-amber-400 hover:bg-slate-800 dark:hover:bg-amber-500 text-amber-400 dark:text-slate-950 rounded-xl text-xs font-bold transition-all disabled:opacity-50 cursor-pointer shadow-xs shrink-0"
+                          onClick={() => {
+                            setIsCouponOpen(false)
+                            setCouponError("")
+                          }}
+                          className="w-full flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-300 hover:text-amber-600 dark:hover:text-amber-400 transition-colors cursor-pointer text-left pb-1"
                         >
-                          {isApplyingCoupon ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Apply"}
+                          <span className="flex items-center gap-1.5">
+                            <Tag className="w-3.5 h-3.5 text-amber-500" />
+                            <span>Have a Coupon Code?</span>
+                          </span>
+                          <ChevronUp className="w-4 h-4 text-slate-400" />
                         </button>
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            placeholder="ENTER COUPON CODE"
+                            value={couponCode}
+                            onChange={(e) => setCouponCode(e.target.value.toUpperCase().replace(/\s+/g, ""))}
+                            disabled={isApplyingCoupon}
+                            autoFocus
+                            className="flex-1 px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-mono font-bold text-slate-900 dark:text-white placeholder:text-slate-400 uppercase focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+                          />
+                          <button
+                            type="button"
+                            onClick={handleApplyCoupon}
+                            disabled={isApplyingCoupon || !couponCode.trim()}
+                            className="px-4 py-2 bg-slate-900 dark:bg-amber-400 hover:bg-slate-800 dark:hover:bg-amber-500 text-amber-400 dark:text-slate-950 rounded-xl text-xs font-bold transition-all disabled:opacity-50 cursor-pointer shadow-xs shrink-0"
+                          >
+                            {isApplyingCoupon ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Apply"}
+                          </button>
+                        </div>
+                        {couponError && <p className="text-red-500 text-xs mt-1 font-medium">{couponError}</p>}
                       </div>
                     )}
-
-                    {couponError && <p className="text-red-500 text-xs mt-1 font-medium">{couponError}</p>}
                   </div>
                 </div>
 
