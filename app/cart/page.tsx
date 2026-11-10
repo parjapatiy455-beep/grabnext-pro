@@ -77,22 +77,10 @@ export default function CartPage() {
                             </Button>
                           </div>
                           <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <Button
-                                variant="outline"
-                                size="icon"
-                                onClick={() => updateQuantity(item.productId, item.quantity - 1)}
-                              >
-                                <Minus className="h-4 w-4" />
-                              </Button>
-                              <span className="w-12 text-center font-medium">{item.quantity}</span>
-                              <Button
-                                variant="outline"
-                                size="icon"
-                                onClick={() => updateQuantity(item.productId, item.quantity + 1)}
-                              >
-                                <Plus className="h-4 w-4" />
-                              </Button>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-semibold px-2.5 py-1 rounded-md bg-secondary text-secondary-foreground border">
+                                Qty: 1 (Digital License)
+                              </span>
                             </div>
                             <p className="font-semibold text-lg">{formatPrice(item.product.price * item.quantity)}</p>
                           </div>

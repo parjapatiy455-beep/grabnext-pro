@@ -9,7 +9,7 @@ interface CartContextType {
   items: CartItem[]
   totalItems: number
   totalAmount: number
-  addToCart: (product: Product, quantity?: number) => void
+  addToCart: (product: Product, quantity?: number, openDrawer?: boolean) => void
   removeFromCart: (productId: string) => void
   updateQuantity: (productId: string, quantity: number) => void
   clearCart: () => void
@@ -48,7 +48,11 @@ export const CartProvider = ({ children }: CartProviderProps) => {
     const savedCart = localStorage.getItem("digital-store-cart")
     if (savedCart) {
       try {
-        setItems(JSON.parse(savedCart))
+        const parsed = JSON.parse(savedCart)
+        if (Array.isArray(parsed)) {
+          // Normalize existing carts to max quantity 1
+          setItems(parsed.map((item: CartItem) => ({ ...item, quantity: 1 })))
+        }
       } catch (error) {
         console.error("Error loading cart from localStorage:", error)
       }
@@ -65,11 +69,13 @@ export const CartProvider = ({ children }: CartProviderProps) => {
       const existingItem = prevItems.find((item) => item.productId === product.id)
 
       if (existingItem) {
+        // Digital downloads store: quantity is capped at 1 per product
         return prevItems.map((item) =>
-          item.productId === product.id ? { ...item, quantity: item.quantity + quantity } : item,
+          item.productId === product.id ? { ...item, quantity: 1 } : item,
         )
       } else {
-        return [...prevItems, { productId: product.id, product, quantity }]
+        // Add new item with maximum quantity of 1
+        return [...prevItems, { productId: product.id, product, quantity: 1 }]
       }
     })
     if (openDrawer) {
@@ -96,7 +102,9 @@ export const CartProvider = ({ children }: CartProviderProps) => {
       return
     }
 
-    setItems((prevItems) => prevItems.map((item) => (item.productId === productId ? { ...item, quantity } : item)))
+    // Digital store: max quantity is 1
+    const cappedQuantity = Math.min(1, Math.max(1, quantity))
+    setItems((prevItems) => prevItems.map((item) => (item.productId === productId ? { ...item, quantity: cappedQuantity } : item)))
   }
 
   const clearCart = () => {

@@ -128,25 +128,11 @@ export function CartDrawer({ children }: CartDrawerProps) {
                           {formatPrice(item.product.price * item.quantity)}
                         </span>
 
-                        {/* Stepper Buttons */}
-                        <div className="flex items-center border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-950 overflow-hidden shadow-2xs">
-                          <button
-                            type="button"
-                            onClick={() => updateQuantity(item.productId, item.quantity - 1)}
-                            className="h-6 w-6 sm:h-7 sm:w-7 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                          >
-                            <Minus className="h-3 w-3" />
-                          </button>
-                          <span className="w-6 sm:w-7 text-center text-xs font-bold text-slate-800 dark:text-slate-200">
-                            {item.quantity}
+                        {/* Digital License Quantity */}
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[11px] font-bold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2.5 py-0.5 rounded-md border border-slate-200 dark:border-slate-700">
+                            Qty: 1
                           </span>
-                          <button
-                            type="button"
-                            onClick={() => updateQuantity(item.productId, item.quantity + 1)}
-                            className="h-6 w-6 sm:h-7 sm:w-7 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                          >
-                            <Plus className="h-3 w-3" />
-                          </button>
                         </div>
                       </div>
                     </div>

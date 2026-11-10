@@ -118,27 +118,65 @@ export function ProductDiscountPopup({
         </button>
 
         <div className="p-5 sm:p-6 space-y-4">
-          {/* Top Pill: Urgency Timer */}
+          {/* Top Pill: Special Deal Tag */}
           <div className="flex items-center justify-between gap-2">
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold tracking-wide uppercase bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20">
-              <Sparkles className="h-3.5 w-3.5 fill-current" /> Special Deal
+              <Sparkles className="h-3.5 w-3.5 fill-current" /> Limited Time Flash Offer
             </span>
-
-            {/* Countdown Badge */}
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-bold bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20 animate-pulse">
-              <Clock className="h-3.5 w-3.5" />
-              <span>Expires in {formattedTime}</span>
-            </div>
+            <span className="text-[11px] font-extrabold text-red-600 dark:text-red-400 uppercase tracking-wider bg-red-500/10 border border-red-500/20 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+              <span className="h-2 w-2 rounded-full bg-red-500 animate-ping" />
+              Live Deal
+            </span>
           </div>
 
           {/* Headline */}
-          <div className="text-center pt-1">
-            <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight leading-snug">
+          <div className="text-center pt-0.5">
+            <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight leading-snug">
               {headline}
             </h2>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-              One-time exclusive discount unlocked for your current visit.
+              Grab this special discount before the timer runs out!
             </p>
+          </div>
+
+          {/* HIGH VISIBILITY URGENCY COUNTDOWN DISPLAY */}
+          <div className="bg-gradient-to-b from-red-500/10 via-amber-500/10 to-red-500/5 dark:from-red-950/40 dark:via-amber-950/30 dark:to-red-950/20 border-2 border-red-500/30 rounded-2xl p-3 sm:p-4 text-center shadow-xs">
+            <div className="flex items-center justify-center gap-1.5 text-xs sm:text-sm font-extrabold text-red-600 dark:text-red-400 uppercase tracking-wider mb-2">
+              <Clock className="h-4 w-4 animate-pulse stroke-[2.5]" />
+              <span>Offer Strictly Expires In:</span>
+            </div>
+
+            {/* Large Bold Responsive Digits */}
+            <div className="flex items-center justify-center gap-2 sm:gap-3">
+              {/* Minutes Card */}
+              <div className="flex flex-col items-center">
+                <div className="w-16 sm:w-20 h-13 sm:h-15 bg-slate-900 dark:bg-black text-amber-400 rounded-xl border border-amber-500/40 flex items-center justify-center shadow-inner">
+                  <span className="font-mono text-2xl sm:text-3xl font-black tracking-tight">
+                    {String(minutes).padStart(2, "0")}
+                  </span>
+                </div>
+                <span className="text-[10px] sm:text-xs font-bold text-slate-500 dark:text-slate-400 mt-1 uppercase tracking-wider">
+                  MINUTES
+                </span>
+              </div>
+
+              {/* Blinking Colon */}
+              <span className="text-2xl sm:text-3xl font-black text-red-500 -mt-4 animate-pulse">
+                :
+              </span>
+
+              {/* Seconds Card */}
+              <div className="flex flex-col items-center">
+                <div className="w-16 sm:w-20 h-13 sm:h-15 bg-slate-900 dark:bg-black text-amber-400 rounded-xl border border-amber-500/40 flex items-center justify-center shadow-inner">
+                  <span className="font-mono text-2xl sm:text-3xl font-black tracking-tight">
+                    {String(seconds).padStart(2, "0")}
+                  </span>
+                </div>
+                <span className="text-[10px] sm:text-xs font-bold text-slate-500 dark:text-slate-400 mt-1 uppercase tracking-wider">
+                  SECONDS
+                </span>
+              </div>
+            </div>
           </div>
 
           {/* Product Mini Preview & Price Cut Card */}

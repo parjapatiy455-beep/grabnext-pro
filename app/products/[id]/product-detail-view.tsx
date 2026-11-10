@@ -98,7 +98,7 @@ function RatingBar({ label, count, total }: { label: string; count: number; tota
 
 export function ProductDetailView({ product: initialProduct, id }: { product: Product; id: string }) {
     const router = useRouter()
-    const { addToCart } = useCart()
+    const { addToCart, setDrawerOpen } = useCart()
     const { user } = useAuth()
 
     const [product] = useState<Product>(initialProduct)
@@ -214,6 +214,21 @@ export function ProductDetailView({ product: initialProduct, id }: { product: Pr
         try {
             sessionStorage.setItem(`discount_dismissed_${prodId}`, "true")
         } catch {}
+    }
+
+    const executeBuyNow = () => {
+        setBuyingNow(true)
+        // Direct checkout: explicitly prevent opening cart drawer
+        setDrawerOpen(false)
+        addToCart(product, 1, false)
+        trackAddToCart({
+            content_name: product.title,
+            content_ids: [product.id || id],
+            contents: [{ id: product.id || id, quantity: 1, item_price: appliedDiscount ? appliedDiscount.discountedPrice : product.price }],
+            value: appliedDiscount ? appliedDiscount.discountedPrice : product.price,
+        })
+        const checkoutUrl = appliedDiscount ? `/checkout?coupon=${encodeURIComponent(appliedDiscount.code)}` : "/checkout"
+        router.push(checkoutUrl)
     }
 
     const changeActiveImg = (i: number) => {
@@ -455,15 +470,30 @@ export function ProductDetailView({ product: initialProduct, id }: { product: Pr
                             {/* Price block */}
                             <div>
                                 {appliedDiscount && (
-                                    <div className="mb-2 p-2.5 rounded-xl bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-amber-500/10 border border-emerald-500/30 flex items-center justify-between gap-2 text-xs">
-                                        <span className="flex items-center gap-1.5 font-bold text-emerald-700 dark:text-emerald-400">
-                                            <Sparkles className="h-4 w-4 fill-emerald-500" />
-                                            ⚡ Flat {appliedDiscount.percent}% Flash Deal Applied!
-                                        </span>
-                                        {discountTimerStr && (
-                                            <span className="font-mono font-bold text-red-600 dark:text-red-400 bg-red-500/10 px-2 py-0.5 rounded-full border border-red-500/20 text-[11px] animate-pulse">
-                                                ⏳ {discountTimerStr}
+                                    <div className="mb-3 p-3 rounded-2xl bg-gradient-to-r from-amber-500/15 via-red-500/10 to-emerald-500/10 border-2 border-red-500/30 dark:border-red-500/40 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                                        <div className="flex items-center gap-2">
+                                            <span className="flex h-2.5 w-2.5 relative shrink-0">
+                                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-600"></span>
                                             </span>
+                                            <div>
+                                                <div className="flex items-center gap-1.5 font-black text-xs sm:text-sm text-slate-900 dark:text-white">
+                                                    <Sparkles className="h-4 w-4 text-amber-500 fill-amber-500 shrink-0" />
+                                                    <span>Flat {appliedDiscount.percent}% Flash Deal Active!</span>
+                                                </div>
+                                                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                                                    Coupon <strong className="font-mono text-emerald-600 dark:text-emerald-400">{appliedDiscount.code}</strong> applied automatically
+                                                </p>
+                                            </div>
+                                        </div>
+                                        {discountTimerStr && (
+                                            <div className="flex items-center gap-2 self-start sm:self-auto bg-slate-900 text-white dark:bg-black px-3.5 py-1.5 rounded-xl border border-red-500/40 shadow-xs">
+                                                <Clock className="h-4 w-4 text-red-400 animate-pulse shrink-0" />
+                                                <span className="text-[10px] font-bold text-slate-300 uppercase tracking-wider">Ends In:</span>
+                                                <span className="font-mono font-black text-amber-400 text-base sm:text-lg tracking-wider">
+                                                    {discountTimerStr}
+                                                </span>
+                                            </div>
                                         )}
                                     </div>
                                 )}
@@ -504,27 +534,16 @@ export function ProductDetailView({ product: initialProduct, id }: { product: Pr
                                 </p>
                             </div>
 
-                            {/* ── BUY NOW BUTTON ── */}
+                            {/* ── BUY NOW BUTTON (DIRECT CHECKOUT) ── */}
                             <div className="mt-1">
                                 <button
                                     id="buy-now-btn"
                                     disabled={buyingNow}
                                     className="w-full flex items-center justify-center gap-2 h-13 py-3.5 rounded-xl font-bold text-base text-white bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-red-600 shadow-md shadow-orange-200 dark:shadow-none transition-all duration-200 active:scale-[0.98] disabled:opacity-70"
-                                    onClick={() => {
-                                        setBuyingNow(true)
-                                        addToCart(product)
-                                        trackAddToCart({
-                                            content_name: product.title,
-                                            content_ids: [product.id || id],
-                                            contents: [{ id: product.id || id, quantity: 1, item_price: appliedDiscount ? appliedDiscount.discountedPrice : product.price }],
-                                            value: appliedDiscount ? appliedDiscount.discountedPrice : product.price,
-                                        })
-                                        const checkoutUrl = appliedDiscount ? `/checkout?coupon=${encodeURIComponent(appliedDiscount.code)}` : "/checkout"
-                                        router.push(checkoutUrl)
-                                    }}
+                                    onClick={executeBuyNow}
                                 >
                                     <Zap className="h-5 w-5 shrink-0" />
-                                    {buyingNow ? "Redirecting..." : appliedDiscount ? `Pay ${formatPrice(appliedDiscount.discountedPrice)} & Download Now` : "Pay and Download"}
+                                    {buyingNow ? "Opening Checkout..." : appliedDiscount ? `Pay ${formatPrice(appliedDiscount.discountedPrice)} & Download Now` : "Pay and Download"}
                                 </button>
                             </div>
 
@@ -890,7 +909,16 @@ export function ProductDetailView({ product: initialProduct, id }: { product: Pr
                     <div className="flex flex-col shrink-0">
                         <div className="flex items-center gap-1 text-[10px] text-emerald-600 dark:text-emerald-400 font-bold uppercase tracking-wider">
                             <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                            {appliedDiscount ? `Flash ${appliedDiscount.percent}% Deal` : "Instant Access"}
+                            {appliedDiscount ? (
+                                <span className="flex items-center gap-1 font-black">
+                                    Flash {appliedDiscount.percent}% Deal
+                                    {discountTimerStr && (
+                                        <span className="font-mono text-red-600 dark:text-red-400 bg-red-500/15 border border-red-500/30 px-1.5 py-0.5 rounded text-[10px] animate-pulse">
+                                            ⏳ {discountTimerStr}
+                                        </span>
+                                    )}
+                                </span>
+                            ) : "Instant Access"}
                         </div>
                         <div className="flex items-baseline gap-1.5">
                             <span className="text-xl font-black text-slate-900 dark:text-white">
@@ -931,22 +959,11 @@ export function ProductDetailView({ product: initialProduct, id }: { product: Pr
                         <button
                             type="button"
                             disabled={buyingNow}
-                            onClick={() => {
-                                setBuyingNow(true)
-                                addToCart(product)
-                                trackAddToCart({
-                                    content_name: product.title,
-                                    content_ids: [product.id || id],
-                                    contents: [{ id: product.id || id, quantity: 1, item_price: appliedDiscount ? appliedDiscount.discountedPrice : product.price }],
-                                    value: appliedDiscount ? appliedDiscount.discountedPrice : product.price,
-                                })
-                                const checkoutUrl = appliedDiscount ? `/checkout?coupon=${encodeURIComponent(appliedDiscount.code)}` : "/checkout"
-                                router.push(checkoutUrl)
-                            }}
+                            onClick={executeBuyNow}
                             className="flex-1 h-11 px-4 rounded-xl font-extrabold text-sm text-white bg-gradient-to-r from-orange-500 via-orange-600 to-red-600 hover:from-orange-600 hover:to-red-700 shadow-md shadow-orange-500/25 active:scale-95 transition-all flex items-center justify-center gap-1.5 disabled:opacity-70"
                         >
                             <Zap className="h-4 w-4 fill-current shrink-0" />
-                            <span>{buyingNow ? "Opening..." : appliedDiscount ? `Buy at ${formatPrice(appliedDiscount.discountedPrice)}` : "Buy Now"}</span>
+                            <span>{buyingNow ? "Opening Checkout..." : appliedDiscount ? `Buy at ${formatPrice(appliedDiscount.discountedPrice)}` : "Buy Now"}</span>
                         </button>
                     </div>
                 </div>
