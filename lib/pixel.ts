@@ -53,6 +53,24 @@ export interface UserData {
 }
 
 // ── Core safe fbq wrapper ─────────────────────────────────────────────────────
+function ensureFbq(): any {
+  if (typeof window === "undefined") return null
+  const w = window as any
+  if (typeof w.fbq === "function") return w.fbq
+
+  // Initialize official Meta Pixel queue stub if not yet loaded
+  const n: any = function () {
+    n.callMethod ? n.callMethod.apply(n, arguments) : n.queue.push(arguments)
+  }
+  if (!w._fbq) w._fbq = n
+  n.push = n
+  n.loaded = true
+  n.version = "2.0"
+  n.queue = []
+  w.fbq = n
+  return n
+}
+
 function _fbq(
   action: "track" | "trackCustom" | "init" | "set",
   eventName: string,
@@ -60,7 +78,8 @@ function _fbq(
   options?: { eventID?: string }
 ): void {
   if (typeof window === "undefined") return
-  if (typeof window.fbq !== "function") return
+  const fbqFn = ensureFbq()
+  if (typeof fbqFn !== "function") return
   if (!eventName || typeof eventName !== "string" || eventName.trim() === "") {
     console.warn("[Meta Pixel] Blocked: fbq called with empty or invalid event name.")
     return
@@ -77,7 +96,11 @@ function _fbq(
     args.push(options)
   }
 
-  window.fbq.apply(null, args)
+  try {
+    fbqFn.apply(null, args)
+  } catch (err) {
+    console.warn("[Meta Pixel] Execution warning:", err)
+  }
 }
 
 export { _fbq as fbq }
@@ -203,22 +226,48 @@ export function trackAddPaymentInfo(params: {
 
 export function trackPurchase(params: {
   value: number
-  content_ids: string[]
+  content_ids?: string[]
   contents?: Array<{ id: string; quantity: number; item_price?: number }>
   currency?: string
 }, userData?: UserData): void {
-  trackEventWithCAPI("Purchase", {
+  const sanitizedValue = Math.max(0, Number(params.value) || 0)
+  const sanitizedCurrency = params.currency || "INR"
+  const sanitizedContentIds = Array.isArray(params.content_ids) && params.content_ids.length > 0
+    ? params.content_ids.map(String)
+    : ["grabnext_digital_item"]
+
+  const sanitizedContents = Array.isArray(params.contents) && params.contents.length > 0
+    ? params.contents.map((c) => ({
+        id: String(c.id),
+        quantity: Number(c.quantity) || 1,
+        item_price: Number(c.item_price) || sanitizedValue,
+      }))
+    : sanitizedContentIds.map((id) => ({
+        id,
+        quantity: 1,
+        item_price: sanitizedValue,
+      }))
+
+  const purchasePayload = {
     content_type: "product",
-    currency: "INR",
-    ...params,
-  }, userData)
+    currency: sanitizedCurrency,
+    value: sanitizedValue,
+    content_ids: sanitizedContentIds,
+    contents: sanitizedContents,
+    num_items: sanitizedContents.reduce((sum, item) => sum + (item.quantity || 1), 0),
+  }
+
+  // Dispatch via Meta Pixel (fbq) & Server CAPI
+  trackEventWithCAPI("Purchase", purchasePayload, userData)
 
   // Dual Track in Google Analytics (GA4)
-  gaPurchase({
-    transaction_id: `tx_${Date.now()}`,
-    value: params.value,
-    items: params.contents?.map((c) => ({ id: c.id, name: c.id, price: c.item_price || params.value })),
-  })
+  try {
+    gaPurchase({
+      transaction_id: `tx_${Date.now()}`,
+      value: sanitizedValue,
+      items: sanitizedContents.map((c) => ({ id: c.id, name: c.id, price: c.item_price || sanitizedValue })),
+    })
+  } catch {}
 }
 
 export function trackLead(params?: {

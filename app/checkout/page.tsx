@@ -28,7 +28,7 @@ import {
 import { useCart } from "@/contexts/cart-context"
 import { useAuth } from "@/contexts/auth-context"
 import { toast } from "@/hooks/use-toast"
-import { trackInitiateCheckout, trackAddPaymentInfo } from "@/lib/pixel"
+import { trackInitiateCheckout, trackAddPaymentInfo, trackPurchase } from "@/lib/pixel"
 import { Logo } from "@/components/logo"
 
 declare global {
@@ -259,6 +259,48 @@ export default function CheckoutPage() {
       onSuccess: async (data: { utr: string; amount?: number }) => {
         paymentSucceeded = true
         setLoading(true)
+
+        const finalPaidAmount = data.amount !== undefined ? Number(data.amount) : verifiedAmount
+        const purchaseItems = items.map((i) => ({
+          id: i.productId,
+          quantity: i.quantity || 1,
+          item_price: i.product.price,
+        }))
+        const purchaseContentIds = items.map((i) => i.productId)
+        const purchaseUserData = {
+          email: formData.email.trim() || undefined,
+          phone: formData.phone.trim() || undefined,
+          firstName: formData.name.trim()?.split(" ")[0] || undefined,
+          lastName: formData.name.trim()?.split(" ").slice(1).join(" ") || undefined,
+          external_id: user?.uid || undefined,
+        }
+
+        // Cache purchase details in sessionStorage for instant retrieval on thank you page
+        try {
+          sessionStorage.setItem("grabnext_last_purchase", JSON.stringify({
+            orderId,
+            utr: data.utr || orderId,
+            value: finalPaidAmount,
+            content_ids: purchaseContentIds,
+            contents: purchaseItems,
+            userData: purchaseUserData,
+            timestamp: Date.now(),
+          }))
+          sessionStorage.setItem(`tracked_purchase_${orderId}`, "true")
+          if (data.utr) sessionStorage.setItem(`tracked_purchase_${data.utr}`, "true")
+        } catch {}
+
+        // Instant Multi-Pixel & CAPI Purchase Dispatch
+        trackPurchase(
+          {
+            value: finalPaidAmount,
+            currency: "INR",
+            content_ids: purchaseContentIds,
+            contents: purchaseItems,
+          },
+          purchaseUserData
+        )
+
         try {
           const res = await fetch("/api/xpay/verify", {
             method: "POST",
@@ -274,7 +316,7 @@ export default function CheckoutPage() {
             throw new Error(verifyData.error || "Payment verification failed")
           }
           clearCart()
-          router.push(`/checkout/success?utr=${data.utr}`)
+          router.push(`/checkout/success?utr=${encodeURIComponent(data.utr || orderId)}&orderId=${encodeURIComponent(orderId)}`)
         } catch (err: any) {
           console.error("XPay verify error:", err)
           toast({
@@ -282,10 +324,8 @@ export default function CheckoutPage() {
             description: err.message || "Could not confirm payment status",
             variant: "destructive",
           })
-          if (data?.utr) {
-            clearCart()
-            router.push(`/checkout/success?utr=${data.utr}`)
-          }
+          clearCart()
+          router.push(`/checkout/success?utr=${encodeURIComponent(data?.utr || orderId)}&orderId=${encodeURIComponent(orderId)}`)
         } finally {
           setLoading(false)
         }
@@ -338,6 +378,49 @@ export default function CheckoutPage() {
       handler: async (response: any) => {
         paymentSucceeded = true
         setLoading(true)
+
+        const purchaseItems = items.map((i) => ({
+          id: i.productId,
+          quantity: i.quantity || 1,
+          item_price: i.product.price,
+        }))
+        const purchaseContentIds = items.map((i) => i.productId)
+        const purchaseUserData = {
+          email: formData.email.trim() || undefined,
+          phone: formData.phone.trim() || undefined,
+          firstName: formData.name.trim()?.split(" ")[0] || undefined,
+          lastName: formData.name.trim()?.split(" ").slice(1).join(" ") || undefined,
+          external_id: user?.uid || undefined,
+        }
+
+        const paidAmount = orderData.amount ? orderData.amount / 100 : finalAmount
+
+        try {
+          sessionStorage.setItem("grabnext_last_purchase", JSON.stringify({
+            orderId,
+            utr: response.razorpay_payment_id || orderId,
+            value: paidAmount,
+            content_ids: purchaseContentIds,
+            contents: purchaseItems,
+            userData: purchaseUserData,
+            timestamp: Date.now(),
+          }))
+          sessionStorage.setItem(`tracked_purchase_${orderId}`, "true")
+          if (response.razorpay_payment_id) {
+            sessionStorage.setItem(`tracked_purchase_${response.razorpay_payment_id}`, "true")
+          }
+        } catch {}
+
+        trackPurchase(
+          {
+            value: paidAmount,
+            currency: "INR",
+            content_ids: purchaseContentIds,
+            contents: purchaseItems,
+          },
+          purchaseUserData
+        )
+
         try {
           const verifyRes = await fetch("/api/razorpay/verify", {
             method: "POST",
@@ -354,13 +437,15 @@ export default function CheckoutPage() {
             throw new Error(verifyData.error || "Payment verification failed")
           }
           clearCart()
-          router.push(`/checkout/success?utr=${response.razorpay_payment_id}`)
+          router.push(`/checkout/success?utr=${encodeURIComponent(response.razorpay_payment_id || orderId)}&orderId=${encodeURIComponent(orderId)}`)
         } catch (err: any) {
           toast({
             title: "Payment Verification Failed",
             description: err.message || "Could not verify transaction with payment gateway",
             variant: "destructive",
           })
+          clearCart()
+          router.push(`/checkout/success?utr=${encodeURIComponent(response?.razorpay_payment_id || orderId)}&orderId=${encodeURIComponent(orderId)}`)
         } finally {
           setLoading(false)
         }
@@ -430,10 +515,30 @@ export default function CheckoutPage() {
         }
       )
 
-      // If order is completely free
+      // If order is completely free or already paid
       if (orderData.totalAmount === 0 || orderData.status === "paid") {
+        trackPurchase(
+          {
+            value: Number(orderData.totalAmount) || 0,
+            currency: "INR",
+            content_ids: items.map((i) => i.productId),
+            contents: items.map((i) => ({
+              id: i.productId,
+              quantity: i.quantity || 1,
+              item_price: 0,
+            })),
+          },
+          {
+            email: formData.email.trim() || undefined,
+            phone: formData.phone.trim() || undefined,
+            external_id: userId || undefined,
+          }
+        )
+        try {
+          sessionStorage.setItem(`tracked_purchase_${orderData.id}`, "true")
+        } catch {}
         clearCart()
-        router.push(`/checkout/success?utr=${orderData.id}`)
+        router.push(`/checkout/success?utr=${encodeURIComponent(orderData.id)}&orderId=${encodeURIComponent(orderData.id)}`)
         return
       }
 

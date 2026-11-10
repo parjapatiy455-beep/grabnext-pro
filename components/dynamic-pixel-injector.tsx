@@ -49,7 +49,7 @@ export function DynamicPixelInjector() {
   // Helper to test if a triggerPage matches current pathname
   const matchesRoute = (triggerPage: string, currentPath: string) => {
     if (!triggerPage || triggerPage === 'all') return true
-    if (triggerPage === 'checkout' && currentPath.startsWith('/checkout') && !currentPath.includes('/success')) return true
+    if (triggerPage === 'checkout' && currentPath.startsWith('/checkout')) return true
     if (triggerPage === 'success' && currentPath.includes('/checkout/success')) return true
     if (triggerPage === 'landing' && (currentPath.startsWith('/lp') || currentPath.startsWith('/products'))) return true
     return false

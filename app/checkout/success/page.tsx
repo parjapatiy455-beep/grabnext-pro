@@ -13,14 +13,54 @@ import { trackPurchase } from "@/lib/pixel"
 
 export default function CheckoutSuccessPage() {
   const searchParams = useSearchParams()
-  const utr = searchParams.get("utr") || ""
+  const utrParam = (searchParams.get("utr") || "").trim()
+  const orderIdParam = (searchParams.get("orderId") || searchParams.get("id") || searchParams.get("order_id") || "").trim()
+  const paymentRef = utrParam || orderIdParam || ""
+
   const [order, setOrder] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   // Guard against duplicate Purchase events if the effect re-runs
   const hasFiredPurchase = useRef(false)
 
+  // 1. Instant fallback tracking via cached session purchase
   useEffect(() => {
-    if (!utr) {
+    try {
+      const cachedRaw = sessionStorage.getItem("grabnext_last_purchase")
+      if (cachedRaw) {
+        const cached = JSON.parse(cachedRaw)
+        const matchesCurrent =
+          !orderIdParam && !utrParam
+            ? true
+            : (orderIdParam && cached.orderId === orderIdParam) ||
+              (utrParam && (cached.utr === utrParam || cached.orderId === utrParam))
+
+        if (matchesCurrent) {
+          const orderKey = cached.orderId || cached.utr || "order"
+          const alreadyTracked = sessionStorage.getItem(`tracked_purchase_${orderKey}`) === "true"
+
+          if (!alreadyTracked && !hasFiredPurchase.current) {
+            hasFiredPurchase.current = true
+            sessionStorage.setItem(`tracked_purchase_${orderKey}`, "true")
+            trackPurchase(
+              {
+                value: Number(cached.value) || 0,
+                currency: "INR",
+                content_ids: cached.content_ids || [],
+                contents: cached.contents || [],
+              },
+              cached.userData
+            )
+          }
+        }
+      }
+    } catch (e) {
+      console.warn("Cached purchase check warning:", e)
+    }
+  }, [orderIdParam, utrParam])
+
+  // 2. Fetch full verified order from server and guarantee Purchase event firing
+  useEffect(() => {
+    if (!paymentRef) {
       setLoading(false)
       return
     }
@@ -30,30 +70,48 @@ export default function CheckoutSuccessPage() {
 
     const fetchOrder = async () => {
       try {
-        const res = await fetch(`/api/orders/by-payment/${encodeURIComponent(utr)}`)
+        const res = await fetch(`/api/orders/by-payment/${encodeURIComponent(paymentRef)}`)
         const data = await res.json()
         if (!data.error && data.id) {
           if (!isCancelled) {
             setOrder(data)
             setLoading(false)
-            if (!hasFiredPurchase.current) {
+
+            const checkKey = data.id || data.paymentId || paymentRef
+            const alreadyTracked =
+              sessionStorage.getItem(`tracked_purchase_${checkKey}`) === "true" ||
+              (data.id && sessionStorage.getItem(`tracked_purchase_${data.id}`) === "true") ||
+              (data.paymentId && sessionStorage.getItem(`tracked_purchase_${data.paymentId}`) === "true")
+
+            if (!alreadyTracked && !hasFiredPurchase.current) {
               hasFiredPurchase.current = true
+              try {
+                sessionStorage.setItem(`tracked_purchase_${data.id}`, "true")
+                if (data.paymentId) sessionStorage.setItem(`tracked_purchase_${data.paymentId}`, "true")
+              } catch {}
+
+              const orderItems = Array.isArray(data.items) ? data.items : []
+              const totalAmount = Number(data.totalAmount) || 0
+              const contentIds = orderItems.map((i: any) => String(i.productId || i.id))
+              const contents = orderItems.map((i: any) => ({
+                id: String(i.productId || i.id),
+                quantity: Number(i.quantity) || 1,
+                item_price: Number(i.price) || (orderItems.length > 0 ? totalAmount / orderItems.length : totalAmount),
+              }))
+
               trackPurchase(
                 {
-                  value: data.totalAmount || 0,
-                  content_ids: data.items?.map((i: any) => i.productId) || [],
-                  contents: data.items?.map((i: any) => ({
-                    id: i.productId,
-                    quantity: i.quantity || 1,
-                    item_price: i.price,
-                  })) || [],
+                  value: totalAmount,
+                  currency: "INR",
+                  content_ids: contentIds,
+                  contents: contents,
                 },
                 {
                   email: data.userEmail,
                   phone: data.userPhone,
-                  firstName: data.userName?.split(' ')[0],
-                  lastName: data.userName?.split(' ').slice(1).join(' '),
-                  external_id: data.userId
+                  firstName: data.userName?.split(" ")[0],
+                  lastName: data.userName?.split(" ").slice(1).join(" "),
+                  external_id: data.userId,
                 }
               )
             }
@@ -65,7 +123,7 @@ export default function CheckoutSuccessPage() {
       }
 
       attempts++
-      if (attempts < 4 && !isCancelled) {
+      if (attempts < 6 && !isCancelled) {
         setTimeout(fetchOrder, 1200)
       } else if (!isCancelled) {
         setLoading(false)
@@ -74,7 +132,7 @@ export default function CheckoutSuccessPage() {
 
     fetchOrder()
     return () => { isCancelled = true }
-  }, [utr])
+  }, [paymentRef])
 
   const digitalItems = order?.items?.filter((i: any) => i.downloadUrl) || []
 
@@ -94,10 +152,10 @@ export default function CheckoutSuccessPage() {
               </p>
             </CardHeader>
             <CardContent className="space-y-6">
-              {utr && (
+              {(utrParam || order?.paymentId) && (
                 <div className="p-4 bg-green-50 border border-green-200 rounded-lg text-center">
                   <p className="text-sm text-green-700 font-medium mb-1">Payment Reference (UTR)</p>
-                  <p className="font-mono text-lg font-bold text-green-800">{utr}</p>
+                  <p className="font-mono text-lg font-bold text-green-800">{order?.paymentId || utrParam}</p>
                 </div>
               )}
 
