@@ -86,19 +86,28 @@ export default function CheckoutPage() {
 
   // Resolve active Meta Pixel ID strictly for these cart items / ad campaign
   const resolvedPixelId = (() => {
+    // 1. Highest priority: Check URL query or SessionStorage (from ad click)
+    if (typeof window !== "undefined") {
+      try {
+        const sp = new URLSearchParams(window.location.search)
+        const urlPixel = sp.get("pixel") || sp.get("pixel_id") || sp.get("fb_pixel")
+        if (urlPixel && urlPixel.trim().length > 4) {
+          sessionStorage.setItem("grabnext_active_pixel", urlPixel.trim())
+          return urlPixel.trim()
+        }
+        const stored = sessionStorage.getItem("grabnext_active_pixel")
+        if (stored && stored.trim().length > 4) return stored.trim()
+      } catch {}
+    }
+    // 2. Second priority: Database assigned pixel for this product
     const itemWithPixel = items.find((i) => (i.product as any)?.metaPixelId)
     if (itemWithPixel && (itemWithPixel.product as any).metaPixelId) {
       return (itemWithPixel.product as any).metaPixelId
     }
+    // 3. Third priority: Live CapCut ads fallback
     const capcutItem = items.find((i) => i.product.title?.toLowerCase().includes("capcut") || i.productId?.toLowerCase().includes("capcut"))
     if (capcutItem) {
       return "2624044841356190"
-    }
-    if (typeof window !== "undefined") {
-      try {
-        const stored = sessionStorage.getItem("grabnext_active_pixel")
-        if (stored && stored.trim().length > 4) return stored.trim()
-      } catch {}
     }
     return null
   })()

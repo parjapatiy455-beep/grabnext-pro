@@ -117,21 +117,40 @@ export function ProductDetailView({ product: initialProduct, id }: { product: Pr
     const [activeMediaType, setActiveMediaType] = useState<"image" | "video">("image")
     const [zoomModalData, setZoomModalData] = useState<{ images: string[]; startIdx: number } | null>(null)
 
-    // Resolved Meta Pixel for this product (with automatic isolation for CapCut ad accounts)
-    const resolvedPixel = initialProduct.metaPixelId || (
-        (initialProduct.title && initialProduct.title.toLowerCase().includes("capcut")) ||
-        (id && id.toLowerCase().includes("capcut"))
-            ? "2624044841356190"
-            : null
-    )
+    // Resolved Meta Pixel for this product (Strict Multi-Account Priority: URL Param > Session > DB Pixel > CapCut Fallback)
+    const [resolvedPixel, setResolvedPixel] = useState<string | null>(null)
 
     useEffect(() => {
-        if (resolvedPixel) {
+        let pixel: string | null = null
+        if (typeof window !== "undefined") {
             try {
-                sessionStorage.setItem("grabnext_active_pixel", resolvedPixel)
+                const sp = new URLSearchParams(window.location.search)
+                const urlPixel = sp.get("pixel") || sp.get("pixel_id") || sp.get("fb_pixel")
+                if (urlPixel && urlPixel.trim().length > 4) {
+                    pixel = urlPixel.trim()
+                } else {
+                    const stored = sessionStorage.getItem("grabnext_active_pixel")
+                    if (stored && stored.trim().length > 4) {
+                        pixel = stored.trim()
+                    }
+                }
             } catch {}
         }
-    }, [resolvedPixel])
+        if (!pixel) {
+            pixel = initialProduct.metaPixelId || (
+                (initialProduct.title && initialProduct.title.toLowerCase().includes("capcut")) ||
+                (id && id.toLowerCase().includes("capcut"))
+                    ? "2624044841356190"
+                    : null
+            )
+        }
+        if (pixel) {
+            try {
+                sessionStorage.setItem("grabnext_active_pixel", pixel)
+            } catch {}
+            setResolvedPixel(pixel)
+        }
+    }, [initialProduct, id])
 
     // ── 50% Off Flash Deal Popup State & Timer ──
     const [showDiscountPopup, setShowDiscountPopup] = useState(false)

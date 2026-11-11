@@ -102,6 +102,7 @@ export function FacebookPixelScript() {
     "try{",
     "  var sp=new URLSearchParams(window.location.search);",
     "  var urlPixel=sp.get('pixel')||sp.get('pixel_id')||sp.get('fb_pixel');",
+    "  if(!urlPixel){try{urlPixel=sessionStorage.getItem('grabnext_active_pixel');}catch(e){}}",
     "  if(!urlPixel&&window.location.pathname.toLowerCase().indexOf('capcut')!==-1){urlPixel='2624044841356190';}",
     "  if(urlPixel){sessionStorage.setItem('grabnext_active_pixel',urlPixel);fbq('init',urlPixel);fbq('trackSingle',urlPixel,'PageView');}",
     `  else{fbq('trackSingle','${FB_PIXEL_ID}','PageView');}`,

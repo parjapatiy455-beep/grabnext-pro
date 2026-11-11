@@ -38,12 +38,9 @@ const initializedInWindow = new Set<string>()
  * 5. Fallback: FB_PIXEL_ID
  */
 export function getActivePixelId(explicitPixelId?: string | null): string {
-  if (explicitPixelId && typeof explicitPixelId === "string" && explicitPixelId.trim().length > 4) {
-    return explicitPixelId.trim()
-  }
-
   if (typeof window !== "undefined") {
     try {
+      // 1. Highest priority: URL query param (?pixel=... or ?pixel_id=... or ?fb_pixel=...)
       const sp = new URLSearchParams(window.location.search)
       const urlPixel = sp.get("pixel") || sp.get("pixel_id") || sp.get("fb_pixel")
       if (urlPixel && urlPixel.trim().length > 4) {
@@ -52,11 +49,27 @@ export function getActivePixelId(explicitPixelId?: string | null): string {
         return clean
       }
 
+      // 2. Second priority: Active pixel stored in browser session from earlier ad click
       const stored = sessionStorage.getItem("grabnext_active_pixel")
       if (stored && stored.trim().length > 4) {
         return stored.trim()
       }
+    } catch {}
+  }
 
+  // 3. Third priority: Explicit pixel assigned to this product in Admin Panel
+  if (explicitPixelId && typeof explicitPixelId === "string" && explicitPixelId.trim().length > 4) {
+    if (typeof window !== "undefined") {
+      try {
+        sessionStorage.setItem("grabnext_active_pixel", explicitPixelId.trim())
+      } catch {}
+    }
+    return explicitPixelId.trim()
+  }
+
+  // 4. Fourth priority: Live CapCut ads fallback
+  if (typeof window !== "undefined") {
+    try {
       const path = (window.location.pathname || "").toLowerCase()
       if (path.includes("capcut")) {
         sessionStorage.setItem("grabnext_active_pixel", CAPCUT_PIXEL_ID)
