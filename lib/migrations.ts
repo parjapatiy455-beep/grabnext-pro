@@ -109,6 +109,7 @@ export async function runMigrations() {
   await safeAddColumn('products', 'discountPopupCoupon', "TEXT DEFAULT 'SAVE50'")
   await safeAddColumn('products', 'discountPopupTimerMinutes', 'INTEGER DEFAULT 10')
   await safeAddColumn('products', 'discountPopupHeadline', 'TEXT')
+  await safeAddColumn('products', 'metaPixelId', 'TEXT')
 
   await safeAddColumn('orders', 'userEmail', 'TEXT')
   await safeAddColumn('orders', 'userName', 'TEXT')

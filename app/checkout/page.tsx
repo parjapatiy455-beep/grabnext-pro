@@ -84,6 +84,25 @@ export default function CheckoutPage() {
     }
   }, [activeGateway])
 
+  // Resolve active Meta Pixel ID strictly for these cart items / ad campaign
+  const resolvedPixelId = (() => {
+    const itemWithPixel = items.find((i) => (i.product as any)?.metaPixelId)
+    if (itemWithPixel && (itemWithPixel.product as any).metaPixelId) {
+      return (itemWithPixel.product as any).metaPixelId
+    }
+    const capcutItem = items.find((i) => i.product.title?.toLowerCase().includes("capcut") || i.productId?.toLowerCase().includes("capcut"))
+    if (capcutItem) {
+      return "2624044841356190"
+    }
+    if (typeof window !== "undefined") {
+      try {
+        const stored = sessionStorage.getItem("grabnext_active_pixel")
+        if (stored && stored.trim().length > 4) return stored.trim()
+      } catch {}
+    }
+    return null
+  })()
+
   // Track Pixel initiate checkout
   useEffect(() => {
     if (totalAmount > 0 && !hasFiredCheckout.current) {
@@ -106,10 +125,11 @@ export default function CheckoutPage() {
               lastName: user.displayName?.split(" ").slice(1).join(" "),
               external_id: user.uid,
             }
-          : undefined
+          : undefined,
+        resolvedPixelId
       )
     }
-  }, [totalAmount, items, user])
+  }, [totalAmount, items, user, resolvedPixelId])
 
   // Prefill user data
   useEffect(() => {
@@ -286,13 +306,14 @@ export default function CheckoutPage() {
             content_ids: purchaseContentIds,
             contents: purchaseItems,
             userData: purchaseUserData,
+            targetPixelId: resolvedPixelId,
             timestamp: Date.now(),
           }))
           sessionStorage.setItem(`tracked_purchase_${orderId}`, "true")
           if (data.utr) sessionStorage.setItem(`tracked_purchase_${data.utr}`, "true")
         } catch {}
 
-        // Instant Multi-Pixel & CAPI Purchase Dispatch
+        // Instant Multi-Pixel & CAPI Purchase Dispatch strictly to target pixel
         trackPurchase(
           {
             value: finalPaidAmount,
@@ -300,7 +321,8 @@ export default function CheckoutPage() {
             content_ids: purchaseContentIds,
             contents: purchaseItems,
           },
-          purchaseUserData
+          purchaseUserData,
+          resolvedPixelId
         )
 
         try {
@@ -405,6 +427,7 @@ export default function CheckoutPage() {
             content_ids: purchaseContentIds,
             contents: purchaseItems,
             userData: purchaseUserData,
+            targetPixelId: resolvedPixelId,
             timestamp: Date.now(),
           }))
           sessionStorage.setItem(`tracked_purchase_${orderId}`, "true")
@@ -420,7 +443,8 @@ export default function CheckoutPage() {
             content_ids: purchaseContentIds,
             contents: purchaseItems,
           },
-          purchaseUserData
+          purchaseUserData,
+          resolvedPixelId
         )
 
         try {
@@ -534,7 +558,8 @@ export default function CheckoutPage() {
             email: formData.email.trim() || undefined,
             phone: formData.phone.trim() || undefined,
             external_id: userId || undefined,
-          }
+          },
+          resolvedPixelId
         )
         try {
           sessionStorage.setItem(`tracked_purchase_${orderData.id}`, "true")

@@ -43,6 +43,7 @@ const EMPTY = {
     discountPopupCoupon: "SAVE50",
     discountPopupTimerMinutes: "10",
     discountPopupHeadline: "",
+    metaPixelId: "",
 }
 
 export function AdminProductForm({ mode, productId }: ProductFormProps) {
@@ -62,10 +63,26 @@ export function AdminProductForm({ mode, productId }: ProductFormProps) {
     const [digitalAssets, setDigitalAssets] = useState<DigitalAsset[]>([])
     const [loading, setLoading] = useState(mode === "edit")
     const [proofUrlInput, setProofUrlInput] = useState("")
+    const [availablePixels, setAvailablePixels] = useState<Array<{ id: string; name: string; pixelId: string }>>([])
     const digitalFileRef = useRef<HTMLInputElement>(null)
 
     useEffect(() => {
         fetchCategories().then((cats: any) => setCategories(Array.isArray(cats) ? cats : []))
+        fetch("/api/pixels")
+            .then(r => r.json())
+            .then((list: any) => {
+                if (Array.isArray(list)) {
+                    const fbList = list
+                        .filter((item: any) => item.type === "facebook" && item.pixelId)
+                        .map((item: any) => ({
+                            id: item.id,
+                            name: item.name,
+                            pixelId: String(item.pixelId).trim(),
+                        }))
+                    setAvailablePixels(fbList)
+                }
+            })
+            .catch(() => {})
     }, [])
 
     useEffect(() => {
@@ -97,6 +114,7 @@ export function AdminProductForm({ mode, productId }: ProductFormProps) {
                     discountPopupCoupon: p.discountPopupCoupon || "SAVE50",
                     discountPopupTimerMinutes: p.discountPopupTimerMinutes ? p.discountPopupTimerMinutes.toString() : "10",
                     discountPopupHeadline: p.discountPopupHeadline || "",
+                    metaPixelId: p.metaPixelId || "",
                 })
                 setDigitalAssets(parsedAssets)
                 setLoading(false)
@@ -252,6 +270,7 @@ export function AdminProductForm({ mode, productId }: ProductFormProps) {
                 discountPopupCoupon: (form.discountPopupCoupon || "SAVE50").trim().toUpperCase(),
                 discountPopupTimerMinutes: parseInt(form.discountPopupTimerMinutes, 10) || 10,
                 discountPopupHeadline: form.discountPopupHeadline?.trim() || null,
+                metaPixelId: form.metaPixelId.trim() || null,
             }
             const url = mode === "edit" ? `/api/products/${productId}` : "/api/products"
             const method = mode === "edit" ? "PUT" : "POST"
@@ -798,10 +817,51 @@ export function AdminProductForm({ mode, productId }: ProductFormProps) {
                                 )}
                             </div>
 
+                            {/* Meta Pixel & Ad Account Isolation Card */}
+                            <div className="bg-white rounded-2xl p-6 border shadow-sm space-y-4">
+                                <div className="flex items-center gap-2 border-b pb-3">
+                                    <div className="h-8 w-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold">4</div>
+                                    <div>
+                                        <h2 className="font-semibold text-gray-800 text-sm">Meta Pixel / Ad Account</h2>
+                                        <p className="text-[11px] text-gray-400">Multi-Account Isolation (No Cross-Data)</p>
+                                    </div>
+                                </div>
+                                <div className="space-y-3">
+                                    <div>
+                                        <Label className="text-xs font-semibold text-slate-700">Dedicated Meta Pixel for this Product</Label>
+                                        <div className="mt-1.5 space-y-2">
+                                            {availablePixels.length > 0 && (
+                                                <select
+                                                    value={form.metaPixelId}
+                                                    onChange={(e) => setForm((f) => ({ ...f, metaPixelId: e.target.value }))}
+                                                    className="w-full h-9 border border-gray-200 rounded-md px-3 text-xs bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary/20"
+                                                >
+                                                    <option value="">Auto-Detect / Store Default Pixel</option>
+                                                    {availablePixels.map((p) => (
+                                                        <option key={p.id} value={p.pixelId}>
+                                                            {p.name} ({p.pixelId})
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            )}
+                                            <Input
+                                                value={form.metaPixelId}
+                                                onChange={(e) => setForm((f) => ({ ...f, metaPixelId: e.target.value.trim() }))}
+                                                placeholder="Or enter Pixel ID manually e.g. 2624044841356190"
+                                                className="h-9 text-xs font-mono"
+                                            />
+                                        </div>
+                                        <p className="text-[10px] text-gray-400 mt-1.5">
+                                            Is product par aane wale visitors aur purchase ka event <strong>sirf isi Pixel ID</strong> ko jayega. Dusre ad accounts ke pixels par zero fake/cross events bhejenge!
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
                             {/* Status Card */}
                             <div className="bg-white rounded-2xl p-6 border shadow-sm space-y-4">
                                 <div className="flex items-center gap-2 border-b pb-3">
-                                    <div className="h-8 w-8 rounded-lg bg-green-50 text-green-600 flex items-center justify-center font-bold">4</div>
+                                    <div className="h-8 w-8 rounded-lg bg-green-50 text-green-600 flex items-center justify-center font-bold">5</div>
                                     <h2 className="font-semibold text-gray-800">Publishing</h2>
                                 </div>
                                 <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100">

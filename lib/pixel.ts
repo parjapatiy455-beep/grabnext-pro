@@ -23,6 +23,50 @@ export const ALL_FB_PIXEL_IDS = Array.from(
 )
 
 export const FB_PIXEL_ID = ALL_FB_PIXEL_IDS[0] || "1004524488604833"
+export const CAPCUT_PIXEL_ID = "2624044841356190"
+
+// Set of initialized pixel IDs in window
+const initializedInWindow = new Set<string>()
+
+/**
+ * Resolves the active Pixel ID with strict isolation:
+ * Priority:
+ * 1. explicitPixelId passed from product/action
+ * 2. URL param (?pixel= or ?pixel_id= or ?fb_pixel=)
+ * 3. sessionStorage ("grabnext_active_pixel")
+ * 4. Current page / product route check (if includes "capcut" -> CAPCUT_PIXEL_ID)
+ * 5. Fallback: FB_PIXEL_ID
+ */
+export function getActivePixelId(explicitPixelId?: string | null): string {
+  if (explicitPixelId && typeof explicitPixelId === "string" && explicitPixelId.trim().length > 4) {
+    return explicitPixelId.trim()
+  }
+
+  if (typeof window !== "undefined") {
+    try {
+      const sp = new URLSearchParams(window.location.search)
+      const urlPixel = sp.get("pixel") || sp.get("pixel_id") || sp.get("fb_pixel")
+      if (urlPixel && urlPixel.trim().length > 4) {
+        const clean = urlPixel.trim()
+        sessionStorage.setItem("grabnext_active_pixel", clean)
+        return clean
+      }
+
+      const stored = sessionStorage.getItem("grabnext_active_pixel")
+      if (stored && stored.trim().length > 4) {
+        return stored.trim()
+      }
+
+      const path = (window.location.pathname || "").toLowerCase()
+      if (path.includes("capcut")) {
+        sessionStorage.setItem("grabnext_active_pixel", CAPCUT_PIXEL_ID)
+        return CAPCUT_PIXEL_ID
+      }
+    } catch {}
+  }
+
+  return FB_PIXEL_ID
+}
 
 // ── TypeScript declarations ───────────────────────────────────────────────────
 declare global {
@@ -103,6 +147,48 @@ function _fbq(
   }
 }
 
+/**
+ * Single-Pixel isolated dispatch using Meta's official trackSingle / trackSingleCustom
+ */
+export function _fbqSingle(
+  targetPixelId: string,
+  action: "track" | "trackCustom",
+  eventName: string,
+  params?: Record<string, any>,
+  options?: { eventID?: string }
+): void {
+  if (typeof window === "undefined") return
+  const fbqFn = ensureFbq()
+  if (typeof fbqFn !== "function") return
+  if (!eventName || typeof eventName !== "string" || eventName.trim() === "") return
+
+  // Ensure target pixel is initialized
+  if (targetPixelId && !initializedInWindow.has(targetPixelId)) {
+    try {
+      fbqFn("init", targetPixelId)
+      initializedInWindow.add(targetPixelId)
+    } catch {}
+  }
+
+  const singleAction = action === "trackCustom" ? "trackSingleCustom" : "trackSingle"
+  const args: any[] = [singleAction, targetPixelId, eventName]
+  if (params && Object.keys(params).length > 0) {
+    args.push(params)
+    if (options && Object.keys(options).length > 0) {
+      args.push(options)
+    }
+  } else if (options && Object.keys(options).length > 0) {
+    args.push({})
+    args.push(options)
+  }
+
+  try {
+    fbqFn.apply(null, args)
+  } catch (err) {
+    console.warn(`[Meta Pixel trackSingle ${targetPixelId}] warning:`, err)
+  }
+}
+
 export { _fbq as fbq }
 
 // ── CAPI Sync Helper ──────────────────────────────────────────────────────────
@@ -110,15 +196,18 @@ export function trackEventWithCAPI(
   eventName: StandardEvent | string,
   customData: Record<string, any> = {},
   userData: UserData = {},
-  isCustom = false
+  isCustom = false,
+  explicitPixelId?: string | null
 ) {
+  const targetPixelId = getActivePixelId(explicitPixelId)
   const eventId = typeof crypto !== "undefined" && crypto.randomUUID 
     ? crypto.randomUUID() 
     : `evt_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`
 
   const action = isCustom ? "trackCustom" : "track"
 
-  _fbq(action, eventName, customData, { eventID: eventId })
+  // Strict isolation: Dispatch ONLY to targetPixelId
+  _fbqSingle(targetPixelId, action, eventName, customData, { eventID: eventId })
 
   if (typeof window !== "undefined") {
     const eventUrl = window.location.href
@@ -127,6 +216,7 @@ export function trackEventWithCAPI(
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
+        targetPixelId,
         eventName,
         eventUrl,
         eventId,
@@ -143,8 +233,8 @@ export function trackEventWithCAPI(
 
 // ── Standard event helpers (Meta + GA4 Dual Tracker) ──────────────────────────
 
-export function trackPageView(userData?: UserData): void {
-  trackEventWithCAPI("PageView", {}, userData)
+export function trackPageView(userData?: UserData, pixelId?: string | null): void {
+  trackEventWithCAPI("PageView", {}, userData, false, pixelId)
 }
 
 export function trackViewContent(params: {
@@ -154,12 +244,12 @@ export function trackViewContent(params: {
   contents?: Array<{ id: string; quantity: number; item_price?: number }>
   value: number
   currency?: string
-}, userData?: UserData): void {
+}, userData?: UserData, pixelId?: string | null): void {
   trackEventWithCAPI("ViewContent", {
     content_type: "product",
     currency: "INR",
     ...params,
-  }, userData)
+  }, userData, false, pixelId)
 
   // Dual Track in Google Analytics (GA4)
   gaViewItem({
@@ -176,12 +266,12 @@ export function trackAddToCart(params: {
   contents?: Array<{ id: string; quantity: number; item_price?: number }>
   value: number
   currency?: string
-}, userData?: UserData): void {
+}, userData?: UserData, pixelId?: string | null): void {
   trackEventWithCAPI("AddToCart", {
     content_type: "product",
     currency: "INR",
     ...params,
-  }, userData)
+  }, userData, false, pixelId)
 
   // Dual Track in Google Analytics (GA4)
   gaAddToCart({
@@ -198,11 +288,11 @@ export function trackInitiateCheckout(params: {
   content_ids?: string[]
   contents?: Array<{ id: string; quantity: number; item_price?: number }>
   currency?: string
-}, userData?: UserData): void {
+}, userData?: UserData, pixelId?: string | null): void {
   trackEventWithCAPI("InitiateCheckout", {
     currency: "INR",
     ...params,
-  }, userData)
+  }, userData, false, pixelId)
 
   // Dual Track in Google Analytics (GA4)
   gaBeginCheckout({
@@ -217,11 +307,11 @@ export function trackAddPaymentInfo(params: {
   content_ids?: string[]
   contents?: Array<{ id: string; quantity: number; item_price?: number }>
   currency?: string
-}, userData?: UserData): void {
+}, userData?: UserData, pixelId?: string | null): void {
   trackEventWithCAPI("AddPaymentInfo", {
     currency: "INR",
     ...params,
-  }, userData)
+  }, userData, false, pixelId)
 }
 
 export function trackPurchase(params: {
@@ -229,7 +319,7 @@ export function trackPurchase(params: {
   content_ids?: string[]
   contents?: Array<{ id: string; quantity: number; item_price?: number }>
   currency?: string
-}, userData?: UserData): void {
+}, userData?: UserData, pixelId?: string | null): void {
   const sanitizedValue = Math.max(0, Number(params.value) || 0)
   const sanitizedCurrency = params.currency || "INR"
   const sanitizedContentIds = Array.isArray(params.content_ids) && params.content_ids.length > 0
@@ -257,8 +347,8 @@ export function trackPurchase(params: {
     num_items: sanitizedContents.reduce((sum, item) => sum + (item.quantity || 1), 0),
   }
 
-  // Dispatch via Meta Pixel (fbq) & Server CAPI
-  trackEventWithCAPI("Purchase", purchasePayload, userData)
+  // Dispatch via Meta Pixel (fbq) & Server CAPI strictly to the target pixel
+  trackEventWithCAPI("Purchase", purchasePayload, userData, false, pixelId)
 
   // Dual Track in Google Analytics (GA4)
   try {
@@ -274,13 +364,13 @@ export function trackLead(params?: {
   content_name?: string
   value?: number
   currency?: string
-}, userData?: UserData): void {
-  trackEventWithCAPI("Lead", params || {}, userData)
+}, userData?: UserData, pixelId?: string | null): void {
+  trackEventWithCAPI("Lead", params || {}, userData, false, pixelId)
 }
 
 export function trackCompleteRegistration(params?: {
   content_name?: string
   status?: boolean | string
-}, userData?: UserData): void {
-  trackEventWithCAPI("CompleteRegistration", params || {}, userData)
+}, userData?: UserData, pixelId?: string | null): void {
+  trackEventWithCAPI("CompleteRegistration", params || {}, userData, false, pixelId)
 }

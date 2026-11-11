@@ -94,12 +94,20 @@ export function FacebookPixelScript() {
     "t.src=v;s=b.getElementsByTagName(e)[0];",
     "s.parentNode.insertBefore(t,s)",
     "}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');",
-    // init all configured pixels (including landing page pixel 1004524488604833)
-    ...ALL_FB_PIXEL_IDS.map(id => `fbq('init','${id}');`),
+    // Initialize default store pixel
+    `fbq('init','${FB_PIXEL_ID}');`,
     // optional: test event code for Facebook Events Manager
     testCode ? `fbq('set','agent','test','${testCode}');` : "",
-    // first PageView – inline script fires synchronously on every hard load
-    "fbq('track','PageView');",
+    // Isolated first PageView: if CapCut or ?pixel= specified, track strictly to that pixel; otherwise primary pixel
+    "try{",
+    "  var sp=new URLSearchParams(window.location.search);",
+    "  var urlPixel=sp.get('pixel')||sp.get('pixel_id')||sp.get('fb_pixel');",
+    "  if(!urlPixel&&window.location.pathname.toLowerCase().indexOf('capcut')!==-1){urlPixel='2624044841356190';}",
+    "  if(urlPixel){sessionStorage.setItem('grabnext_active_pixel',urlPixel);fbq('init',urlPixel);fbq('trackSingle',urlPixel,'PageView');}",
+    `  else{fbq('trackSingle','${FB_PIXEL_ID}','PageView');}`,
+    "}catch(e){",
+    `  fbq('trackSingle','${FB_PIXEL_ID}','PageView');`,
+    "}",
   ]
     .filter(Boolean)
     .join("\n")

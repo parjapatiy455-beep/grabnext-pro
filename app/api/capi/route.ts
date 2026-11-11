@@ -26,7 +26,7 @@ const TEST_EVENT_CODE = process.env.NEXT_PUBLIC_FB_TEST_EVENT_CODE
 export async function POST(req: Request) {
   try {
     const body = await req.json()
-    const { eventName, eventUrl, eventId, customData, userData } = body
+    const { targetPixelId, eventName, eventUrl, eventId, customData, userData } = body
 
     // 1. Check for Access Token
     if (!ACCESS_TOKEN) {
@@ -77,26 +77,17 @@ export async function POST(req: Request) {
       ...(TEST_EVENT_CODE ? { test_event_code: TEST_EVENT_CODE } : {})
     }
 
-    // 5. Dispatch to Meta Graph API for all configured pixels (DB + Env)
-    let dbPixelIds: string[] = []
-    try {
-      const rows = (await executeQuery(
-        "SELECT pixelId, scriptCode FROM pixels WHERE isActive = 1 AND (pixelId IS NOT NULL OR scriptCode LIKE '%fbq%')"
-      )) as any[]
-      if (Array.isArray(rows)) {
-        for (const r of rows) {
-          if (r.pixelId) dbPixelIds.push(String(r.pixelId).trim())
-          if (r.scriptCode) {
-            const m = String(r.scriptCode).match(/fbq\s*\(\s*['"]init['"]\s*,\s*['"](\d+)['"]/) || String(r.scriptCode).match(/tr\?id=(\d+)/)
-            if (m && m[1]) dbPixelIds.push(m[1])
-          }
-        }
-      }
-    } catch {
-      // ignore table fallback
+    // 5. Strict Multi-Account Pixel Isolation
+    // Only send the event to the pixel dedicated to this product/campaign!
+    let targetPixelIds: string[] = []
+    if (targetPixelId && typeof targetPixelId === "string" && targetPixelId.trim().length > 4) {
+      targetPixelIds = [targetPixelId.trim()]
+    } else if (eventUrl && eventUrl.toLowerCase().includes("capcut")) {
+      targetPixelIds = ["2624044841356190"]
+    } else {
+      // Fallback: send strictly to primary pixel, never broadcast to all!
+      targetPixelIds = [ALL_PIXEL_IDS[0] || "1004524488604833"]
     }
-
-    const targetPixelIds = Array.from(new Set([...dbPixelIds, ...ALL_PIXEL_IDS].filter(Boolean)))
 
     await Promise.allSettled(
       targetPixelIds.map(async (pId) => {
@@ -120,7 +111,7 @@ export async function POST(req: Request) {
     )
 
     if (process.env.NODE_ENV !== "production") {
-      console.log(`[Meta CAPI] Successfully dispatched ${eventName} (ID: ${eventId})`)
+      console.log(`[Meta CAPI] Successfully dispatched ${eventName} (ID: ${eventId}) to Pixel(s): ${targetPixelIds.join(', ')}`)
     }
 
     return NextResponse.json({ success: true, eventId })

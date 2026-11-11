@@ -84,6 +84,7 @@ export interface Product {
   discountPopupCoupon?: string
   discountPopupTimerMinutes?: number
   discountPopupHeadline?: string
+  metaPixelId?: string | null
 }
 
 export interface CartItem {

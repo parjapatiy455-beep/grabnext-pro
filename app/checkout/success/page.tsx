@@ -48,7 +48,8 @@ export default function CheckoutSuccessPage() {
                 content_ids: cached.content_ids || [],
                 contents: cached.contents || [],
               },
-              cached.userData
+              cached.userData,
+              cached.targetPixelId
             )
           }
         }
@@ -99,6 +100,15 @@ export default function CheckoutSuccessPage() {
                 item_price: Number(i.price) || (orderItems.length > 0 ? totalAmount / orderItems.length : totalAmount),
               }))
 
+              let successPixelId: string | null = null
+              try {
+                const stored = sessionStorage.getItem("grabnext_active_pixel")
+                if (stored && stored.trim().length > 4) successPixelId = stored.trim()
+              } catch {}
+              if (!successPixelId && orderItems.some((i: any) => (i.title || i.name || i.productId || i.id || '').toLowerCase().includes('capcut'))) {
+                successPixelId = '2624044841356190'
+              }
+
               trackPurchase(
                 {
                   value: totalAmount,
@@ -112,7 +122,8 @@ export default function CheckoutSuccessPage() {
                   firstName: data.userName?.split(" ")[0],
                   lastName: data.userName?.split(" ").slice(1).join(" "),
                   external_id: data.userId,
-                }
+                },
+                successPixelId
               )
             }
           }

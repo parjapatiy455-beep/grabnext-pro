@@ -99,8 +99,8 @@ export function DynamicPixelInjector() {
               if (pixel.testEventCode) {
                 ;(window as any).fbq('set', 'agent', 'test', pixel.testEventCode.trim())
               }
-              // Track initial PageView
-              ;(window as any).fbq('track', 'PageView')
+              // Track initial PageView strictly for this specific pixel (no global broadcast)
+              ;(window as any).fbq('trackSingle', pid, 'PageView')
             } catch (err) {
               console.warn(`[DynamicPixelInjector] FB Pixel ${pid} init error:`, err)
             }
