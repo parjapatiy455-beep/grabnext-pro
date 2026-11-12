@@ -117,7 +117,7 @@ export function ProductDetailView({ product: initialProduct, id }: { product: Pr
     const [activeMediaType, setActiveMediaType] = useState<"image" | "video">("image")
     const [zoomModalData, setZoomModalData] = useState<{ images: string[]; startIdx: number } | null>(null)
 
-    // Resolved Meta Pixel for this product (Strict Multi-Account Priority: URL Param > Session > DB Pixel > CapCut Fallback)
+    // Resolved Meta Pixel for this product (Strict Multi-Account Priority: URL Param > Session > DB Pixel > Primary Pixel via DynamicPixelInjector)
     const [resolvedPixel, setResolvedPixel] = useState<string | null>(null)
 
     useEffect(() => {
@@ -137,12 +137,8 @@ export function ProductDetailView({ product: initialProduct, id }: { product: Pr
             } catch {}
         }
         if (!pixel) {
-            pixel = initialProduct.metaPixelId || (
-                (initialProduct.title && initialProduct.title.toLowerCase().includes("capcut")) ||
-                (id && id.toLowerCase().includes("capcut"))
-                    ? "2624044841356190"
-                    : null
-            )
+            // Use DB-assigned metaPixelId if available; fallback to primary pixel managed via Admin Panel
+            pixel = initialProduct.metaPixelId || null
         }
         if (pixel) {
             try {

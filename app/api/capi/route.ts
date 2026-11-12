@@ -88,7 +88,7 @@ export async function POST(req: Request) {
 
     await Promise.allSettled(
       targetPixelIds.map(async (pId) => {
-        const metaUrl = `https://graph.facebook.com/v19.0/${pId}/events?access_token=${ACCESS_TOKEN}`
+        const metaUrl = `https://graph.facebook.com/v21.0/${pId}/events?access_token=${ACCESS_TOKEN}`
         try {
           const response = await fetch(metaUrl, {
             method: "POST",
