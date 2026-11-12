@@ -1,6 +1,7 @@
 export const runtime = 'edge'
 import { NextRequest, NextResponse } from 'next/server'
 import { executeQuery } from '@/lib/db'
+import { createDownloadToken } from '@/lib/session'
 
 export const dynamic = 'force-dynamic'
 
@@ -28,7 +29,7 @@ export async function GET(
         }
 
         // Fetch download URLs for each product in the order
-        const productIds = order.items.map((item: any) => item.productId)
+        const productIds = order.items.map((item: any) => item.productId || item.id).filter(Boolean)
         if (productIds.length > 0) {
             const placeholders = productIds.map(() => '?').join(',')
             const products = await executeQuery(
@@ -37,10 +38,31 @@ export async function GET(
             )
 
             if (Array.isArray(products)) {
-                order.items = order.items.map((item: any) => {
-                    const product = products.find((p: any) => p.id === item.productId)
-                    return { ...item, downloadUrl: product?.downloadUrl || null }
-                })
+                order.items = await Promise.all(order.items.map(async (item: any) => {
+                    const pId = item.productId || item.id
+                    const product = products.find((p: any) => p.id === pId)
+                    const downloadUrl = product?.downloadUrl || item.downloadUrl || null
+                    const assetTokens: Record<string, string> = {}
+
+                    if (downloadUrl) {
+                        try {
+                            const parsedAssets = JSON.parse(downloadUrl)
+                            if (Array.isArray(parsedAssets)) {
+                                for (const asset of parsedAssets) {
+                                    if (asset && asset.id && asset.id !== 'legacy') {
+                                        assetTokens[asset.id] = await createDownloadToken({
+                                            orderId: o.id,
+                                            productId: pId,
+                                            assetId: asset.id,
+                                        })
+                                    }
+                                }
+                            }
+                        } catch {}
+                    }
+
+                    return { ...item, downloadUrl, assetTokens }
+                }))
             }
         }
 

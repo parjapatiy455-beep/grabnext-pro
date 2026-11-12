@@ -198,7 +198,14 @@ export default function CheckoutSuccessPage() {
                               <p className="font-semibold text-sm border-b border-gray-100 pb-1.5 px-1">{item.title}</p>
                               {assets.map((asset: any) => {
                                 const isLegacy = asset.id === 'legacy'
-                                const secureUrl = isLegacy ? asset.url : `/api/user/secure-asset?productId=${pId}&assetId=${asset.id}`
+                                const isDirectExternal =
+                                  (asset.provider === 'external' || asset.type === 'link') &&
+                                  typeof asset.url === 'string' &&
+                                  asset.url.trim().startsWith('http')
+                                const token = item.assetTokens?.[asset.id]
+                                const secureUrl = (isLegacy || isDirectExternal)
+                                  ? asset.url
+                                  : `/api/user/secure-asset?productId=${encodeURIComponent(pId)}&assetId=${encodeURIComponent(asset.id)}${token ? `&token=${encodeURIComponent(token)}` : ''}`
 
                                 return (
                                   <div key={asset.id} className="flex items-center justify-between p-3 ml-2 bg-primary/5 rounded-xl border border-primary/10 group hover:bg-primary/10 transition-colors">

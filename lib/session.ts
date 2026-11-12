@@ -59,3 +59,59 @@ export async function updateSession(request: NextRequest) {
   });
   return res;
 }
+
+export interface DownloadTokenPayload {
+  purpose: 'asset_download';
+  orderId: string;
+  productId: string;
+  assetId: string;
+}
+
+/**
+ * Creates a cryptographically signed magic download token bound to a specific paid order, product, and asset.
+ * Allows buyers to download their purchased files from email / another browser without needing a login cookie.
+ */
+export async function createDownloadToken(params: {
+  orderId: string;
+  productId: string;
+  assetId: string;
+}): Promise<string> {
+  return await new SignJWT({
+    purpose: 'asset_download',
+    orderId: String(params.orderId),
+    productId: String(params.productId),
+    assetId: String(params.assetId),
+  })
+    .setProtectedHeader({ alg: 'HS256' })
+    .setIssuedAt()
+    .setExpirationTime('365d')
+    .sign(getKey());
+}
+
+/**
+ * Verifies a magic download token and ensures it is specifically issued for asset downloads.
+ */
+export async function verifyDownloadToken(token: string): Promise<DownloadTokenPayload | null> {
+  try {
+    const { payload } = await jwtVerify(token, getKey(), {
+      algorithms: ['HS256'],
+    });
+    if (
+      payload &&
+      payload.purpose === 'asset_download' &&
+      typeof payload.orderId === 'string' &&
+      typeof payload.productId === 'string' &&
+      typeof payload.assetId === 'string'
+    ) {
+      return {
+        purpose: 'asset_download',
+        orderId: payload.orderId,
+        productId: payload.productId,
+        assetId: payload.assetId,
+      };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}

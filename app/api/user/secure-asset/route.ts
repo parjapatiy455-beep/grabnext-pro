@@ -1,48 +1,75 @@
 export const runtime = 'edge'
 import { NextRequest, NextResponse } from 'next/server'
 import { executeQuery } from '@/lib/db'
-import { getSession } from '@/lib/session'
+import { getSession, verifyDownloadToken } from '@/lib/session'
 import { DigitalAsset } from '@/lib/types'
 
-// GET /api/user/secure-asset?productId=123&assetId=456
+// GET /api/user/secure-asset?productId=123&assetId=456[&token=jwt]
 export async function GET(request: NextRequest) {
     try {
         const { searchParams } = new URL(request.url)
         const productId = searchParams.get('productId')
         const assetId = searchParams.get('assetId')
+        const token = searchParams.get('token')
 
         if (!productId || !assetId) {
             return new NextResponse('Missing productId or assetId', { status: 400 })
         }
 
-        const auth = await getSession()
-        if (!auth) {
-            return new NextResponse('Unauthorized: Please log in', { status: 401 })
+        let isAuthorized = false
+
+        // 1. Check Magic Download Token (for cross-browser / direct email 1-click access without login)
+        if (token) {
+            const payload = await verifyDownloadToken(token)
+            if (payload && payload.productId === productId && payload.assetId === assetId) {
+                const tokenOrders = await executeQuery(
+                    "SELECT items FROM orders WHERE id = ? AND (status = 'completed' OR status = 'paid') LIMIT 1",
+                    [payload.orderId]
+                )
+                if (Array.isArray(tokenOrders) && tokenOrders.length > 0) {
+                    const orderRow: any = tokenOrders[0]
+                    try {
+                        const items = typeof orderRow.items === 'string' ? JSON.parse(orderRow.items) : orderRow.items
+                        if (Array.isArray(items) && items.some((item: any) => item.productId === productId || item.id === productId)) {
+                            isAuthorized = true
+                        }
+                    } catch {}
+                }
+            }
         }
 
-        const isAdmin = auth.role === 'admin'
-
-        // Verify purchase if not admin
-        if (!isAdmin) {
-            const orders = await executeQuery(
-                "SELECT items FROM orders WHERE userId = ? AND (status = 'completed' OR status = 'paid')",
-                [auth.uid]
-            )
-
-            let hasPurchased = false;
-            for (const order of orders || []) {
-                try {
-                    const items = typeof order.items === 'string' ? JSON.parse(order.items) : order.items
-                    if (Array.isArray(items) && items.some((item: any) => item.productId === productId || item.id === productId)) {
-                        hasPurchased = true;
-                        break;
-                    }
-                } catch (e) { }
+        // 2. Fallback to Logged-in Session Cookie (for Dashboard users)
+        if (!isAuthorized) {
+            const auth = await getSession()
+            if (!auth) {
+                return new NextResponse('Unauthorized: Please log in or use the direct download link from your confirmation email', { status: 401 })
             }
 
-            if (!hasPurchased) {
-                return new NextResponse('Forbidden: You have not purchased this product', { status: 403 })
+            const isAdmin = auth.role === 'admin'
+
+            // Verify purchase if not admin
+            if (!isAdmin) {
+                const orders = await executeQuery(
+                    "SELECT items FROM orders WHERE userId = ? AND (status = 'completed' OR status = 'paid')",
+                    [auth.uid]
+                )
+
+                let hasPurchased = false;
+                for (const order of orders || []) {
+                    try {
+                        const items = typeof order.items === 'string' ? JSON.parse(order.items) : order.items
+                        if (Array.isArray(items) && items.some((item: any) => item.productId === productId || item.id === productId)) {
+                            hasPurchased = true;
+                            break;
+                        }
+                    } catch (e) { }
+                }
+
+                if (!hasPurchased) {
+                    return new NextResponse('Forbidden: You have not purchased this product', { status: 403 })
+                }
             }
+            isAuthorized = true
         }
 
         // Get product to find the asset URL
@@ -58,9 +85,18 @@ export async function GET(request: NextRequest) {
         const product = products[0]
         let assets: DigitalAsset[] = []
         try {
-            assets = JSON.parse(product.downloadUrl)
+            const parsed = JSON.parse(product.downloadUrl)
+            if (Array.isArray(parsed)) assets = parsed
         } catch {
-            return new NextResponse('Product has no digital assets', { status: 404 })
+            if (typeof product.downloadUrl === 'string' && product.downloadUrl.trim().length > 0) {
+                assets = [{
+                    id: 'legacy',
+                    name: 'Download',
+                    type: 'file',
+                    provider: 'external',
+                    url: product.downloadUrl.trim(),
+                }]
+            }
         }
 
         const asset = assets.find(a => a.id === assetId)

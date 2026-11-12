@@ -1,5 +1,6 @@
 import { getRequestContext } from '@cloudflare/next-on-pages'
 import { executeQuery } from '@/lib/db'
+import { createDownloadToken } from '@/lib/session'
 
 function getEnv(key: string): string | undefined {
   try {
@@ -267,7 +268,7 @@ export async function sendOrderSuccessEmail(orderId: string) {
     let itemsTableHtml = ''
     let downloadLinksHtml = ''
 
-    items.forEach((item: any) => {
+    for (const item of items) {
       const pId = item.productId || item.id
       const product = productsMap[pId] || {}
       const title = item.title || product.title || 'Digital Product'
@@ -310,21 +311,34 @@ export async function sendOrderSuccessEmail(orderId: string) {
       `
 
       if (assets.length > 0) {
-        assets.forEach((asset: any) => {
+        for (const asset of assets) {
           const isLegacy = asset.id === 'legacy'
-          const downloadUrl = isLegacy
-            ? asset.url
-            : `${appUrl}/api/user/secure-asset?productId=${pId}&assetId=${asset.id}`
+          const isDirectExternal =
+            (asset.provider === 'external' || asset.type === 'link') &&
+            typeof asset.url === 'string' &&
+            asset.url.trim().startsWith('http')
+
+          let downloadUrl = ''
+          if (isLegacy || isDirectExternal) {
+            downloadUrl = asset.url.trim()
+          } else {
+            const token = await createDownloadToken({
+              orderId: order.id,
+              productId: pId,
+              assetId: asset.id,
+            })
+            downloadUrl = `${appUrl}/api/user/secure-asset?productId=${encodeURIComponent(pId)}&assetId=${encodeURIComponent(asset.id)}&token=${encodeURIComponent(token)}`
+          }
 
           downloadLinksHtml += `
-            <div style="margin-top: 8px; display: flex; align-items: center; justify-content: space-between;">
+            <div style="margin-top: 8px; display: flex; align-items: center; justify-content: space-between; gap: 10px;">
               <span style="font-size: 13px; color: #475569; font-weight: 500;">🔹 ${asset.name || 'Download File'}</span>
-              <a href="${downloadUrl}" target="_blank" style="background-color: #2563eb; color: #ffffff; text-decoration: none; padding: 8px 14px; border-radius: 6px; font-size: 12px; font-weight: 600; display: inline-block;">
-                📥 Download
+              <a href="${downloadUrl}" target="_blank" style="background-color: #2563eb; color: #ffffff; text-decoration: none; padding: 8px 14px; border-radius: 6px; font-size: 12px; font-weight: 600; display: inline-block; white-space: nowrap;">
+                ${isDirectExternal ? '🔗 Open / Download' : '📥 Download'}
               </a>
             </div>
           `
-        })
+        }
       } else {
         const directUrl = `${appUrl}/checkout/success?utr=${order.paymentId || order.id}`
         downloadLinksHtml += `
@@ -337,7 +351,7 @@ export async function sendOrderSuccessEmail(orderId: string) {
       }
 
       downloadLinksHtml += `</div>`
-    })
+    }
 
     const logoUrl = `${appUrl}/logo.webp`
     const viewAccessUrl = `${appUrl}/checkout/success?utr=${order.paymentId || order.id}`
