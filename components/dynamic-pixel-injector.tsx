@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react"
 import { usePathname } from "next/navigation"
+import { getActivePixelId } from "@/lib/pixel"
 
 interface PixelItem {
   id: string
@@ -59,14 +60,16 @@ export function DynamicPixelInjector() {
   useEffect(() => {
     if (pixels.length === 0) return
     isLoaded.current = true
+    const activeMetaPixel = getActivePixelId()
 
     pixels.forEach((pixel) => {
       if (!pixel.isActive) return
 
-      // --- META (FACEBOOK) PIXEL ---
+      // --- META (FACEBOOK) PIXEL (Strict Multi-Account Isolation) ---
+      // Only initialize & configure the pixel that matches the active campaign/product
       if (pixel.type === 'facebook' && pixel.pixelId) {
         const pid = pixel.pixelId.trim()
-        if (!initializedPixels.has(`fb_${pid}`)) {
+        if (pid === activeMetaPixel && !initializedPixels.has(`fb_${pid}`)) {
           initializedPixels.add(`fb_${pid}`)
 
           // Ensure base fbq exists
@@ -99,8 +102,6 @@ export function DynamicPixelInjector() {
               if (pixel.testEventCode) {
                 ;(window as any).fbq('set', 'agent', 'test', pixel.testEventCode.trim())
               }
-              // Track initial PageView strictly for this specific pixel (no global broadcast)
-              ;(window as any).fbq('trackSingle', pid, 'PageView')
             } catch (err) {
               console.warn(`[DynamicPixelInjector] FB Pixel ${pid} init error:`, err)
             }
@@ -213,6 +214,13 @@ export function DynamicPixelInjector() {
 
       // --- CUSTOM SCRIPT / EVENT CODE ---
       if (pixel.type === 'custom_script' && pixel.scriptCode) {
+        const rawCode = pixel.scriptCode.trim()
+        // Prevent raw Facebook Pixel snippets in Custom Scripts from running global fbq('track', 'PageView')
+        // across all pages and breaking multi-account pixel isolation
+        if (rawCode.includes('fbevents.js') || /fbq\s*\(/i.test(rawCode)) {
+          return
+        }
+
         const scriptId = `dyn_script_${pixel.id}`
         if (!document.getElementById(scriptId) && matchesRoute(pixel.triggerPage, pathname)) {
           const targetParent = pixel.placement === 'body' ? document.body : document.head
@@ -220,8 +228,6 @@ export function DynamicPixelInjector() {
           container.id = scriptId
           container.style.display = 'none'
 
-          // Extract script tags or evaluate code
-          const rawCode = pixel.scriptCode.trim()
           if (rawCode.includes('<script')) {
             // Render HTML containing scripts/noscripts
             container.innerHTML = rawCode
@@ -248,7 +254,7 @@ export function DynamicPixelInjector() {
     })
   }, [pixels, pathname])
 
-  // 3. Track Route Navigation for all active pixels
+  // 3. Track Route Navigation for non-Meta pixels (Meta PageView is handled strictly via trackSingle in FacebookPixelRouteTracker)
   useEffect(() => {
     if (!lastPath.current) {
       lastPath.current = pathname
@@ -258,15 +264,8 @@ export function DynamicPixelInjector() {
     if (lastPath.current === pathname) return
     lastPath.current = pathname
 
-    // Route changed! Dispatch PageView to all configured pixels
+    // Route changed! Dispatch PageView to analytics/other pixels
     if (typeof window !== 'undefined') {
-      // Meta (Facebook)
-      if (typeof (window as any).fbq === 'function') {
-        try {
-          ;(window as any).fbq('track', 'PageView')
-        } catch {}
-      }
-
       // Google Analytics
       if (typeof (window as any).gtag === 'function') {
         pixels
