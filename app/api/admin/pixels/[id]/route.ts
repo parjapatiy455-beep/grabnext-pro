@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { executeQuery } from '@/lib/db'
 import { getSession } from '@/lib/session'
 import { ADMIN_EMAIL } from '@/lib/auth'
-import { ensurePixelsTable } from '@/lib/pixels-db'
+import { ensurePixelsTable, setPrimaryPixel } from '@/lib/pixels-db'
 
 export const dynamic = 'force-dynamic'
 
@@ -39,6 +39,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       testEventCode = '',
       description = '',
       isActive = 1,
+      isPrimary = false,
     } = body
 
     if (!name || !name.trim()) {
@@ -54,10 +55,16 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     }
 
     const now = Date.now()
+    const primaryFlag = type === 'facebook' && Boolean(isPrimary) ? 1 : 0
+    const activeFlag = primaryFlag === 1 ? 1 : (isActive ? 1 : 0)
+
+    if (primaryFlag === 1) {
+      await executeQuery(`UPDATE pixels SET isPrimary = 0 WHERE type = 'facebook' AND id != ?`, [id])
+    }
 
     await executeQuery(
       `UPDATE pixels 
-       SET name = ?, type = ?, pixelId = ?, scriptCode = ?, placement = ?, triggerPage = ?, testEventCode = ?, description = ?, isActive = ?, updatedAt = ?
+       SET name = ?, type = ?, pixelId = ?, scriptCode = ?, placement = ?, triggerPage = ?, testEventCode = ?, description = ?, isActive = ?, isPrimary = ?, updatedAt = ?
        WHERE id = ?`,
       [
         name.trim(),
@@ -68,7 +75,8 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
         triggerPage || 'all',
         testEventCode ? testEventCode.trim() : '',
         description ? description.trim() : '',
-        isActive ? 1 : 0,
+        activeFlag,
+        primaryFlag,
         now,
         id,
       ]
@@ -90,6 +98,19 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     const { id } = params
     const body = await request.json().catch(() => ({}))
     const now = Date.now()
+
+    if (body.setPrimary === true || body.isPrimary === 1 || body.isPrimary === true) {
+      const res = await setPrimaryPixel(id)
+      if (!res.success) {
+        return NextResponse.json({ error: res.error }, { status: res.error === 'Pixel not found' ? 404 : 400 })
+      }
+      return NextResponse.json({
+        success: true,
+        message: 'Primary fallback pixel updated successfully',
+        isPrimary: 1,
+        isActive: 1,
+      })
+    }
 
     let newStatus: number
     if (body.isActive !== undefined) {

@@ -17,25 +17,15 @@ import { useEffect, useRef } from "react"
 import { usePathname } from "next/navigation"
 import { trackPageView } from "@/lib/pixel"
 
-// Read from env — NEXT_PUBLIC_ prefix makes it safe in both server and client components
-export const DEFAULT_PIXEL_IDS = [
-  "1004524488604833",
-  "1350267536434257",
-  "960737320324988",
-  "1765109014782891",
-  "864520106659183",
-]
-
+// Optional env fallback only (no hardcoded pixel IDs; Admin Panel Primary Pixel is authoritative)
 const envPixelList = (process.env.NEXT_PUBLIC_FB_PIXEL_IDS || process.env.NEXT_PUBLIC_FB_PIXEL_ID || "")
   .split(",")
   .map(id => id.trim())
   .filter(Boolean)
 
-export const ALL_FB_PIXEL_IDS = Array.from(
-  new Set([...envPixelList, ...DEFAULT_PIXEL_IDS].filter(Boolean))
-)
+export const ALL_FB_PIXEL_IDS = Array.from(new Set(envPixelList))
 
-export const FB_PIXEL_ID = ALL_FB_PIXEL_IDS[0] || "1004524488604833"
+export const FB_PIXEL_ID = ALL_FB_PIXEL_IDS[0] || ""
 
 // ── SPA route-change tracker (Client Component) ───────────────────────────────
 export function FacebookPixelRouteTracker() {
@@ -94,21 +84,15 @@ export function FacebookPixelScript() {
     "t.src=v;s=b.getElementsByTagName(e)[0];",
     "s.parentNode.insertBefore(t,s)",
     "}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');",
-    // Initialize default store pixel
-    `fbq('init','${FB_PIXEL_ID}');`,
     // optional: test event code for Facebook Events Manager
     testCode ? `fbq('set','agent','test','${testCode}');` : "",
-    // Isolated first PageView: if CapCut or ?pixel= specified, track strictly to that pixel; otherwise primary pixel
+    // Isolated first PageView: if ?pixel= or session pixel exists, track immediately; otherwise DynamicPixelInjector uses Admin Primary Pixel
     "try{",
     "  var sp=new URLSearchParams(window.location.search);",
     "  var urlPixel=sp.get('pixel')||sp.get('pixel_id')||sp.get('fb_pixel');",
     "  if(!urlPixel){try{urlPixel=sessionStorage.getItem('grabnext_active_pixel');}catch(e){}}",
-    "  if(!urlPixel&&window.location.pathname.toLowerCase().indexOf('capcut')!==-1){urlPixel='2624044841356190';}",
-    "  if(urlPixel){sessionStorage.setItem('grabnext_active_pixel',urlPixel);fbq('init',urlPixel);fbq('trackSingle',urlPixel,'PageView');}",
-    `  else{fbq('trackSingle','${FB_PIXEL_ID}','PageView');}`,
-    "}catch(e){",
-    `  fbq('trackSingle','${FB_PIXEL_ID}','PageView');`,
-    "}",
+    "  if(urlPixel){sessionStorage.setItem('grabnext_active_pixel',urlPixel);fbq('init',urlPixel);fbq('trackSingle',urlPixel,'PageView');window.__GRABNEXT_INITIAL_PV_FIRED__=true;}",
+    "}catch(e){}",
   ]
     .filter(Boolean)
     .join("\n")

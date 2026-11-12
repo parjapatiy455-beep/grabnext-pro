@@ -10,7 +10,7 @@ export async function GET() {
     const pixels = await getActivePixels()
     return NextResponse.json(pixels, {
       headers: {
-        'Cache-Control': 'public, max-age=60, stale-while-revalidate=120',
+        'Cache-Control': 'no-store, max-age=0',
       },
     })
   } catch (error: any) {

@@ -3,23 +3,14 @@ export const runtime = 'edge'
 import { NextResponse } from "next/server"
 import { hashData } from "@/lib/hash"
 import { executeQuery } from "@/lib/db"
-
-const DEFAULT_PIXEL_IDS = [
-  "1004524488604833",
-  "1350267536434257",
-  "960737320324988",
-  "1765109014782891",
-  "864520106659183",
-]
+import { getPrimaryFacebookPixelId } from "@/lib/pixels-db"
 
 const envPixelList = (process.env.NEXT_PUBLIC_FB_PIXEL_IDS || process.env.NEXT_PUBLIC_FB_PIXEL_ID || "")
   .split(",")
   .map(id => id.trim())
   .filter(Boolean)
 
-const ALL_PIXEL_IDS = Array.from(
-  new Set([...envPixelList, ...DEFAULT_PIXEL_IDS].filter(Boolean))
-)
+const ALL_PIXEL_IDS = Array.from(new Set(envPixelList))
 const ACCESS_TOKEN = process.env.FB_ACCESS_TOKEN
 const TEST_EVENT_CODE = process.env.NEXT_PUBLIC_FB_TEST_EVENT_CODE
 
@@ -78,15 +69,21 @@ export async function POST(req: Request) {
     }
 
     // 5. Strict Multi-Account Pixel Isolation
-    // Only send the event to the pixel dedicated to this product/campaign!
+    // Only send the event to the pixel dedicated to this product/campaign, or Admin Panel's Primary Pixel!
     let targetPixelIds: string[] = []
     if (targetPixelId && typeof targetPixelId === "string" && targetPixelId.trim().length > 4) {
       targetPixelIds = [targetPixelId.trim()]
-    } else if (eventUrl && eventUrl.toLowerCase().includes("capcut")) {
-      targetPixelIds = ["2624044841356190"]
     } else {
-      // Fallback: send strictly to primary pixel, never broadcast to all!
-      targetPixelIds = [ALL_PIXEL_IDS[0] || "1004524488604833"]
+      const dbPrimaryPixel = await getPrimaryFacebookPixelId()
+      if (dbPrimaryPixel) {
+        targetPixelIds = [dbPrimaryPixel]
+      } else if (ALL_PIXEL_IDS[0]) {
+        targetPixelIds = [ALL_PIXEL_IDS[0]]
+      }
+    }
+
+    if (targetPixelIds.length === 0) {
+      return NextResponse.json({ success: true, eventId, skipped: "No active Meta pixel configured" })
     }
 
     await Promise.allSettled(

@@ -52,6 +52,7 @@ export async function POST(request: NextRequest) {
       testEventCode = '',
       description = '',
       isActive = 1,
+      isPrimary = false,
     } = body
 
     if (!name || !name.trim()) {
@@ -72,10 +73,16 @@ export async function POST(request: NextRequest) {
 
     const id = `pix_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`
     const now = Date.now()
+    const primaryFlag = type === 'facebook' && Boolean(isPrimary) ? 1 : 0
+    const activeFlag = primaryFlag === 1 ? 1 : (isActive ? 1 : 0)
+
+    if (primaryFlag === 1) {
+      await executeQuery(`UPDATE pixels SET isPrimary = 0 WHERE type = 'facebook'`)
+    }
 
     await executeQuery(
-      `INSERT INTO pixels (id, name, type, pixelId, scriptCode, placement, triggerPage, testEventCode, description, isActive, createdAt, updatedAt)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO pixels (id, name, type, pixelId, scriptCode, placement, triggerPage, testEventCode, description, isActive, isPrimary, createdAt, updatedAt)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id,
         name.trim(),
@@ -86,7 +93,8 @@ export async function POST(request: NextRequest) {
         triggerPage || 'all',
         testEventCode ? testEventCode.trim() : '',
         description ? description.trim() : '',
-        isActive ? 1 : 0,
+        activeFlag,
+        primaryFlag,
         now,
         now,
       ]
@@ -105,7 +113,8 @@ export async function POST(request: NextRequest) {
         triggerPage,
         testEventCode: testEventCode ? testEventCode.trim() : '',
         description: description ? description.trim() : '',
-        isActive: isActive ? 1 : 0,
+        isActive: activeFlag,
+        isPrimary: primaryFlag,
         createdAt: now,
         updatedAt: now,
       },

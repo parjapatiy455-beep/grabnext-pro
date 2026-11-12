@@ -22,6 +22,7 @@ import {
   ExternalLink,
   ShieldCheck,
   RefreshCw,
+  Star,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -42,6 +43,7 @@ interface PixelItem {
   testEventCode?: string | null
   description?: string | null
   isActive: number
+  isPrimary?: number
   createdAt: number
   updatedAt: number
 }
@@ -56,6 +58,7 @@ const defaultFormData = {
   testEventCode: "",
   description: "",
   isActive: true,
+  isPrimary: false,
 }
 
 export default function PixelsAdminPage() {
@@ -134,6 +137,7 @@ export default function PixelsAdminPage() {
       testEventCode: pixel.testEventCode || "",
       description: pixel.description || "",
       isActive: Boolean(pixel.isActive),
+      isPrimary: Boolean(pixel.isPrimary),
     })
     setIsOpen(true)
   }
@@ -215,6 +219,38 @@ export default function PixelsAdminPage() {
     }
   }
 
+  // Quick Set Primary / Default Fallback Meta Pixel
+  const handleSetPrimary = async (pixel: PixelItem) => {
+    if (pixel.type !== 'facebook') return
+    const prevPixels = pixels
+    setPixels((prev) =>
+      prev.map((p) =>
+        p.type === 'facebook'
+          ? { ...p, isPrimary: p.id === pixel.id ? 1 : 0, isActive: p.id === pixel.id ? 1 : p.isActive }
+          : p
+      )
+    )
+
+    try {
+      const res = await fetch(`/api/admin/pixels/${pixel.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ setPrimary: true }),
+      })
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}))
+        throw new Error(d.error || 'Failed to set primary pixel')
+      }
+      toast({
+        title: "Primary Fallback Pixel Updated",
+        description: `${pixel.name} (${pixel.pixelId}) ab default fallback pixel hai jab URL me ?pixel= na ho.`,
+      })
+    } catch (err: any) {
+      setPixels(prevPixels)
+      toast({ title: "Error", description: err.message, variant: "destructive" })
+    }
+  }
+
   // Delete Pixel
   const handleDelete = async () => {
     if (!deleteId) return
@@ -246,6 +282,9 @@ export default function PixelsAdminPage() {
   const fbCount = pixels.filter((p) => p.type === 'facebook').length
   const gaCount = pixels.filter((p) => p.type === 'google_analytics').length
   const customCount = pixels.filter((p) => p.type === 'custom_script').length
+  const primaryFbPixel =
+    pixels.find((p) => p.type === 'facebook' && p.isActive === 1 && p.isPrimary === 1) ||
+    pixels.find((p) => p.type === 'facebook' && p.isActive === 1)
 
   // Filtered list
   const filteredPixels = pixels.filter((p) => {
@@ -326,7 +365,13 @@ export default function PixelsAdminPage() {
               ⚡ Real-Time Tracking Engine Active
             </p>
             <p className="text-xs text-slate-600">
-              Any pixel or script added here starts tracking visitors immediately across the website. Meta CAPI (Server-Side Conversions API) also automatically syncs with all active Facebook Pixels!
+              URL me <code className="bg-slate-200/70 px-1 rounded">?pixel=</code> hone par sirf wahi pixel fire hota hai. Bina parameter ke events{' '}
+              <span className="font-semibold text-slate-800">
+                {primaryFbPixel
+                  ? `${primaryFbPixel.name} (${primaryFbPixel.pixelId})`
+                  : 'kisi bhi active Meta pixel (pehle Primary set karein)'}
+              </span>{' '}
+              par fallback karte hain.
             </p>
           </div>
         </div>
@@ -480,9 +525,15 @@ export default function PixelsAdminPage() {
                       {/* Platform & Name */}
                       <TableCell>
                         <div className="space-y-1">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             {getTypeBadge(pixel.type)}
                             <span className="font-semibold text-sm text-slate-900">{pixel.name}</span>
+                            {pixel.type === 'facebook' && pixel.isPrimary === 1 && (
+                              <Badge className="bg-amber-100 text-amber-800 border-amber-300 hover:bg-amber-100 text-[11px] font-semibold gap-1">
+                                <Star className="h-3 w-3 fill-amber-500 text-amber-600" />
+                                Primary (Fallback)
+                              </Badge>
+                            )}
                           </div>
                           {pixel.description && (
                             <p className="text-xs text-muted-foreground line-clamp-1">{pixel.description}</p>
@@ -533,6 +584,18 @@ export default function PixelsAdminPage() {
                       {/* Actions */}
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1">
+                          {pixel.type === 'facebook' && pixel.isPrimary !== 1 && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-7 px-2 text-xs text-amber-700 border-amber-200 hover:bg-amber-50 hover:text-amber-800 gap-1"
+                              onClick={() => handleSetPrimary(pixel)}
+                              title="Set as default fallback pixel when ?pixel= is absent"
+                            >
+                              <Star className="h-3.5 w-3.5" />
+                              Set Primary
+                            </Button>
+                          )}
                           <Button
                             variant="ghost"
                             size="icon"
@@ -622,7 +685,7 @@ export default function PixelsAdminPage() {
                 <Input
                   placeholder={
                     form.type === 'facebook'
-                      ? "1004524488604833"
+                      ? "e.g. 16-digit Meta Pixel ID"
                       : form.type === 'google_analytics'
                       ? "G-C3HYF0VYC0 or AW-123456789"
                       : "CXXXXXXXXXXXXXXX"
@@ -724,6 +787,27 @@ export default function PixelsAdminPage() {
                 className="mt-1 text-sm"
               />
             </div>
+
+            {/* Primary Fallback switch (Meta only) */}
+            {form.type === 'facebook' && (
+              <div className="flex items-center justify-between p-3 bg-amber-50/70 rounded-lg border border-amber-200">
+                <div>
+                  <p className="text-sm font-semibold text-amber-900 flex items-center gap-1.5">
+                    <Star className="h-4 w-4 fill-amber-500 text-amber-600" />
+                    Set as Primary / Default Fallback Pixel
+                  </p>
+                  <p className="text-xs text-amber-800/80">
+                    Jab URL me ?pixel= parameter na ho, tab saare events is pixel par fallback honge.
+                  </p>
+                </div>
+                <Switch
+                  checked={form.isPrimary}
+                  onCheckedChange={(checked) =>
+                    setForm({ ...form, isPrimary: checked, isActive: checked ? true : form.isActive })
+                  }
+                />
+              </div>
+            )}
 
             {/* Active switch */}
             <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border">

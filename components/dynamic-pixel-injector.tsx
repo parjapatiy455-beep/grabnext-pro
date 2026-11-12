@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react"
 import { usePathname } from "next/navigation"
-import { getActivePixelId } from "@/lib/pixel"
+import { getActivePixelId, setRuntimePrimaryPixelId } from "@/lib/pixel"
 
 interface PixelItem {
   id: string
@@ -15,6 +15,7 @@ interface PixelItem {
   testEventCode?: string | null
   description?: string | null
   isActive: number
+  isPrimary?: number
 }
 
 // Global registry of initialized pixels to prevent duplicate initialization
@@ -60,6 +61,13 @@ export function DynamicPixelInjector() {
   useEffect(() => {
     if (pixels.length === 0) return
     isLoaded.current = true
+
+    // Register Admin Panel Primary Meta Pixel as runtime fallback
+    const primaryFb =
+      pixels.find((p) => p.type === 'facebook' && p.isActive && Number(p.isPrimary) === 1 && p.pixelId) ||
+      pixels.find((p) => p.type === 'facebook' && p.isActive && p.pixelId)
+    setRuntimePrimaryPixelId(primaryFb?.pixelId?.trim() || null)
+
     const activeMetaPixel = getActivePixelId()
 
     pixels.forEach((pixel) => {
@@ -101,6 +109,10 @@ export function DynamicPixelInjector() {
               ;(window as any).fbq('init', pid)
               if (pixel.testEventCode) {
                 ;(window as any).fbq('set', 'agent', 'test', pixel.testEventCode.trim())
+              }
+              if (!(window as any).__GRABNEXT_INITIAL_PV_FIRED__) {
+                ;(window as any).__GRABNEXT_INITIAL_PV_FIRED__ = true
+                ;(window as any).fbq('trackSingle', pid, 'PageView')
               }
             } catch (err) {
               console.warn(`[DynamicPixelInjector] FB Pixel ${pid} init error:`, err)

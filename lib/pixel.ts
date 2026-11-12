@@ -5,37 +5,37 @@
 
 import { gaViewItem, gaAddToCart, gaBeginCheckout, gaPurchase } from "@/lib/gtag"
 
-export const DEFAULT_PIXEL_IDS = [
-  "1004524488604833",
-  "1350267536434257",
-  "960737320324988",
-  "1765109014782891",
-  "864520106659183",
-]
-
 const envPixelList = (process.env.NEXT_PUBLIC_FB_PIXEL_IDS || process.env.NEXT_PUBLIC_FB_PIXEL_ID || "")
   .split(",")
   .map(id => id.trim())
   .filter(Boolean)
 
-export const ALL_FB_PIXEL_IDS = Array.from(
-  new Set([...envPixelList, ...DEFAULT_PIXEL_IDS].filter(Boolean))
-)
+export const ALL_FB_PIXEL_IDS = Array.from(new Set(envPixelList))
 
-export const FB_PIXEL_ID = ALL_FB_PIXEL_IDS[0] || "1004524488604833"
-export const CAPCUT_PIXEL_ID = "2624044841356190"
+// Optional env fallback only (no hardcoded pixel IDs; Admin Panel Primary Pixel is authoritative)
+export const FB_PIXEL_ID = ALL_FB_PIXEL_IDS[0] || ""
 
 // Set of initialized pixel IDs in window
 const initializedInWindow = new Set<string>()
+let runtimePrimaryPixelId: string | null = null
+let primaryPixelPromise: Promise<string> | null = null
+
+export function setRuntimePrimaryPixelId(pixelId: string | null): void {
+  const clean = pixelId && pixelId.trim().length > 4 ? pixelId.trim() : null
+  runtimePrimaryPixelId = clean
+  if (typeof window !== "undefined") {
+    ;(window as any).__GRABNEXT_PRIMARY_PIXEL__ = clean
+  }
+}
 
 /**
  * Resolves the active Pixel ID with strict isolation:
  * Priority:
- * 1. explicitPixelId passed from product/action
- * 2. URL param (?pixel= or ?pixel_id= or ?fb_pixel=)
- * 3. sessionStorage ("grabnext_active_pixel")
- * 4. Current page / product route check (if includes "capcut" -> CAPCUT_PIXEL_ID)
- * 5. Fallback: FB_PIXEL_ID
+ * 1. URL param (?pixel= or ?pixel_id= or ?fb_pixel=)
+ * 2. sessionStorage ("grabnext_active_pixel")
+ * 3. explicitPixelId passed from product/action (Admin Product Form)
+ * 4. Admin Panel Primary / Fallback Pixel (loaded from /api/pixels)
+ * 5. Optional env fallback (FB_PIXEL_ID)
  */
 export function getActivePixelId(explicitPixelId?: string | null): string {
   if (typeof window !== "undefined") {
@@ -67,18 +67,42 @@ export function getActivePixelId(explicitPixelId?: string | null): string {
     return explicitPixelId.trim()
   }
 
-  // 4. Fourth priority: Live CapCut ads fallback
-  if (typeof window !== "undefined") {
-    try {
-      const path = (window.location.pathname || "").toLowerCase()
-      if (path.includes("capcut")) {
-        sessionStorage.setItem("grabnext_active_pixel", CAPCUT_PIXEL_ID)
-        return CAPCUT_PIXEL_ID
-      }
-    } catch {}
+  // 4. Fourth priority: Admin Panel Primary / Default Fallback Pixel
+  if (runtimePrimaryPixelId) return runtimePrimaryPixelId
+  if (typeof window !== "undefined" && (window as any).__GRABNEXT_PRIMARY_PIXEL__) {
+    return (window as any).__GRABNEXT_PRIMARY_PIXEL__
   }
 
+  // 5. Optional env fallback
   return FB_PIXEL_ID
+}
+
+export async function resolveActivePixelId(explicitPixelId?: string | null): Promise<string> {
+  const immediate = getActivePixelId(explicitPixelId)
+  if (immediate) return immediate
+
+  if (typeof window === "undefined") return FB_PIXEL_ID
+
+  if (!primaryPixelPromise) {
+    primaryPixelPromise = fetch("/api/pixels", { cache: "no-store" })
+      .then((res) => (res.ok ? res.json() : []))
+      .then((pixels: any[]) => {
+        if (!Array.isArray(pixels)) return ""
+        const primary =
+          pixels.find((p) => p.type === "facebook" && p.isActive && Number(p.isPrimary) === 1 && p.pixelId) ||
+          pixels.find((p) => p.type === "facebook" && p.isActive && p.pixelId)
+        const pid = primary?.pixelId ? String(primary.pixelId).trim() : ""
+        if (pid) setRuntimePrimaryPixelId(pid)
+        return pid
+      })
+      .catch(() => "")
+      .finally(() => {
+        primaryPixelPromise = null
+      })
+  }
+
+  const resolved = await primaryPixelPromise
+  return resolved || FB_PIXEL_ID
 }
 
 // ── TypeScript declarations ───────────────────────────────────────────────────
@@ -205,16 +229,17 @@ export function _fbqSingle(
 export { _fbq as fbq }
 
 // ── CAPI Sync Helper ──────────────────────────────────────────────────────────
-export function trackEventWithCAPI(
+function dispatchIsolatedEvent(
+  targetPixelId: string,
   eventName: StandardEvent | string,
-  customData: Record<string, any> = {},
-  userData: UserData = {},
-  isCustom = false,
-  explicitPixelId?: string | null
+  customData: Record<string, any>,
+  userData: UserData,
+  isCustom: boolean
 ) {
-  const targetPixelId = getActivePixelId(explicitPixelId)
-  const eventId = typeof crypto !== "undefined" && crypto.randomUUID 
-    ? crypto.randomUUID() 
+  if (!targetPixelId) return
+
+  const eventId = typeof crypto !== "undefined" && crypto.randomUUID
+    ? crypto.randomUUID()
     : `evt_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`
 
   const action = isCustom ? "trackCustom" : "track"
@@ -242,6 +267,27 @@ export function trackEventWithCAPI(
       }
     })
   }
+}
+
+export function trackEventWithCAPI(
+  eventName: StandardEvent | string,
+  customData: Record<string, any> = {},
+  userData: UserData = {},
+  isCustom = false,
+  explicitPixelId?: string | null
+) {
+  const targetPixelId = getActivePixelId(explicitPixelId)
+  if (targetPixelId) {
+    dispatchIsolatedEvent(targetPixelId, eventName, customData, userData, isCustom)
+    return
+  }
+
+  // Admin-configured primary pixel hasn't finished loading yet; resolve it asynchronously
+  resolveActivePixelId(explicitPixelId).then((resolvedId) => {
+    if (resolvedId) {
+      dispatchIsolatedEvent(resolvedId, eventName, customData, userData, isCustom)
+    }
+  })
 }
 
 // ── Standard event helpers (Meta + GA4 Dual Tracker) ──────────────────────────
