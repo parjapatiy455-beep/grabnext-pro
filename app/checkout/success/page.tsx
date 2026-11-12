@@ -34,7 +34,7 @@ export default function CheckoutSuccessPage() {
             : (orderIdParam && cached.orderId === orderIdParam) ||
               (utrParam && (cached.utr === utrParam || cached.orderId === utrParam))
 
-        if (matchesCurrent) {
+        if (matchesCurrent && cached.verifiedPaid === true) {
           const orderKey = cached.orderId || cached.utr || "order"
           const alreadyTracked = sessionStorage.getItem(`tracked_purchase_${orderKey}`) === "true"
 
@@ -84,7 +84,7 @@ export default function CheckoutSuccessPage() {
               (data.id && sessionStorage.getItem(`tracked_purchase_${data.id}`) === "true") ||
               (data.paymentId && sessionStorage.getItem(`tracked_purchase_${data.paymentId}`) === "true")
 
-            if (!alreadyTracked && !hasFiredPurchase.current) {
+            if (data.status === "paid" && !alreadyTracked && !hasFiredPurchase.current) {
               hasFiredPurchase.current = true
               try {
                 sessionStorage.setItem(`tracked_purchase_${data.id}`, "true")
@@ -105,9 +105,6 @@ export default function CheckoutSuccessPage() {
                 const stored = sessionStorage.getItem("grabnext_active_pixel")
                 if (stored && stored.trim().length > 4) successPixelId = stored.trim()
               } catch {}
-              if (!successPixelId && orderItems.some((i: any) => (i.title || i.name || i.productId || i.id || '').toLowerCase().includes('capcut'))) {
-                successPixelId = '2624044841356190'
-              }
 
               trackPurchase(
                 {

@@ -104,41 +104,11 @@ export default function CheckoutPage() {
     if (itemWithPixel && (itemWithPixel.product as any).metaPixelId) {
       return (itemWithPixel.product as any).metaPixelId
     }
-    // 3. Third priority: Live CapCut ads fallback
-    const capcutItem = items.find((i) => i.product.title?.toLowerCase().includes("capcut") || i.productId?.toLowerCase().includes("capcut"))
-    if (capcutItem) {
-      return "2624044841356190"
-    }
     return null
   })()
 
-  // Track Pixel initiate checkout
-  useEffect(() => {
-    if (totalAmount > 0 && !hasFiredCheckout.current) {
-      hasFiredCheckout.current = true
-      trackInitiateCheckout(
-        {
-          value: totalAmount,
-          num_items: items.length,
-          content_ids: items.map((i) => i.productId),
-          contents: items.map((i) => ({
-            id: i.productId,
-            quantity: i.quantity || 1,
-            item_price: i.product.price,
-          })),
-        },
-        user
-          ? {
-              email: user.email || undefined,
-              firstName: user.displayName?.split(" ")[0],
-              lastName: user.displayName?.split(" ").slice(1).join(" "),
-              external_id: user.uid,
-            }
-          : undefined,
-        resolvedPixelId
-      )
-    }
-  }, [totalAmount, items, user, resolvedPixelId])
+  // Note: InitiateCheckout is fired inside handleFastCheckoutSubmit when user fills details and clicks Continue,
+  // not on page load, so bounced visitors don't pollute checkout signals.
 
   // Prefill user data
   useEffect(() => {
@@ -306,34 +276,6 @@ export default function CheckoutPage() {
           external_id: user?.uid || undefined,
         }
 
-        // Cache purchase details in sessionStorage for instant retrieval on thank you page
-        try {
-          sessionStorage.setItem("grabnext_last_purchase", JSON.stringify({
-            orderId,
-            utr: data.utr || orderId,
-            value: finalPaidAmount,
-            content_ids: purchaseContentIds,
-            contents: purchaseItems,
-            userData: purchaseUserData,
-            targetPixelId: resolvedPixelId,
-            timestamp: Date.now(),
-          }))
-          sessionStorage.setItem(`tracked_purchase_${orderId}`, "true")
-          if (data.utr) sessionStorage.setItem(`tracked_purchase_${data.utr}`, "true")
-        } catch {}
-
-        // Instant Multi-Pixel & CAPI Purchase Dispatch strictly to target pixel
-        trackPurchase(
-          {
-            value: finalPaidAmount,
-            currency: "INR",
-            content_ids: purchaseContentIds,
-            contents: purchaseItems,
-          },
-          purchaseUserData,
-          resolvedPixelId
-        )
-
         try {
           const res = await fetch("/api/xpay/verify", {
             method: "POST",
@@ -348,17 +290,44 @@ export default function CheckoutPage() {
           if (!res.ok || !verifyData.success) {
             throw new Error(verifyData.error || "Payment verification failed")
           }
+
+          // Fire Purchase strictly AFTER server confirms payment is verified & paid
+          try {
+            sessionStorage.setItem("grabnext_last_purchase", JSON.stringify({
+              orderId,
+              utr: data.utr || orderId,
+              value: finalPaidAmount,
+              content_ids: purchaseContentIds,
+              contents: purchaseItems,
+              userData: purchaseUserData,
+              targetPixelId: resolvedPixelId,
+              verifiedPaid: true,
+              timestamp: Date.now(),
+            }))
+            sessionStorage.setItem(`tracked_purchase_${orderId}`, "true")
+            if (data.utr) sessionStorage.setItem(`tracked_purchase_${data.utr}`, "true")
+          } catch {}
+
+          trackPurchase(
+            {
+              value: finalPaidAmount,
+              currency: "INR",
+              content_ids: purchaseContentIds,
+              contents: purchaseItems,
+            },
+            purchaseUserData,
+            resolvedPixelId
+          )
+
           clearCart()
           router.push(`/checkout/success?utr=${encodeURIComponent(data.utr || orderId)}&orderId=${encodeURIComponent(orderId)}`)
         } catch (err: any) {
           console.error("XPay verify error:", err)
           toast({
             title: "Verification Issue",
-            description: err.message || "Could not confirm payment status",
+            description: err.message || "Could not confirm payment status. Please contact support if amount was deducted.",
             variant: "destructive",
           })
-          clearCart()
-          router.push(`/checkout/success?utr=${encodeURIComponent(data?.utr || orderId)}&orderId=${encodeURIComponent(orderId)}`)
         } finally {
           setLoading(false)
         }
@@ -429,34 +398,6 @@ export default function CheckoutPage() {
         const paidAmount = orderData.amount ? orderData.amount / 100 : finalAmount
 
         try {
-          sessionStorage.setItem("grabnext_last_purchase", JSON.stringify({
-            orderId,
-            utr: response.razorpay_payment_id || orderId,
-            value: paidAmount,
-            content_ids: purchaseContentIds,
-            contents: purchaseItems,
-            userData: purchaseUserData,
-            targetPixelId: resolvedPixelId,
-            timestamp: Date.now(),
-          }))
-          sessionStorage.setItem(`tracked_purchase_${orderId}`, "true")
-          if (response.razorpay_payment_id) {
-            sessionStorage.setItem(`tracked_purchase_${response.razorpay_payment_id}`, "true")
-          }
-        } catch {}
-
-        trackPurchase(
-          {
-            value: paidAmount,
-            currency: "INR",
-            content_ids: purchaseContentIds,
-            contents: purchaseItems,
-          },
-          purchaseUserData,
-          resolvedPixelId
-        )
-
-        try {
           const verifyRes = await fetch("/api/razorpay/verify", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -471,6 +412,37 @@ export default function CheckoutPage() {
           if (!verifyRes.ok || !verifyData.success) {
             throw new Error(verifyData.error || "Payment verification failed")
           }
+
+          // Fire Purchase strictly AFTER server confirms Razorpay signature & paid status
+          try {
+            sessionStorage.setItem("grabnext_last_purchase", JSON.stringify({
+              orderId,
+              utr: response.razorpay_payment_id || orderId,
+              value: paidAmount,
+              content_ids: purchaseContentIds,
+              contents: purchaseItems,
+              userData: purchaseUserData,
+              targetPixelId: resolvedPixelId,
+              verifiedPaid: true,
+              timestamp: Date.now(),
+            }))
+            sessionStorage.setItem(`tracked_purchase_${orderId}`, "true")
+            if (response.razorpay_payment_id) {
+              sessionStorage.setItem(`tracked_purchase_${response.razorpay_payment_id}`, "true")
+            }
+          } catch {}
+
+          trackPurchase(
+            {
+              value: paidAmount,
+              currency: "INR",
+              content_ids: purchaseContentIds,
+              contents: purchaseItems,
+            },
+            purchaseUserData,
+            resolvedPixelId
+          )
+
           clearCart()
           router.push(`/checkout/success?utr=${encodeURIComponent(response.razorpay_payment_id || orderId)}&orderId=${encodeURIComponent(orderId)}`)
         } catch (err: any) {
@@ -479,8 +451,6 @@ export default function CheckoutPage() {
             description: err.message || "Could not verify transaction with payment gateway",
             variant: "destructive",
           })
-          clearCart()
-          router.push(`/checkout/success?utr=${encodeURIComponent(response?.razorpay_payment_id || orderId)}&orderId=${encodeURIComponent(orderId)}`)
         } finally {
           setLoading(false)
         }
@@ -500,12 +470,36 @@ export default function CheckoutPage() {
   }
 
   // 1-STEP FAST CHECKOUT HANDLER
-  const handleFastCheckoutSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleFastCheckoutSubmit = async (e?: React.SyntheticEvent) => {
+    e?.preventDefault()
     if (items.length === 0) return toast({ title: "Your cart is empty", variant: "destructive" })
     if (!formData.name.trim()) return toast({ title: "Please enter your name", variant: "destructive" })
     if (!formData.email.trim()) return toast({ title: "Please enter your email", variant: "destructive" })
     if (!formData.phone.trim()) return toast({ title: "Please enter your phone number", variant: "destructive" })
+
+    if (totalAmount > 0 && !hasFiredCheckout.current) {
+      hasFiredCheckout.current = true
+      trackInitiateCheckout(
+        {
+          value: totalAmount,
+          num_items: items.length,
+          content_ids: items.map((i) => i.productId),
+          contents: items.map((i) => ({
+            id: i.productId,
+            quantity: i.quantity || 1,
+            item_price: i.product.price,
+          })),
+        },
+        {
+          email: formData.email.trim() || undefined,
+          phone: formData.phone.trim() || undefined,
+          firstName: formData.name.trim().split(" ")[0] || undefined,
+          lastName: formData.name.trim().split(" ").slice(1).join(" ") || undefined,
+          external_id: user?.uid || undefined,
+        },
+        resolvedPixelId
+      )
+    }
 
     setLoading(true)
     try {
@@ -891,22 +885,23 @@ export default function CheckoutPage() {
                   </div>
                 </div>
 
-                {/* 5. Big Single Action Button (Pay Now) */}
+                {/* 5. Big Single Action Button (Non-submit button + neutral label to prevent Meta auto-Purchase false triggers) */}
                 <div className="pt-2">
                   <button
-                    type="submit"
+                    type="button"
+                    onClick={() => handleFastCheckoutSubmit()}
                     disabled={loading}
                     className="w-full py-4 px-6 rounded-2xl font-black text-base sm:text-lg text-slate-950 bg-gradient-to-r from-amber-400 via-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 shadow-xl shadow-amber-500/25 active:scale-[0.99] transition-all duration-200 disabled:opacity-70 flex items-center justify-center gap-2 cursor-pointer"
                   >
                     {loading ? (
                       <>
                         <Loader2 className="w-5 h-5 animate-spin text-slate-950" />
-                        <span>Processing Order...</span>
+                        <span>Opening UPI...</span>
                       </>
                     ) : (
                       <>
                         <Lock className="w-5 h-5 text-slate-950" />
-                        <span>PAY NOW — {formatPrice(finalAmount)}</span>
+                        <span>Continue to UPI — {formatPrice(finalAmount)}</span>
                         <ArrowRight className="w-5 h-5 text-slate-950" />
                       </>
                     )}
