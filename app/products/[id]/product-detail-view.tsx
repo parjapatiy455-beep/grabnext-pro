@@ -176,10 +176,10 @@ export function ProductDetailView({ product: initialProduct, id }: { product: Pr
             localStorage.setItem(timerKey, freshEndTime.toString())
         } catch {}
 
-        // Launch popup after 15 seconds (giving user time to read before displaying flash deal)
+        // Launch popup after 30 seconds (giving user time to read before displaying flash deal)
         const t = setTimeout(() => {
             setShowDiscountPopup(true)
-        }, 15000)
+        }, 30000)
         return () => clearTimeout(t)
     }, [product?.id, product?.enableDiscountPopup, product?.price, id])
 
