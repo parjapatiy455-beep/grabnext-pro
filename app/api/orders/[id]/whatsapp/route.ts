@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { executeQuery } from '@/lib/db'
 import { getSession, createOrderRecoveryToken } from '@/lib/session'
 import { formatWhatsAppPhone, DEFAULT_PENDING_TEMPLATE, DEFAULT_PAID_TEMPLATE } from '@/lib/whatsapp'
+import { createOrGetShortLink } from '@/lib/short-link'
 
 export const dynamic = 'force-dynamic'
 
@@ -23,7 +24,7 @@ async function isAdminSession(): Promise<boolean> {
   return false
 }
 
-// GET /api/orders/[id]/whatsapp?type=pending|paid
+// GET /api/orders/[id]/whatsapp?type=pending|paid&discount=15
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -41,6 +42,7 @@ export async function GET(
 
     const url = new URL(request.url)
     const typeParam = url.searchParams.get('type') // 'pending' | 'paid'
+    const discountParam = url.searchParams.get('discount') // custom discount override
 
     // Fetch order from DB
     const orderRows = (await executeQuery(
@@ -68,6 +70,7 @@ export async function GET(
       `SELECT key, value FROM settings WHERE key IN (
         'whatsapp_pending_template',
         'whatsapp_paid_template',
+        'whatsapp_recovery_discount_percent',
         'app_url',
         'sender_name',
         'whatsapp_number'
@@ -100,18 +103,38 @@ export async function GET(
 
     let message = ''
     let recoveryLink = ''
+    let fullRecoveryUrl = ''
     let downloadLinks = ''
+    let activeDiscountPercent = 10
+    let discountedTotal = originalTotal
 
     if (messageType === 'pending') {
-      const discountAmount = Math.max(1, Math.round(originalTotal * 0.10))
-      const discountedTotal = Math.max(1, originalTotal - discountAmount)
+      const settingDiscount = Number(settingsMap['whatsapp_recovery_discount_percent'] || 10)
+      activeDiscountPercent = discountParam !== null && discountParam !== undefined && !isNaN(Number(discountParam))
+        ? Math.max(0, Math.min(100, Number(discountParam)))
+        : settingDiscount
+
+      const discountAmount = activeDiscountPercent > 0
+        ? Math.max(1, Math.round(originalTotal * (activeDiscountPercent / 100)))
+        : 0
+      discountedTotal = Math.max(1, originalTotal - discountAmount)
 
       const recoveryToken = await createOrderRecoveryToken({
         orderId: order.id,
         email: order.userEmail || order.u_email || '',
+        discountPercent: activeDiscountPercent,
       })
 
-      recoveryLink = `${appUrl}/checkout?orderId=${encodeURIComponent(order.id)}&token=${encodeURIComponent(recoveryToken)}&recover=1`
+      fullRecoveryUrl = `${appUrl}/checkout?orderId=${encodeURIComponent(order.id)}&token=${encodeURIComponent(recoveryToken)}&recover=1`
+
+      // Generate ultra short link for WhatsApp
+      const shortCode = await createOrGetShortLink({
+        targetUrl: fullRecoveryUrl,
+        orderId: String(order.id),
+        ttlDays: 14,
+      })
+
+      recoveryLink = `${appUrl}/r/${shortCode}`
 
       const template = settingsMap['whatsapp_pending_template'] || DEFAULT_PENDING_TEMPLATE
 
@@ -121,7 +144,7 @@ export async function GET(
         .replace(/{{products}}/g, productNames)
         .replace(/{{original_amount}}/g, `₹${originalTotal.toLocaleString('en-IN')}`)
         .replace(/{{amount}}/g, `₹${discountedTotal.toLocaleString('en-IN')}`)
-        .replace(/{{discount}}/g, '10%')
+        .replace(/{{discount}}/g, `${activeDiscountPercent}%`)
         .replace(/{{recovery_link}}/g, recoveryLink)
         .replace(/{{site_name}}/g, siteName)
     } else {
@@ -155,6 +178,10 @@ export async function GET(
       message,
       whatsappUrl,
       recoveryLink,
+      fullRecoveryUrl,
+      discountPercent: activeDiscountPercent,
+      originalTotal,
+      discountedTotal,
       downloadLinks,
     })
   } catch (error: any) {

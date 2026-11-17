@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import {
   MessageSquare, X, Check, RotateCcw, Sparkles,
-  ExternalLink, Copy, HelpCircle, Save, Loader2, CheckCircle2
+  ExternalLink, Copy, HelpCircle, Save, Loader2, CheckCircle2, Percent
 } from "lucide-react"
 import { DEFAULT_PENDING_TEMPLATE, DEFAULT_PAID_TEMPLATE } from "@/lib/whatsapp"
 
@@ -18,6 +18,7 @@ export function AdminWhatsAppTemplatesModal({ isOpen, onClose }: WhatsAppTemplat
   const [activeTab, setActiveTab] = useState<"pending" | "paid">("pending")
   const [pendingTemplate, setPendingTemplate] = useState(DEFAULT_PENDING_TEMPLATE)
   const [paidTemplate, setPaidTemplate] = useState(DEFAULT_PAID_TEMPLATE)
+  const [discountPercent, setDiscountPercent] = useState<number>(10)
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
@@ -39,6 +40,9 @@ export function AdminWhatsAppTemplatesModal({ isOpen, onClose }: WhatsAppTemplat
           }
           if (data.whatsapp_paid_template) {
             setPaidTemplate(data.whatsapp_paid_template)
+          }
+          if (data.whatsapp_recovery_discount_percent !== undefined) {
+            setDiscountPercent(Number(data.whatsapp_recovery_discount_percent))
           }
         }
       } catch (err) {
@@ -98,6 +102,7 @@ export function AdminWhatsAppTemplatesModal({ isOpen, onClose }: WhatsAppTemplat
         body: JSON.stringify({
           whatsapp_pending_template: pendingTemplate,
           whatsapp_paid_template: paidTemplate,
+          whatsapp_recovery_discount_percent: discountPercent,
         }),
       })
 
@@ -115,14 +120,15 @@ export function AdminWhatsAppTemplatesModal({ isOpen, onClose }: WhatsAppTemplat
   }
 
   // Sample data for real-time preview
+  const sampleCalcAmount = Math.max(1, 499 - Math.round(499 * (discountPercent / 100)))
   const sampleData = {
     name: "Rahul Sharma",
     order_id: "ORD-98214",
     products: "Complete Web Dev Bundle 2026, AI SaaS Masterclass",
     original_amount: "₹499",
-    amount: activeTab === "pending" ? "₹449" : "₹499",
-    discount: "10%",
-    recovery_link: "https://grabnext.pages.dev/checkout?orderId=ORD-98214&token=signed_token&recover=1",
+    amount: activeTab === "pending" ? `₹${sampleCalcAmount}` : "₹499",
+    discount: `${discountPercent}%`,
+    recovery_link: "https://grabnext.pages.dev/r/k7q2m",
     download_links: "https://grabnext.pages.dev/checkout/success?orderId=ORD-98214",
     site_name: "GrabNext",
   }
@@ -146,10 +152,10 @@ export function AdminWhatsAppTemplatesModal({ isOpen, onClose }: WhatsAppTemplat
     { tag: "{{name}}", label: "Customer Name" },
     { tag: "{{order_id}}", label: "Order ID" },
     { tag: "{{products}}", label: "Product Title(s)" },
-    { tag: "{{amount}}", label: "10% Discounted Price" },
+    { tag: "{{amount}}", label: "Discounted Price" },
     { tag: "{{original_amount}}", label: "Original Price" },
-    { tag: "{{discount}}", label: "10%" },
-    { tag: "{{recovery_link}}", label: "1-Click Recovery Link" },
+    { tag: "{{discount}}", label: `${discountPercent}%` },
+    { tag: "{{recovery_link}}", label: "Short 1-Click Link" },
     { tag: "{{site_name}}", label: "Store Name" },
   ]
 
@@ -203,7 +209,7 @@ export function AdminWhatsAppTemplatesModal({ isOpen, onClose }: WhatsAppTemplat
             }`}
           >
             <span className="h-2 w-2 rounded-full bg-amber-500"></span>
-            🕒 Pending Order Follow-up (10% OFF)
+            🕒 Pending Order Follow-up ({discountPercent}% OFF)
           </button>
           <button
             type="button"
@@ -233,10 +239,35 @@ export function AdminWhatsAppTemplatesModal({ isOpen, onClose }: WhatsAppTemplat
                 <div className="bg-slate-50 p-3 rounded-xl border border-slate-200/80">
                   <p className="text-xs font-semibold text-slate-700">
                     {activeTab === "pending"
-                      ? "⚡ Triggered for pending / abandoned checkouts. Injects customer name, products, and a 1-click recovery link with an extra 10% discount."
+                      ? `⚡ Triggered for pending / abandoned checkouts. Injects customer name, products, and a short 1-click recovery link with an extra ${discountPercent}% discount.`
                       : "🎉 Triggered for completed / paid orders. Sends instant thank you message with direct product access & download links."}
                   </p>
                 </div>
+
+                {/* Custom Recovery Discount Percentage Config */}
+                {activeTab === "pending" && (
+                  <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/90 rounded-xl p-3.5 flex flex-wrap items-center justify-between gap-3 shadow-2xs">
+                    <div>
+                      <label className="text-xs font-bold text-amber-950 flex items-center gap-1.5">
+                        <Percent className="h-4 w-4 text-amber-600" /> Custom Recovery Discount Percentage:
+                      </label>
+                      <p className="text-[11px] text-amber-850 mt-0.5">
+                        Set the discount you want to offer on WhatsApp recovery links (e.g. 5%, 10%, 15%, 20%).
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1.5 bg-white border border-amber-300 rounded-xl px-3 py-1.5 shadow-2xs">
+                      <input
+                        type="number"
+                        min="0"
+                        max="90"
+                        value={discountPercent}
+                        onChange={(e) => setDiscountPercent(Math.max(0, Math.min(90, Number(e.target.value) || 0)))}
+                        className="w-14 text-center font-black text-sm text-gray-900 focus:outline-none"
+                      />
+                      <span className="text-xs font-extrabold text-amber-800">% OFF</span>
+                    </div>
+                  </div>
+                )}
 
                 {/* Tag Pills */}
                 <div>

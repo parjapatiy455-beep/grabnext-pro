@@ -50,6 +50,7 @@ function OrderRow({ order, onStatusChange }: { order: any; onStatusChange: (id: 
     phone: string
     message: string
     type: "pending" | "paid"
+    discountPercent?: number
   } | null>(null)
 
   let items: any[] = []
@@ -91,6 +92,7 @@ function OrderRow({ order, onStatusChange }: { order: any; onStatusChange: (id: 
           phone: data.rawPhone || data.phone || "",
           message: data.message,
           type,
+          discountPercent: data.discountPercent,
         })
       } else {
         window.open(data.whatsappUrl, "_blank")
@@ -172,7 +174,7 @@ function OrderRow({ order, onStatusChange }: { order: any; onStatusChange: (id: 
           title={
             order.status === "paid" || order.status === "completed"
               ? "Send WhatsApp Thank You & Downloads"
-              : "Send WhatsApp Follow-up (10% OFF)"
+              : "Send WhatsApp Follow-up (Discount Link)"
           }
           className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 text-xs font-bold transition-all shadow-2xs hover:scale-102"
         >
@@ -182,7 +184,7 @@ function OrderRow({ order, onStatusChange }: { order: any; onStatusChange: (id: 
             <MessageCircle className="h-3.5 w-3.5 text-[#25D366]" />
           )}
           <span className="hidden sm:inline">
-            {order.status === "paid" || order.status === "completed" ? "WA Delivery" : "WA 10% OFF"}
+            {order.status === "paid" || order.status === "completed" ? "WA Delivery" : "WA Follow-up"}
           </span>
         </button>
 
@@ -280,7 +282,7 @@ function OrderRow({ order, onStatusChange }: { order: any; onStatusChange: (id: 
                           ) : (
                             <>
                               <MessageCircle className="h-4 w-4" />
-                              <span>💬 WhatsApp Follow-up (10% OFF Link)</span>
+                              <span>💬 WhatsApp Follow-up (Discount Link)</span>
                             </>
                           )}
                         </button>
@@ -295,7 +297,7 @@ function OrderRow({ order, onStatusChange }: { order: any; onStatusChange: (id: 
                         </button>
                       </div>
                       <p className="text-[10px] text-gray-500 mt-1 text-center">
-                        Sends 1-click recovery link with 10% discount to {order.userPhone || "customer's WhatsApp"}
+                        Sends short recovery link with custom discount to {order.userPhone || "customer's WhatsApp"}
                       </p>
                     </div>
                   ) : (
@@ -441,6 +443,7 @@ function OrderRow({ order, onStatusChange }: { order: any; onStatusChange: (id: 
           initialPhone={sendModalData.phone}
           initialMessage={sendModalData.message}
           orderType={sendModalData.type}
+          initialDiscountPercent={sendModalData.discountPercent}
         />
       )}
     </div>

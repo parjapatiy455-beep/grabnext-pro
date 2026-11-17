@@ -71,6 +71,7 @@ export interface OrderRecoveryTokenPayload {
   purpose: 'order_recovery';
   orderId: string;
   email: string;
+  discountPercent?: number;
 }
 
 /**
@@ -129,12 +130,17 @@ export async function verifyDownloadToken(token: string): Promise<DownloadTokenP
 export async function createOrderRecoveryToken(params: {
   orderId: string;
   email: string;
+  discountPercent?: number;
 }): Promise<string> {
-  return await new SignJWT({
+  const payload: any = {
     purpose: 'order_recovery',
     orderId: String(params.orderId),
     email: String(params.email).toLowerCase().trim(),
-  })
+  };
+  if (typeof params.discountPercent === 'number') {
+    payload.discountPercent = params.discountPercent;
+  }
+  return await new SignJWT(payload)
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
     .setExpirationTime('14d')
@@ -158,6 +164,7 @@ export async function verifyOrderRecoveryToken(token: string): Promise<OrderReco
         purpose: 'order_recovery',
         orderId: payload.orderId,
         email: String(payload.email || ''),
+        discountPercent: typeof payload.discountPercent === 'number' ? payload.discountPercent : undefined,
       };
     }
     return null;

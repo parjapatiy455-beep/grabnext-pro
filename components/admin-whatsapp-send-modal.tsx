@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import {
   MessageCircle, X, Copy, Check, ExternalLink,
-  Phone, User, Package, AlertCircle
+  Phone, User, Package, AlertCircle, Percent, Loader2, Sparkles
 } from "lucide-react"
 import { formatWhatsAppPhone } from "@/lib/whatsapp"
 
@@ -18,6 +18,7 @@ interface WhatsAppSendModalProps {
   initialPhone: string
   initialMessage: string
   orderType: "pending" | "paid"
+  initialDiscountPercent?: number
 }
 
 export function AdminWhatsAppSendModal({
@@ -28,10 +29,13 @@ export function AdminWhatsAppSendModal({
   initialPhone,
   initialMessage,
   orderType,
+  initialDiscountPercent = 10,
 }: WhatsAppSendModalProps) {
   const [phone, setPhone] = useState(initialPhone || "")
   const [message, setMessage] = useState(initialMessage || "")
   const [copied, setCopied] = useState(false)
+  const [customDiscount, setCustomDiscount] = useState<number>(initialDiscountPercent)
+  const [recalculating, setRecalculating] = useState(false)
 
   if (!isOpen) return null
 
@@ -41,6 +45,23 @@ export function AdminWhatsAppSendModal({
   const whatsappUrl = cleanPhone
     ? `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`
     : `https://wa.me/?text=${encodeURIComponent(message)}`
+
+  const handleApplyDiscountChange = async (newDiscount: number) => {
+    const val = Math.max(0, Math.min(90, newDiscount))
+    setCustomDiscount(val)
+    setRecalculating(true)
+    try {
+      const res = await fetch(`/api/orders/${orderId}/whatsapp?type=pending&discount=${val}`)
+      const data = await res.json()
+      if (res.ok && data.success && data.message) {
+        setMessage(data.message)
+      }
+    } catch (err) {
+      console.error("Failed to re-calculate discount:", err)
+    } finally {
+      setRecalculating(false)
+    }
+  }
 
   const handleOpenWhatsApp = () => {
     if (!cleanPhone) {
@@ -80,7 +101,7 @@ export function AdminWhatsAppSendModal({
                       : "bg-emerald-100 text-emerald-800"
                   }`}
                 >
-                  {orderType === "pending" ? "10% OFF Recovery" : "Download Delivery"}
+                  {orderType === "pending" ? `${customDiscount}% OFF Recovery` : "Download Delivery"}
                 </span>
               </h3>
               <p className="text-xs text-gray-500">Order #{orderId} • {customerName}</p>
@@ -96,6 +117,47 @@ export function AdminWhatsAppSendModal({
 
         {/* Content */}
         <div className="p-5 space-y-4">
+          {/* Custom Discount Adjuster for Pending Orders */}
+          {orderType === "pending" && (
+            <div className="bg-amber-50/70 border border-amber-200/80 rounded-xl p-3 flex items-center justify-between gap-2">
+              <div>
+                <span className="text-xs font-bold text-amber-900 flex items-center gap-1">
+                  <Percent className="h-3.5 w-3.5 text-amber-600" /> Recovery Discount:
+                </span>
+                <span className="text-[11px] text-amber-700">Change discount for this customer</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                {[5, 10, 15, 20].map((d) => (
+                  <button
+                    key={d}
+                    type="button"
+                    onClick={() => handleApplyDiscountChange(d)}
+                    disabled={recalculating}
+                    className={`px-2 py-1 text-xs font-bold rounded-lg border transition-all ${
+                      customDiscount === d
+                        ? "bg-amber-500 text-white border-amber-500 shadow-2xs"
+                        : "bg-white text-gray-700 border-gray-200 hover:border-amber-300"
+                    }`}
+                  >
+                    {d}%
+                  </button>
+                ))}
+                <div className="flex items-center bg-white border border-gray-200 rounded-lg px-1.5 py-0.5 ml-1">
+                  <input
+                    type="number"
+                    min="0"
+                    max="90"
+                    value={customDiscount}
+                    onChange={(e) => handleApplyDiscountChange(Number(e.target.value) || 0)}
+                    disabled={recalculating}
+                    className="w-10 text-xs font-bold text-center focus:outline-none"
+                  />
+                  <span className="text-[10px] text-gray-500 font-semibold">%</span>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Phone Field */}
           <div>
             <label className="text-xs font-bold text-gray-700 uppercase tracking-wide flex items-center justify-between mb-1.5">
@@ -126,8 +188,9 @@ export function AdminWhatsAppSendModal({
           {/* Message Preview & Edit */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <label className="text-xs font-bold text-gray-700 uppercase tracking-wide">
-                Message Preview (Editable)
+              <label className="text-xs font-bold text-gray-700 uppercase tracking-wide flex items-center gap-1.5">
+                <span>Message Content (with Short Link)</span>
+                {recalculating && <Loader2 className="h-3 w-3 animate-spin text-amber-600" />}
               </label>
               <button
                 type="button"
@@ -177,7 +240,7 @@ export function AdminWhatsAppSendModal({
             <Button
               type="button"
               onClick={handleOpenWhatsApp}
-              disabled={!isPhoneValid}
+              disabled={!isPhoneValid || recalculating}
               className="bg-[#25D366] hover:bg-[#20bd5a] text-white font-bold text-xs px-4 py-2.5 rounded-xl flex items-center gap-2 shadow-xs transition-all disabled:opacity-50"
             >
               <MessageCircle className="h-4 w-4" />

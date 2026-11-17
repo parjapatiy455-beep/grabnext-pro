@@ -87,18 +87,29 @@ export async function GET(request: NextRequest) {
       items = []
     }
 
-    // 4. Calculate 10% Special Recovery Discount
-    // We base it on totalAmount or subtotal of items
+    // 4. Calculate Custom Special Recovery Discount
     const baseTotal = Number(order.totalAmount || 0)
-    // If order was already discounted with RECOVERY10, preserve existing values, otherwise compute 10%
+    let discountPercent = 10
+    if (typeof tokenPayload?.discountPercent === 'number') {
+      discountPercent = tokenPayload.discountPercent
+    } else {
+      const settingRows = (await executeQuery(
+        "SELECT value FROM settings WHERE key = 'whatsapp_recovery_discount_percent' LIMIT 1"
+      ).catch(() => [])) as any[]
+      if (settingRows && settingRows.length > 0 && settingRows[0].value) {
+        discountPercent = Number(settingRows[0].value)
+      }
+    }
+
     let discountAmount = 0
     let recoveryTotal = baseTotal
 
-    if (order.couponCode === 'RECOVERY10' && order.discountAmount > 0) {
+    const isAlreadyRecovered = order.couponCode && String(order.couponCode).startsWith('RECOVERY') && order.discountAmount > 0
+    if (isAlreadyRecovered) {
       discountAmount = Number(order.discountAmount)
       recoveryTotal = baseTotal
     } else {
-      discountAmount = Math.max(1, Math.round(baseTotal * 0.10))
+      discountAmount = discountPercent > 0 ? Math.max(1, Math.round(baseTotal * (discountPercent / 100))) : 0
       recoveryTotal = Math.max(1, baseTotal - discountAmount)
     }
 
@@ -139,8 +150,8 @@ export async function GET(request: NextRequest) {
         userEmail: order.userEmail || '',
         userPhone: order.userPhone || '',
         items,
-        originalTotal: baseTotal + (order.couponCode === 'RECOVERY10' ? discountAmount : 0),
-        discountPercent: 10,
+        originalTotal: baseTotal + (isAlreadyRecovered ? discountAmount : 0),
+        discountPercent,
         discountAmount,
         recoveryTotal,
         status: order.status,
@@ -167,8 +178,9 @@ export async function POST(request: NextRequest) {
     }
 
     let isAuthorized = false
+    let tokenPayload: any = null
     if (token) {
-      const tokenPayload = await verifyOrderRecoveryToken(token)
+      tokenPayload = await verifyOrderRecoveryToken(token)
       if (tokenPayload && tokenPayload.orderId === orderId) {
         isAuthorized = true
       }
@@ -208,21 +220,35 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true, isPaid: true, orderId: order.id })
     }
 
+    let discountPercent = 10
+    if (typeof tokenPayload?.discountPercent === 'number') {
+      discountPercent = tokenPayload.discountPercent
+    } else {
+      const settingRows = (await executeQuery(
+        "SELECT value FROM settings WHERE key = 'whatsapp_recovery_discount_percent' LIMIT 1"
+      ).catch(() => [])) as any[]
+      if (settingRows && settingRows.length > 0 && settingRows[0].value) {
+        discountPercent = Number(settingRows[0].value)
+      }
+    }
+
     const currentTotal = Number(order.totalAmount || 0)
     let newTotal = currentTotal
     let discountAmount = Number(order.discountAmount || 0)
+    const recoveryCoupon = `RECOVERY${discountPercent}`
 
-    // Apply 10% discount if not already applied
-    if (order.couponCode !== 'RECOVERY10') {
-      discountAmount = Math.max(1, Math.round(currentTotal * 0.10))
+    // Apply recovery discount if not already applied
+    const isAlreadyDiscounted = order.couponCode && String(order.couponCode).startsWith('RECOVERY')
+    if (!isAlreadyDiscounted && discountPercent > 0) {
+      discountAmount = Math.max(1, Math.round(currentTotal * (discountPercent / 100)))
       newTotal = Math.max(1, currentTotal - discountAmount)
 
       const now = Date.now()
       await executeQuery(`
         UPDATE orders 
-        SET totalAmount = ?, discountAmount = ?, couponCode = 'RECOVERY10', status = 'pending', updatedAt = ?
+        SET totalAmount = ?, discountAmount = ?, couponCode = ?, status = 'pending', updatedAt = ?
         WHERE id = ? AND (status = 'pending' OR status = 'failed')
-      `, [newTotal, discountAmount, now, orderId])
+      `, [newTotal, discountAmount, recoveryCoupon, now, orderId])
     }
 
     return NextResponse.json({

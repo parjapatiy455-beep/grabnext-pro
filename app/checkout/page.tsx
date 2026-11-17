@@ -94,7 +94,7 @@ export default function CheckoutPage() {
               phone: data.order.userPhone || "",
             })
             toast({
-              title: "🎉 10% Extra Discount Applied!",
+              title: `🎉 ${data.order.discountPercent || 10}% Extra Discount Applied!`,
               description: `Special recovery discount applied to Order #${data.order.id}.`,
             })
           } else if (data.error) {
@@ -780,7 +780,7 @@ export default function CheckoutPage() {
             <Sparkles className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
             <div>
               <h4 className="text-sm font-black text-emerald-900 dark:text-emerald-200">
-                🎉 Special 10% Incomplete Order Recovery Discount Applied!
+                🎉 Special {recoveryOrder.discountPercent || 10}% Incomplete Order Recovery Discount Applied!
               </h4>
               <p className="text-xs text-emerald-700 dark:text-emerald-400 mt-0.5">
                 Items for Order #{recoveryOrder.id} are loaded and discounted. Complete your payment below to get instant digital access.
@@ -854,7 +854,7 @@ export default function CheckoutPage() {
                   </div>
                   {isRecovering && recoveryDiscountAmount > 0 ? (
                     <div className="flex justify-between text-emerald-600 dark:text-emerald-400 font-bold">
-                      <span>⚡ 10% Recovery Discount</span>
+                      <span>⚡ {recoveryOrder?.discountPercent || 10}% Recovery Discount</span>
                       <span>-{formatPrice(recoveryDiscountAmount)}</span>
                     </div>
                   ) : appliedCoupon ? (
@@ -1174,7 +1174,7 @@ export default function CheckoutPage() {
                 </div>
                 {isRecovering && recoveryDiscountAmount > 0 ? (
                   <div className="flex justify-between text-emerald-600 dark:text-emerald-400 font-bold">
-                    <span>⚡ 10% Recovery Discount</span>
+                    <span>⚡ {recoveryOrder?.discountPercent || 10}% Recovery Discount</span>
                     <span>-{formatPrice(recoveryDiscountAmount)}</span>
                   </div>
                 ) : appliedCoupon ? (

@@ -47,6 +47,9 @@ export async function GET() {
         if (!settings.whatsapp_paid_template) {
             settings.whatsapp_paid_template = DEFAULT_PAID_TEMPLATE
         }
+        if (!settings.whatsapp_recovery_discount_percent) {
+            settings.whatsapp_recovery_discount_percent = '10'
+        }
         return NextResponse.json(settings, {
             headers: { 'Cache-Control': 'no-store' }
         })

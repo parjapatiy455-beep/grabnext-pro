@@ -21,7 +21,7 @@ Aapka {{site_name}} par order #{{order_id}} incomplete reh gaya tha.
 
 📦 Products: {{products}}
 💰 Original Price: {{original_amount}}
-🔥 Special 10% OFF: Pay only {{amount}}!
+🔥 Special {{discount}} OFF: Pay only {{amount}}!
 
 Aapko login karne ki koi zaroorat nahi hai. Niche diye gaye link par click karke aap apna order complete kar sakte hain aur payment ke turant baad product access kar sakte hain:
 👉 {{recovery_link}}
