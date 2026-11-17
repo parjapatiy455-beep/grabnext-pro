@@ -163,39 +163,23 @@ export function ProductDetailView({ product: initialProduct, id }: { product: Pr
         if (!product?.enableDiscountPopup) return
 
         const prodId = product.id || id
-        const claimedKey = `discount_claimed_${prodId}`
         const timerKey = `discount_timer_end_${prodId}`
-        const dismissedKey = `discount_dismissed_${prodId}`
 
         const percent = Number(product.discountPopupPercent || 50)
         const code = (product.discountPopupCoupon || "SAVE50").trim().toUpperCase()
+        const timerMinutes = Number(product.discountPopupTimerMinutes || 10)
 
-        // Check if already claimed and still active
-        const isClaimed = typeof window !== "undefined" && sessionStorage.getItem(claimedKey) === "true"
-        const savedEndTime = typeof window !== "undefined" ? localStorage.getItem(timerKey) : null
+        // Reset timer freshly on every page refresh/visit as requested
+        const freshEndTime = Date.now() + timerMinutes * 60 * 1000
+        try {
+            localStorage.setItem(timerKey, freshEndTime.toString())
+        } catch {}
 
-        if (isClaimed && savedEndTime) {
-            const remaining = Math.floor((parseInt(savedEndTime, 10) - Date.now()) / 1000)
-            if (remaining > 0) {
-                const discPrice = Math.max(1, Math.round(product.price * (1 - percent / 100)))
-                setAppliedDiscount({
-                    code,
-                    percent,
-                    discountedPrice: discPrice,
-                    savings: product.price - discPrice,
-                })
-                return
-            }
-        }
-
-        // If not dismissed in this session, trigger popup after 2.5s
-        const isDismissed = typeof window !== "undefined" && sessionStorage.getItem(dismissedKey) === "true"
-        if (!isDismissed) {
-            const t = setTimeout(() => {
-                setShowDiscountPopup(true)
-            }, 2500)
-            return () => clearTimeout(t)
-        }
+        // Launch popup after 2 seconds
+        const t = setTimeout(() => {
+            setShowDiscountPopup(true)
+        }, 2000)
+        return () => clearTimeout(t)
     }, [product?.id, product?.enableDiscountPopup, product?.price, id])
 
     // Live ticking countdown when discount is applied
@@ -241,10 +225,28 @@ export function ProductDetailView({ product: initialProduct, id }: { product: Pr
 
     const handleDismissDiscountPopup = () => {
         const prodId = product.id || id
+        const percent = Number(product.discountPopupPercent || 50)
+        const code = (product.discountPopupCoupon || "SAVE50").trim().toUpperCase()
+        const discPrice = Math.max(1, Math.round(product.price * (1 - percent / 100)))
+
+        // Auto-apply offer even if closed
+        const discountInfo = {
+            code,
+            percent,
+            discountedPrice: discPrice,
+            savings: product.price - discPrice,
+        }
+        setAppliedDiscount(discountInfo)
         setShowDiscountPopup(false)
         try {
-            sessionStorage.setItem(`discount_dismissed_${prodId}`, "true")
+            sessionStorage.setItem(`discount_claimed_${prodId}`, "true")
+            sessionStorage.setItem("copiedCouponCode", code)
         } catch {}
+
+        toast({
+            title: `🎉 Flat ${percent}% OFF Auto-Applied!`,
+            description: `We applied the special offer for you. Pay only ${formatPrice(discPrice)}!`,
+        })
     }
 
     const executeBuyNow = () => {
