@@ -4,6 +4,8 @@ import { executeQuery } from '@/lib/db'
 
 import { getRequestContext } from '@cloudflare/next-on-pages'
 
+import { DEFAULT_PENDING_TEMPLATE, DEFAULT_PAID_TEMPLATE } from '@/lib/whatsapp'
+
 export const dynamic = 'force-dynamic'
 
 function getEnv(key: string): string | undefined {
@@ -38,6 +40,12 @@ export async function GET() {
         if (!settings.payment_gateway) settings.payment_gateway = 'xpay'
         if (!settings.xpay_api_key) {
             settings.xpay_api_key = getEnv('XPAY_API_KEY') || getEnv('NEXT_PUBLIC_XPAY_API_KEY') || 'xp_live_wtm5vj64kseuylg9cfmsl9'
+        }
+        if (!settings.whatsapp_pending_template) {
+            settings.whatsapp_pending_template = DEFAULT_PENDING_TEMPLATE
+        }
+        if (!settings.whatsapp_paid_template) {
+            settings.whatsapp_paid_template = DEFAULT_PAID_TEMPLATE
         }
         return NextResponse.json(settings, {
             headers: { 'Cache-Control': 'no-store' }

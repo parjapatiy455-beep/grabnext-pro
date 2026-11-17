@@ -7,10 +7,13 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
   Package, User, CreditCard, CalendarDays, ChevronDown, ChevronUp, ExternalLink,
-  Download, Search, Filter, RefreshCw, Loader2, ShoppingBag, Phone, Mail, MapPin
+  Download, Search, Filter, RefreshCw, Loader2, ShoppingBag, Phone, Mail, MapPin,
+  MessageCircle, MessageSquare, Check, Eye
 } from "lucide-react"
 import Link from "next/link"
 import { DigitalProductViewer } from "@/components/digital-product-viewer"
+import { AdminWhatsAppTemplatesModal } from "@/components/admin-whatsapp-templates-modal"
+import { AdminWhatsAppSendModal } from "@/components/admin-whatsapp-send-modal"
 
 function StatusBadge({ status }: { status: string }) {
   const variants: Record<string, string> = {
@@ -41,7 +44,14 @@ function formatDateTime(ts: number | string) {
 function OrderRow({ order, onStatusChange }: { order: any; onStatusChange: (id: string, status: string) => void }) {
   const [expanded, setExpanded] = useState(false)
   const [updatingStatus, setUpdatingStatus] = useState(false)
-  const [sendingRecoveryEmail, setSendingRecoveryEmail] = useState(false)
+  const [loadingWhatsApp, setLoadingWhatsApp] = useState(false)
+  const [sendModalData, setSendModalData] = useState<{
+    isOpen: boolean
+    phone: string
+    message: string
+    type: "pending" | "paid"
+  } | null>(null)
+
   let items: any[] = []
   try { items = Array.isArray(order.items) ? order.items : JSON.parse(order.items) } catch { }
 
@@ -63,23 +73,32 @@ function OrderRow({ order, onStatusChange }: { order: any; onStatusChange: (id: 
     }
   }
 
-  const handleSendRecoveryEmail = async () => {
+  const handleTriggerWhatsApp = async (type: "pending" | "paid", forcePreview = false) => {
     if (!order.id) return
-    setSendingRecoveryEmail(true)
+    setLoadingWhatsApp(true)
     try {
-      const res = await fetch(`/api/orders/${order.id}/send-recovery`, {
-        method: "POST",
-      })
+      const res = await fetch(`/api/orders/${order.id}/whatsapp?type=${type}`)
       const data = await res.json()
-      if (res.ok && data.success) {
-        alert(`✅ ${data.message}`)
+      if (!res.ok || !data.success) {
+        alert(`❌ ${data.error || "Failed to generate WhatsApp message"}`)
+        return
+      }
+
+      // If customer phone is missing or forcePreview is true, open modal
+      if (forcePreview || !data.phone) {
+        setSendModalData({
+          isOpen: true,
+          phone: data.rawPhone || data.phone || "",
+          message: data.message,
+          type,
+        })
       } else {
-        alert(`❌ ${data.error || "Failed to send recovery email"}`)
+        window.open(data.whatsappUrl, "_blank")
       }
     } catch (e: any) {
       alert(`❌ Error: ${e.message}`)
     } finally {
-      setSendingRecoveryEmail(false)
+      setLoadingWhatsApp(false)
     }
   }
 
@@ -140,6 +159,32 @@ function OrderRow({ order, onStatusChange }: { order: any; onStatusChange: (id: 
         <div>
           <StatusBadge status={order.status} />
         </div>
+
+        {/* 1-Click WhatsApp Quick Action */}
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation()
+            const isOrderPaid = order.status === "paid" || order.status === "completed"
+            handleTriggerWhatsApp(isOrderPaid ? "paid" : "pending")
+          }}
+          disabled={loadingWhatsApp}
+          title={
+            order.status === "paid" || order.status === "completed"
+              ? "Send WhatsApp Thank You & Downloads"
+              : "Send WhatsApp Follow-up (10% OFF)"
+          }
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 text-xs font-bold transition-all shadow-2xs hover:scale-102"
+        >
+          {loadingWhatsApp ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin text-[#25D366]" />
+          ) : (
+            <MessageCircle className="h-3.5 w-3.5 text-[#25D366]" />
+          )}
+          <span className="hidden sm:inline">
+            {order.status === "paid" || order.status === "completed" ? "WA Delivery" : "WA 10% OFF"}
+          </span>
+        </button>
 
         <button className="text-gray-400 hover:text-blue-500 transition-colors ml-auto">
           {expanded ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
@@ -216,32 +261,80 @@ function OrderRow({ order, onStatusChange }: { order: any; onStatusChange: (id: 
                   </div>
                 </div>
 
-                {/* 1-Click Recovery Email with 10% Discount */}
-                {(order.status === "pending" || order.status === "failed") && (
-                  <div className="pt-3 border-t border-gray-100">
-                    <button
-                      type="button"
-                      onClick={handleSendRecoveryEmail}
-                      disabled={sendingRecoveryEmail}
-                      className="w-full text-xs font-bold py-2 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center gap-1.5 shadow-xs transition-colors cursor-pointer disabled:opacity-50"
-                    >
-                      {sendingRecoveryEmail ? (
-                        <>
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          <span>Sending Recovery Email...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Mail className="h-3.5 w-3.5" />
-                          <span>⚡ Send Recovery Email (10% OFF Link)</span>
-                        </>
-                      )}
-                    </button>
-                    <p className="text-[10px] text-gray-500 mt-1 text-center">
-                      Sends signed 1-click recovery link with 10% discount to {order.userEmail || "customer"}
-                    </p>
-                  </div>
-                )}
+                {/* WhatsApp Follow-up & Delivery Actions */}
+                <div className="pt-3 border-t border-gray-100 space-y-2">
+                  {(order.status === "pending" || order.status === "failed") ? (
+                    <div>
+                      <div className="flex gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => handleTriggerWhatsApp("pending")}
+                          disabled={loadingWhatsApp}
+                          className="flex-1 text-xs font-bold py-2.5 px-3 rounded-lg bg-[#25D366] hover:bg-[#20bd5a] text-white flex items-center justify-center gap-1.5 shadow-xs transition-colors cursor-pointer disabled:opacity-50"
+                        >
+                          {loadingWhatsApp ? (
+                            <>
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              <span>Generating WhatsApp Link...</span>
+                            </>
+                          ) : (
+                            <>
+                              <MessageCircle className="h-4 w-4" />
+                              <span>💬 WhatsApp Follow-up (10% OFF Link)</span>
+                            </>
+                          )}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleTriggerWhatsApp("pending", true)}
+                          disabled={loadingWhatsApp}
+                          title="Preview or edit message before sending"
+                          className="px-2.5 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-200 text-xs font-semibold flex items-center gap-1 transition-colors"
+                        >
+                          <Eye className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                      <p className="text-[10px] text-gray-500 mt-1 text-center">
+                        Sends 1-click recovery link with 10% discount to {order.userPhone || "customer's WhatsApp"}
+                      </p>
+                    </div>
+                  ) : (
+                    <div>
+                      <div className="flex gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => handleTriggerWhatsApp("paid")}
+                          disabled={loadingWhatsApp}
+                          className="flex-1 text-xs font-bold py-2.5 px-3 rounded-lg bg-[#25D366] hover:bg-[#20bd5a] text-white flex items-center justify-center gap-1.5 shadow-xs transition-colors cursor-pointer disabled:opacity-50"
+                        >
+                          {loadingWhatsApp ? (
+                            <>
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              <span>Generating WhatsApp Link...</span>
+                            </>
+                          ) : (
+                            <>
+                              <MessageCircle className="h-4 w-4" />
+                              <span>💬 WhatsApp Thank You & Downloads</span>
+                            </>
+                          )}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleTriggerWhatsApp("paid", true)}
+                          disabled={loadingWhatsApp}
+                          title="Preview or edit message before sending"
+                          className="px-2.5 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-200 text-xs font-semibold flex items-center gap-1 transition-colors"
+                        >
+                          <Eye className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                      <p className="text-[10px] text-gray-500 mt-1 text-center">
+                        Sends thank you message with product download links to {order.userPhone || "customer's WhatsApp"}
+                      </p>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -337,6 +430,19 @@ function OrderRow({ order, onStatusChange }: { order: any; onStatusChange: (id: 
           </div>
         </div>
       )}
+
+      {/* WhatsApp Send & Edit Modal */}
+      {sendModalData?.isOpen && (
+        <AdminWhatsAppSendModal
+          isOpen={sendModalData.isOpen}
+          onClose={() => setSendModalData(null)}
+          orderId={order.id}
+          customerName={order.userName || "Customer"}
+          initialPhone={sendModalData.phone}
+          initialMessage={sendModalData.message}
+          orderType={sendModalData.type}
+        />
+      )}
     </div>
   )
 }
@@ -347,6 +453,7 @@ export default function AdminOrdersPage() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
+  const [showTemplatesModal, setShowTemplatesModal] = useState(false)
 
   const loadOrders = async () => {
     setLoading(true)
@@ -401,13 +508,21 @@ export default function AdminOrdersPage() {
           </h1>
           <p className="text-gray-500 text-sm mt-0.5">{orders.length} total orders</p>
         </div>
-        <button
-          onClick={loadOrders}
-          disabled={loading}
-          className="flex items-center gap-2 text-sm font-semibold text-gray-600 hover:text-blue-600 bg-white border border-gray-200 hover:border-blue-300 px-4 py-2 rounded-xl transition-all"
-        >
-          <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} /> Refresh
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowTemplatesModal(true)}
+            className="flex items-center gap-2 text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 px-4 py-2 rounded-xl transition-all shadow-xs"
+          >
+            <MessageSquare className="h-4 w-4" /> WhatsApp Templates
+          </button>
+          <button
+            onClick={loadOrders}
+            disabled={loading}
+            className="flex items-center gap-2 text-sm font-semibold text-gray-600 hover:text-blue-600 bg-white border border-gray-200 hover:border-blue-300 px-4 py-2 rounded-xl transition-all"
+          >
+            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} /> Refresh
+          </button>
+        </div>
       </div>
 
       {/* Stats */}
@@ -469,6 +584,12 @@ export default function AdminOrdersPage() {
           ))}
         </div>
       )}
+
+      {/* WhatsApp Templates Config Modal */}
+      <AdminWhatsAppTemplatesModal
+        isOpen={showTemplatesModal}
+        onClose={() => setShowTemplatesModal(false)}
+      />
     </div>
   )
 }
