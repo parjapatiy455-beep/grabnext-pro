@@ -48,6 +48,11 @@ export default function CheckoutPage() {
   const hasFiredCheckout = useRef(false)
   const [showOrderSummaryMobile, setShowOrderSummaryMobile] = useState(true)
 
+  // ─── Order Recovery State (for pending/incomplete order recovery links) ───
+  const [recoveryOrder, setRecoveryOrder] = useState<any | null>(null)
+  const [recoveryLoading, setRecoveryLoading] = useState(false)
+  const [recoveryError, setRecoveryError] = useState<string | null>(null)
+
   // Coupon Code States (Dynamic Only - No hardcoded coupons)
   const [couponCode, setCouponCode] = useState("")
   const [appliedCoupon, setAppliedCoupon] = useState<any | null>(null)
@@ -60,6 +65,51 @@ export default function CheckoutPage() {
     email: "",
     phone: "",
   })
+
+  // ─── Order Recovery Fetcher ───
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    const sp = new URLSearchParams(window.location.search)
+    const oId = sp.get("orderId") || sp.get("id")
+    const tok = sp.get("token") || ""
+
+    if (oId) {
+      setRecoveryLoading(true)
+      fetch(`/api/orders/recover?orderId=${encodeURIComponent(oId)}&token=${encodeURIComponent(tok)}`)
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.isPaid) {
+            toast({
+              title: "Order Already Completed! 🎉",
+              description: "This order has already been paid. Redirecting to your downloads...",
+            })
+            router.push(`/checkout/success?orderId=${encodeURIComponent(oId)}`)
+            return
+          }
+          if (data.success && data.order) {
+            setRecoveryOrder(data.order)
+            setFormData({
+              name: data.order.userName || "",
+              email: data.order.userEmail || "",
+              phone: data.order.userPhone || "",
+            })
+            toast({
+              title: "🎉 10% Extra Discount Applied!",
+              description: `Special recovery discount applied to Order #${data.order.id}.`,
+            })
+          } else if (data.error) {
+            setRecoveryError(data.error)
+          }
+        })
+        .catch((err) => {
+          console.error("Recovery fetch error:", err)
+          setRecoveryError("Failed to load your order details.")
+        })
+        .finally(() => {
+          setRecoveryLoading(false)
+        })
+    }
+  }, [router])
 
   // Load gateway and XPay setting
   useEffect(() => {
@@ -84,6 +134,29 @@ export default function CheckoutPage() {
     }
   }, [activeGateway])
 
+  // ─── Active Items & Recovery Computation ───
+  const isRecovering = Boolean(recoveryOrder)
+
+  const activeItems: any[] = isRecovering
+    ? (recoveryOrder.items || []).map((it: any) => ({
+        productId: String(it.productId || it.id || "item"),
+        quantity: Number(it.quantity) || 1,
+        product: {
+          id: String(it.productId || it.id || "item"),
+          title: it.title || "Digital Product",
+          price: Number(it.price) || 0,
+          imageUrl: it.imageUrl || "/placeholder.svg",
+          metaPixelId: it.metaPixelId,
+        },
+      }))
+    : items
+
+  const activeSubtotal = isRecovering
+    ? Number(recoveryOrder.originalTotal || recoveryOrder.recoveryTotal || 0)
+    : totalAmount
+
+  const recoveryDiscountAmount = isRecovering ? Number(recoveryOrder.discountAmount || 0) : 0
+
   // Resolve active Meta Pixel ID strictly for these cart items / ad campaign
   const resolvedPixelId = (() => {
     // 1. Highest priority: Check URL query or SessionStorage (from ad click)
@@ -100,7 +173,7 @@ export default function CheckoutPage() {
       } catch {}
     }
     // 2. Second priority: Database assigned pixel for this product
-    const itemWithPixel = items.find((i) => (i.product as any)?.metaPixelId)
+    const itemWithPixel = activeItems.find((i) => (i.product as any)?.metaPixelId)
     if (itemWithPixel && (itemWithPixel.product as any).metaPixelId) {
       return (itemWithPixel.product as any).metaPixelId
     }
@@ -112,7 +185,7 @@ export default function CheckoutPage() {
 
   // Prefill user data
   useEffect(() => {
-    if (user) {
+    if (user && !recoveryOrder) {
       setFormData((f) => ({
         ...f,
         name: user.displayName || f.name || "",
@@ -120,11 +193,11 @@ export default function CheckoutPage() {
         phone: (user as any).phone || f.phone || "",
       }))
     }
-  }, [user])
+  }, [user, recoveryOrder])
 
   // Dynamic Coupon Application: ONLY when explicitly provided via URL query or active campaign session
   useEffect(() => {
-    if (totalAmount > 0 && !appliedCoupon && typeof window !== "undefined") {
+    if (totalAmount > 0 && !appliedCoupon && !isRecovering && typeof window !== "undefined") {
       const urlParams = new URLSearchParams(window.location.search)
       const urlCoupon = urlParams.get("coupon")
       const sessionCoupon = sessionStorage.getItem("copiedCouponCode") || ""
@@ -158,13 +231,13 @@ export default function CheckoutPage() {
           })
       }
     }
-  }, [totalAmount, appliedCoupon])
+  }, [totalAmount, appliedCoupon, isRecovering])
 
   const formatPrice = (price: number) =>
     new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(price)
 
   const handleApplyCoupon = async () => {
-    if (!couponCode.trim()) return
+    if (!couponCode.trim() || isRecovering) return
     setIsApplyingCoupon(true)
     setCouponError("")
     try {
@@ -196,7 +269,13 @@ export default function CheckoutPage() {
     setIsCouponOpen(false)
   }
 
-  const finalAmount = appliedCoupon ? Math.max(0, totalAmount - appliedCoupon.discountAmount) : totalAmount
+  const effectiveFinalAmount = isRecovering
+    ? Number(recoveryOrder.recoveryTotal || 0)
+    : appliedCoupon
+    ? Math.max(0, totalAmount - appliedCoupon.discountAmount)
+    : totalAmount
+
+  const finalAmount = effectiveFinalAmount
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) =>
     setFormData({ ...formData, [e.target.name]: e.target.value })
@@ -247,7 +326,11 @@ export default function CheckoutPage() {
       return
     }
     const orderTitle =
-      items.length === 1 ? items[0].product.title : `${items[0].product.title} + ${items.length - 1} more`
+      activeItems.length === 1
+        ? (activeItems[0]?.product?.title || "Digital Product")
+        : activeItems.length > 1
+        ? `${activeItems[0]?.product?.title || "Digital Product"} + ${activeItems.length - 1} more`
+        : `Order #${orderId}`
     let paymentSucceeded = false
     const xpay = new window.XPay({
       api_key: xpayApiKey || "xp_live_wtm5vj64kseuylg9cfmsl9",
@@ -262,12 +345,12 @@ export default function CheckoutPage() {
         setLoading(true)
 
         const finalPaidAmount = data.amount !== undefined ? Number(data.amount) : verifiedAmount
-        const purchaseItems = items.map((i) => ({
+        const purchaseItems = activeItems.map((i) => ({
           id: i.productId,
           quantity: i.quantity || 1,
-          item_price: i.product.price,
+          item_price: i.product?.price || 0,
         }))
-        const purchaseContentIds = items.map((i) => i.productId)
+        const purchaseContentIds = activeItems.map((i) => i.productId)
         const purchaseUserData = {
           email: formData.email.trim() || undefined,
           phone: formData.phone.trim() || undefined,
@@ -369,7 +452,10 @@ export default function CheckoutPage() {
       amount: orderData.amount,
       currency: "INR",
       name: "Grabnext",
-      description: items.length === 1 ? items[0].product.title : `${items.length} items`,
+      description:
+        activeItems.length === 1
+          ? (activeItems[0]?.product?.title || "Digital Product")
+          : `${activeItems.length} items`,
       order_id: orderData.orderId,
       prefill: {
         name: formData.name,
@@ -381,12 +467,12 @@ export default function CheckoutPage() {
         paymentSucceeded = true
         setLoading(true)
 
-        const purchaseItems = items.map((i) => ({
+        const purchaseItems = activeItems.map((i) => ({
           id: i.productId,
           quantity: i.quantity || 1,
-          item_price: i.product.price,
+          item_price: i.product?.price || 0,
         }))
-        const purchaseContentIds = items.map((i) => i.productId)
+        const purchaseContentIds = activeItems.map((i) => i.productId)
         const purchaseUserData = {
           email: formData.email.trim() || undefined,
           phone: formData.phone.trim() || undefined,
@@ -472,19 +558,19 @@ export default function CheckoutPage() {
   // 1-STEP FAST CHECKOUT HANDLER
   const handleFastCheckoutSubmit = async (e?: React.SyntheticEvent) => {
     e?.preventDefault()
-    if (items.length === 0) return toast({ title: "Your cart is empty", variant: "destructive" })
+    if (activeItems.length === 0) return toast({ title: "Your cart is empty", variant: "destructive" })
     if (!formData.name.trim()) return toast({ title: "Please enter your name", variant: "destructive" })
     if (!formData.email.trim()) return toast({ title: "Please enter your email", variant: "destructive" })
     if (!formData.phone.trim()) return toast({ title: "Please enter your phone number", variant: "destructive" })
 
-    if (totalAmount > 0 && !hasFiredCheckout.current) {
+    if (effectiveFinalAmount > 0 && !hasFiredCheckout.current) {
       hasFiredCheckout.current = true
       trackInitiateCheckout(
         {
-          value: totalAmount,
-          num_items: items.length,
-          content_ids: items.map((i) => i.productId),
-          contents: items.map((i) => ({
+          value: effectiveFinalAmount,
+          num_items: activeItems.length,
+          content_ids: activeItems.map((i) => i.productId),
+          contents: activeItems.map((i) => ({
             id: i.productId,
             quantity: i.quantity || 1,
             item_price: i.product.price,
@@ -503,35 +589,85 @@ export default function CheckoutPage() {
 
     setLoading(true)
     try {
-      const userId = await getOrCreateUserId()
-      const orderRes = await fetch("/api/orders", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId,
-          userEmail: formData.email.trim(),
-          userName: formData.name.trim(),
-          userPhone: formData.phone.trim(),
-          items: items.map((i) => ({
-            productId: i.productId,
-            quantity: i.quantity || 1,
-          })),
-          couponCode: appliedCoupon?.code || null,
-        }),
-      })
+      let orderIdToPay = ""
+      let verifiedOrderTotal = effectiveFinalAmount
 
-      const orderData = await orderRes.json()
-      if (!orderData.id) throw new Error(orderData.error || "Failed to initialize order")
+      if (isRecovering && recoveryOrder?.id) {
+        // Recovery Flow: Lock 10% recovery discount on existing order in DB
+        const recRes = await fetch("/api/orders/recover", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            orderId: recoveryOrder.id,
+            token: typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("token") || "" : "",
+          }),
+        })
+        const recData = await recRes.json()
+        if (!recRes.ok || !recData.success) {
+          throw new Error(recData.error || "Failed to prepare order recovery")
+        }
+        orderIdToPay = recoveryOrder.id
+        verifiedOrderTotal = Number(recData.verifiedTotal || effectiveFinalAmount)
+      } else {
+        // Standard Checkout Flow
+        const userId = await getOrCreateUserId()
+        const orderRes = await fetch("/api/orders", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            userId,
+            userEmail: formData.email.trim(),
+            userName: formData.name.trim(),
+            userPhone: formData.phone.trim(),
+            items: items.map((i) => ({
+              productId: i.productId,
+              quantity: i.quantity || 1,
+            })),
+            couponCode: appliedCoupon?.code || null,
+          }),
+        })
 
-      const verifiedOrderTotal = orderData.totalAmount !== undefined ? orderData.totalAmount : finalAmount
+        const orderData = await orderRes.json()
+        if (!orderData.id) throw new Error(orderData.error || "Failed to initialize order")
+        orderIdToPay = orderData.id
+        verifiedOrderTotal = orderData.totalAmount !== undefined ? orderData.totalAmount : finalAmount
+
+        // If order is completely free or already paid
+        if (orderData.totalAmount === 0 || orderData.status === "paid") {
+          trackPurchase(
+            {
+              value: Number(orderData.totalAmount) || 0,
+              currency: "INR",
+              content_ids: items.map((i) => i.productId),
+              contents: items.map((i) => ({
+                id: i.productId,
+                quantity: i.quantity || 1,
+                item_price: 0,
+              })),
+            },
+            {
+              email: formData.email.trim() || undefined,
+              phone: formData.phone.trim() || undefined,
+              external_id: userId || undefined,
+            },
+            resolvedPixelId
+          )
+          try {
+            sessionStorage.setItem(`tracked_purchase_${orderData.id}`, "true")
+          } catch {}
+          clearCart()
+          router.push(`/checkout/success?utr=${encodeURIComponent(orderData.id)}&orderId=${encodeURIComponent(orderData.id)}`)
+          return
+        }
+      }
 
       // Track Pixel payment info
       trackAddPaymentInfo(
         {
           value: verifiedOrderTotal,
-          num_items: items.length,
-          content_ids: items.map((i) => i.productId),
-          contents: items.map((i) => ({
+          num_items: activeItems.length,
+          content_ids: activeItems.map((i) => i.productId),
+          contents: activeItems.map((i) => ({
             id: i.productId,
             quantity: i.quantity || 1,
             item_price: i.product.price,
@@ -540,43 +676,15 @@ export default function CheckoutPage() {
         {
           email: formData.email || undefined,
           phone: formData.phone || undefined,
-          external_id: userId || undefined,
+          external_id: user?.uid || undefined,
         }
       )
 
-      // If order is completely free or already paid
-      if (orderData.totalAmount === 0 || orderData.status === "paid") {
-        trackPurchase(
-          {
-            value: Number(orderData.totalAmount) || 0,
-            currency: "INR",
-            content_ids: items.map((i) => i.productId),
-            contents: items.map((i) => ({
-              id: i.productId,
-              quantity: i.quantity || 1,
-              item_price: 0,
-            })),
-          },
-          {
-            email: formData.email.trim() || undefined,
-            phone: formData.phone.trim() || undefined,
-            external_id: userId || undefined,
-          },
-          resolvedPixelId
-        )
-        try {
-          sessionStorage.setItem(`tracked_purchase_${orderData.id}`, "true")
-        } catch {}
-        clearCart()
-        router.push(`/checkout/success?utr=${encodeURIComponent(orderData.id)}&orderId=${encodeURIComponent(orderData.id)}`)
-        return
-      }
-
       // Open Gateway immediately
       if (activeGateway === "razorpay") {
-        await launchRazorpay(orderData.id)
+        await launchRazorpay(orderIdToPay)
       } else {
-        launchXPay(orderData.id, verifiedOrderTotal)
+        launchXPay(orderIdToPay, verifiedOrderTotal)
       }
     } catch (err: any) {
       setLoading(false)
@@ -584,7 +692,41 @@ export default function CheckoutPage() {
     }
   }
 
-  if (items.length === 0) {
+  if (recoveryLoading) {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white flex items-center justify-center p-4">
+        <div className="text-center max-w-md w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-8 rounded-3xl shadow-xl space-y-3">
+          <Loader2 className="w-8 h-8 animate-spin text-amber-500 mx-auto" />
+          <h2 className="text-lg font-black text-slate-900 dark:text-white">Retrieving Your Order...</h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400">Loading your details and applying your special 10% recovery discount.</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (recoveryError) {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white flex items-center justify-center p-4">
+        <div className="text-center max-w-md w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-8 rounded-3xl shadow-xl space-y-4">
+          <div className="w-16 h-16 rounded-2xl bg-amber-50 dark:bg-amber-950/40 text-amber-500 mx-auto flex items-center justify-center">
+            <ShoppingBag className="w-8 h-8" />
+          </div>
+          <h2 className="text-xl font-black text-slate-900 dark:text-white">Order Recovery Notice</h2>
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+            {recoveryError}
+          </p>
+          <button
+            onClick={() => router.push("/products")}
+            className="w-full bg-slate-950 hover:bg-slate-900 dark:bg-amber-400 dark:hover:bg-amber-500 text-white dark:text-slate-950 py-3.5 px-6 font-black rounded-xl transition-all shadow-md text-sm cursor-pointer"
+          >
+            Browse Digital Products →
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  if (!isRecovering && items.length === 0) {
     return (
       <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white flex items-center justify-center p-4">
         <div className="text-center max-w-md w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-8 rounded-3xl shadow-xl">
@@ -632,6 +774,20 @@ export default function CheckoutPage() {
 
       {/* 2. Main Content Container */}
       <main className="max-w-4xl mx-auto px-3 sm:px-4 pt-4 sm:pt-6">
+        {/* Special 10% Recovery Alert Banner */}
+        {isRecovering && (
+          <div className="mb-4 bg-emerald-50 dark:bg-emerald-950/70 border border-emerald-300 dark:border-emerald-800 rounded-2xl p-4 flex items-start gap-3 shadow-xs">
+            <Sparkles className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+            <div>
+              <h4 className="text-sm font-black text-emerald-900 dark:text-emerald-200">
+                🎉 Special 10% Incomplete Order Recovery Discount Applied!
+              </h4>
+              <p className="text-xs text-emerald-700 dark:text-emerald-400 mt-0.5">
+                Items for Order #{recoveryOrder.id} are loaded and discounted. Complete your payment below to get instant digital access.
+              </p>
+            </div>
+          </div>
+        )}
         {/* Mobile Collapsible Order Summary Card */}
         <div className="block lg:hidden mb-4">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-xs">
@@ -647,7 +803,7 @@ export default function CheckoutPage() {
                 <div>
                   <span className="text-slate-900 dark:text-white">Order Summary</span>
                   <span className="text-[11px] text-slate-500 dark:text-slate-400 font-normal ml-1.5">
-                    ({items.length} {items.length === 1 ? "item" : "items"})
+                    ({activeItems.length} {activeItems.length === 1 ? "item" : "items"})
                   </span>
                 </div>
               </div>
@@ -665,7 +821,7 @@ export default function CheckoutPage() {
 
             {showOrderSummaryMobile && (
               <div className="border-t border-slate-100 dark:border-slate-800 p-3 sm:p-4 bg-slate-50/60 dark:bg-slate-900/60 space-y-3">
-                {items.map((item) => (
+                {activeItems.map((item) => (
                   <div key={item.productId} className="flex gap-3 items-center text-xs">
                     <div className="w-12 h-12 min-w-[48px] min-h-[48px] max-w-[48px] max-h-[48px] rounded-xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 overflow-hidden shrink-0 flex items-center justify-center p-1">
                       <img
@@ -677,7 +833,7 @@ export default function CheckoutPage() {
                     <div className="flex-1 min-w-0">
                       <p className="font-bold text-slate-900 dark:text-white truncate text-xs">{item.product.title}</p>
                       <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1 mt-0.5">
-                        <Zap className="w-2.5 h-2.5 fill-current" /> Instant Email & WhatsApp
+                        <Zap className="w-2.5 h-2.5 fill-current" /> Instant Email &amp; WhatsApp
                       </p>
                     </div>
                     <div className="text-right shrink-0">
@@ -694,14 +850,19 @@ export default function CheckoutPage() {
                 <div className="border-t border-slate-200 dark:border-slate-800 pt-2.5 space-y-1.5 text-xs">
                   <div className="flex justify-between text-slate-600 dark:text-slate-400">
                     <span>Subtotal</span>
-                    <span className="font-semibold text-slate-900 dark:text-white">{formatPrice(totalAmount)}</span>
+                    <span className="font-semibold text-slate-900 dark:text-white">{formatPrice(activeSubtotal)}</span>
                   </div>
-                  {appliedCoupon && (
+                  {isRecovering && recoveryDiscountAmount > 0 ? (
+                    <div className="flex justify-between text-emerald-600 dark:text-emerald-400 font-bold">
+                      <span>⚡ 10% Recovery Discount</span>
+                      <span>-{formatPrice(recoveryDiscountAmount)}</span>
+                    </div>
+                  ) : appliedCoupon ? (
                     <div className="flex justify-between text-emerald-600 dark:text-emerald-400 font-bold">
                       <span>Discount ({appliedCoupon.code})</span>
                       <span>-{formatPrice(appliedCoupon.discountAmount)}</span>
                     </div>
-                  )}
+                  ) : null}
                   <div className="flex justify-between text-slate-500">
                     <span>Instant Digital Delivery</span>
                     <span className="text-emerald-600 dark:text-emerald-400 font-bold text-[10px] bg-emerald-50 dark:bg-emerald-950/60 px-1.5 py-0.2 rounded border border-emerald-200 dark:border-emerald-800">
@@ -974,13 +1135,13 @@ export default function CheckoutPage() {
               <h3 className="font-black text-slate-900 dark:text-white text-base border-b border-slate-100 dark:border-slate-800 pb-3 mb-4 flex items-center justify-between">
                 <span>Order Summary</span>
                 <span className="text-xs bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-bold px-2.5 py-0.5 rounded-full border border-slate-200 dark:border-slate-700">
-                  {items.length} {items.length === 1 ? "item" : "items"}
+                  {activeItems.length} {activeItems.length === 1 ? "item" : "items"}
                 </span>
               </h3>
 
               {/* Items List */}
               <div className="space-y-3.5 max-h-[300px] overflow-y-auto pr-1 scrollbar-thin">
-                {items.map((item) => (
+                {activeItems.map((item) => (
                   <div key={item.productId} className="flex gap-3 items-center text-xs">
                     <div className="w-14 h-14 min-w-[56px] min-h-[56px] max-w-[56px] max-h-[56px] rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 overflow-hidden shrink-0 flex items-center justify-center p-1">
                       <img
@@ -1009,14 +1170,19 @@ export default function CheckoutPage() {
               <div className="border-t border-slate-100 dark:border-slate-800 pt-4 mt-4 space-y-2 text-xs text-slate-600 dark:text-slate-400">
                 <div className="flex justify-between">
                   <span>Subtotal</span>
-                  <span className="font-bold text-slate-900 dark:text-white">{formatPrice(totalAmount)}</span>
+                  <span className="font-bold text-slate-900 dark:text-white">{formatPrice(activeSubtotal)}</span>
                 </div>
-                {appliedCoupon && (
+                {isRecovering && recoveryDiscountAmount > 0 ? (
+                  <div className="flex justify-between text-emerald-600 dark:text-emerald-400 font-bold">
+                    <span>⚡ 10% Recovery Discount</span>
+                    <span>-{formatPrice(recoveryDiscountAmount)}</span>
+                  </div>
+                ) : appliedCoupon ? (
                   <div className="flex justify-between text-emerald-600 dark:text-emerald-400 font-bold">
                     <span>Discount ({appliedCoupon.code})</span>
                     <span>-{formatPrice(appliedCoupon.discountAmount)}</span>
                   </div>
-                )}
+                ) : null}
                 <div className="flex justify-between text-slate-500">
                   <span>Delivery Fee</span>
                   <span className="text-emerald-700 dark:text-emerald-400 font-bold text-[10px] bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 px-2 py-0.5 rounded-full">

@@ -67,6 +67,12 @@ export interface DownloadTokenPayload {
   assetId: string;
 }
 
+export interface OrderRecoveryTokenPayload {
+  purpose: 'order_recovery';
+  orderId: string;
+  email: string;
+}
+
 /**
  * Creates a cryptographically signed magic download token bound to a specific paid order, product, and asset.
  * Allows buyers to download their purchased files from email / another browser without needing a login cookie.
@@ -108,6 +114,50 @@ export async function verifyDownloadToken(token: string): Promise<DownloadTokenP
         orderId: payload.orderId,
         productId: payload.productId,
         assetId: payload.assetId,
+      };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Creates a cryptographically signed recovery token for an incomplete/pending order.
+ * Allows buyers to complete their payment from email on ANY device/browser without requiring prior login.
+ */
+export async function createOrderRecoveryToken(params: {
+  orderId: string;
+  email: string;
+}): Promise<string> {
+  return await new SignJWT({
+    purpose: 'order_recovery',
+    orderId: String(params.orderId),
+    email: String(params.email).toLowerCase().trim(),
+  })
+    .setProtectedHeader({ alg: 'HS256' })
+    .setIssuedAt()
+    .setExpirationTime('14d')
+    .sign(getKey());
+}
+
+/**
+ * Verifies an order recovery token and returns its payload if valid.
+ */
+export async function verifyOrderRecoveryToken(token: string): Promise<OrderRecoveryTokenPayload | null> {
+  try {
+    const { payload } = await jwtVerify(token, getKey(), {
+      algorithms: ['HS256'],
+    });
+    if (
+      payload &&
+      payload.purpose === 'order_recovery' &&
+      typeof payload.orderId === 'string'
+    ) {
+      return {
+        purpose: 'order_recovery',
+        orderId: payload.orderId,
+        email: String(payload.email || ''),
       };
     }
     return null;

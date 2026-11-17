@@ -1,6 +1,6 @@
 import { getRequestContext } from '@cloudflare/next-on-pages'
 import { executeQuery } from '@/lib/db'
-import { createDownloadToken } from '@/lib/session'
+import { createDownloadToken, createOrderRecoveryToken } from '@/lib/session'
 
 function getEnv(key: string): string | undefined {
   try {
@@ -557,7 +557,18 @@ export async function sendOrderFailedEmail(orderId: string, reason?: string) {
     }
 
     const items: any[] = order.items ? JSON.parse(order.items) : []
-    const retryCheckoutUrl = `${appUrl}/checkout`
+    const originalTotal = Number(order.totalAmount || 0)
+    // 10% Extra Recovery Discount
+    const discountAmount = Math.max(1, Math.round(originalTotal * 0.10))
+    const recoveryTotal = Math.max(1, originalTotal - discountAmount)
+
+    // Generate cryptographically signed recovery token valid for 14 days
+    const recoveryToken = await createOrderRecoveryToken({
+      orderId: order.id,
+      email: recipientEmail,
+    })
+
+    const retryCheckoutUrl = `${appUrl}/checkout?orderId=${encodeURIComponent(order.id)}&token=${encodeURIComponent(recoveryToken)}&recover=1`
     const logoUrl = `${appUrl}/logo.webp`
 
     let itemsListHtml = ''
@@ -581,7 +592,7 @@ export async function sendOrderFailedEmail(orderId: string, reason?: string) {
       }
       .animated-header-bar-failed {
         height: 4px;
-        background: linear-gradient(90deg, #f59e0b, #d97706, #3b82f6, #f59e0b);
+        background: linear-gradient(90deg, #10b981, #f59e0b, #6366f1, #10b981);
         background-size: 200% 100%;
         animation: shimmer 3s infinite linear;
       }
@@ -615,7 +626,7 @@ export async function sendOrderFailedEmail(orderId: string, reason?: string) {
       <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Payment Unsuccessful - ${order.id}</title>
+        <title>Special 10% OFF: Complete Your Order - #${order.id}</title>
         <style>${responsiveStyle}</style>
       </head>
       <body class="email-body" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f1f5f9; margin: 0; padding: 20px 0; -webkit-text-size-adjust: 100%;">
@@ -624,24 +635,25 @@ export async function sendOrderFailedEmail(orderId: string, reason?: string) {
           <!-- Animated Accent Top Line -->
           <div class="animated-header-bar-failed"></div>
 
-          <!-- Header with Clean Brand Logo (No Duplicate H1) -->
+          <!-- Header with Clean Brand Logo -->
           <div class="header-box" style="background-color: #ffffff; border-bottom: 1px solid #e2e8f0; padding: 16px 20px; text-align: center; color: #0f172a;">
             <img src="${logoUrl}" alt="${senderName}" style="height: 42px; max-height: 42px; width: auto; display: block; margin: 0 auto; border: 0; outline: none;" />
-            <p style="margin: 6px 0 0 0; color: #64748b; font-size: 12px; font-weight: 500;">Payment Status Alert</p>
+            <p style="margin: 6px 0 0 0; color: #64748b; font-size: 12px; font-weight: 500;">Order Recovery &amp; Special Discount</p>
           </div>
 
           <!-- Body Container -->
           <div class="content-box" style="padding: 24px 20px;">
             
-            <!-- Failed Banner -->
-            <div style="background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); border: 1px solid #fde68a; border-radius: 12px; padding: 16px; text-align: center; margin-bottom: 22px;">
-              <h2 style="margin: 0; color: #92400e; font-size: 18px; font-weight: 800;">⚡ Action Required: Complete Your Order</h2>
-              <p style="margin: 4px 0 0 0; color: #b45309; font-size: 13px; font-weight: 500;">Your payment for Order #${order.id} was incomplete.</p>
+            <!-- Special 10% OFF Discount Banner -->
+            <div style="background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); border: 1.5px solid #6ee7b7; border-radius: 12px; padding: 16px; text-align: center; margin-bottom: 22px;">
+              <span style="display: inline-block; background-color: #059669; color: #ffffff; font-size: 11px; font-weight: 800; padding: 3px 10px; border-radius: 9999px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;">🎉 10% Extra Discount Applied</span>
+              <h2 style="margin: 0; color: #065f46; font-size: 19px; font-weight: 800;">Complete Your Order &amp; Save More!</h2>
+              <p style="margin: 4px 0 0 0; color: #047857; font-size: 13px; font-weight: 600;">We've reserved your items and added an instant 10% discount on order #${order.id}.</p>
             </div>
 
             <p style="font-size: 14px; color: #334155; margin-bottom: 20px; line-height: 1.5;">
               Hi <strong>${recipientName}</strong>,<br>
-              We noticed that your recent payment attempt for order <strong style="color: #0f172a;">${order.id}</strong> (Total: <strong>₹${order.totalAmount}</strong>) was cancelled or interrupted.
+              We noticed you started an order on ${senderName} but couldn't finish payment. Your digital items are reserved for you, and we've applied a <strong>special 10% discount</strong> to make checkout faster and easier!
             </p>
 
             ${
@@ -651,25 +663,44 @@ export async function sendOrderFailedEmail(orderId: string, reason?: string) {
             }
 
             <h3 style="color: #0f172a; font-size: 15px; font-weight: 700; margin: 24px 0 10px 0;">Items waiting in your order:</h3>
-            <ul style="padding-left: 20px; margin: 0 0 24px 0;">
+            <ul style="padding-left: 20px; margin: 0 0 20px 0;">
               ${itemsListHtml}
             </ul>
 
-            <p style="font-size: 13px; color: #475569; margin-bottom: 22px; line-height: 1.5; background-color: #f8fafc; padding: 12px 16px; border-radius: 8px; border-left: 4px solid #f59e0b;">
-              💡 <strong>Need to try again?</strong> If any amount was debited by your bank, it will be automatically refunded within 3-5 business days. You can complete your purchase using the payment link below.
-            </p>
+            <!-- Pricing Breakdown Box -->
+            <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; margin-bottom: 22px;">
+              <div style="display: flex; justify-content: space-between; font-size: 13px; color: #64748b; margin-bottom: 6px;">
+                <span>Original Order Total:</span>
+                <span style="text-decoration: line-through;">₹${originalTotal}</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; font-size: 13px; color: #059669; font-weight: 700; margin-bottom: 8px;">
+                <span>⚡ Special Recovery Discount (10% OFF):</span>
+                <span>-₹${discountAmount}</span>
+              </div>
+              <div style="border-top: 1px dashed #cbd5e1; padding-top: 8px; display: flex; justify-content: space-between; font-size: 16px; color: #0f172a; font-weight: 800;">
+                <span>Payable Amount:</span>
+                <span style="color: #059669; font-size: 18px;">₹${recoveryTotal}</span>
+              </div>
+            </div>
+
+            <!-- Instant Access & Login-Free Notice -->
+            <div style="background-color: #eff6ff; border-left: 4px solid #3b82f6; border-radius: 8px; padding: 12px 16px; margin-bottom: 24px;">
+              <p style="margin: 0; font-size: 13px; color: #1e40af; line-height: 1.4;">
+                🚀 <strong>No Login Required:</strong> Simply click the button below from your phone or any browser. Your customer details and items are pre-loaded. Once payment is verified, you receive <strong>instant on-screen download access</strong> and direct download links by email!
+              </p>
+            </div>
 
             <!-- Animated Complete Payment Button -->
             <div style="text-align: center; margin: 28px 0;">
-              <a href="${retryCheckoutUrl}" target="_blank" class="pulse-btn-failed" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 10px; font-size: 15px; font-weight: 700; display: inline-block; box-shadow: 0 4px 14px rgba(245, 158, 11, 0.35);">
-                ⚡ Complete Payment
+              <a href="${retryCheckoutUrl}" target="_blank" class="pulse-btn-failed" style="background: linear-gradient(135deg, #059669 0%, #047857 100%); color: #ffffff; text-decoration: none; padding: 15px 32px; border-radius: 10px; font-size: 16px; font-weight: 800; display: inline-block; box-shadow: 0 4px 16px rgba(5, 150, 105, 0.35);">
+                ⚡ Complete Order with 10% OFF — Pay ₹${recoveryTotal}
               </a>
             </div>
 
-            ${getWhatsAppBoxHtml(whatsappNumber, senderName, `Failed Payment Order ${order.id}`)}
+            ${getWhatsAppBoxHtml(whatsappNumber, senderName, `Complete Order ${order.id} with 10% OFF`)}
 
             <p style="font-size: 12px; color: #64748b; text-align: center; margin-top: 24px;">
-              Need help with payment? Reply directly to this email and our support team will assist you.
+              Need help completing payment? Reply directly to this email or reach us on WhatsApp.
             </p>
           </div>
 
@@ -686,13 +717,20 @@ export async function sendOrderFailedEmail(orderId: string, reason?: string) {
     return await sendBrevoEmail({
       toEmail: recipientEmail,
       toName: recipientName,
-      subject: `⚠️ Payment Unsuccessful for Order ${order.id}`,
+      subject: `⚡ 10% Extra Discount: Complete Order #${order.id} - ${senderName}`,
       htmlContent,
     })
   } catch (error: any) {
     console.error('[Brevo sendOrderFailedEmail Error]', error)
     return { success: false, error: error.message || 'Error processing failure email' }
   }
+}
+
+/**
+ * Convenience alias for explicitly sending an Order Recovery Email with 10% OFF
+ */
+export async function sendOrderRecoveryEmail(orderId: string, reason?: string) {
+  return await sendOrderFailedEmail(orderId, reason || 'Exclusive 10% discount to complete your incomplete order.')
 }
 
 /**

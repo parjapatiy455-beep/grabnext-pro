@@ -41,6 +41,7 @@ function formatDateTime(ts: number | string) {
 function OrderRow({ order, onStatusChange }: { order: any; onStatusChange: (id: string, status: string) => void }) {
   const [expanded, setExpanded] = useState(false)
   const [updatingStatus, setUpdatingStatus] = useState(false)
+  const [sendingRecoveryEmail, setSendingRecoveryEmail] = useState(false)
   let items: any[] = []
   try { items = Array.isArray(order.items) ? order.items : JSON.parse(order.items) } catch { }
 
@@ -59,6 +60,26 @@ function OrderRow({ order, onStatusChange }: { order: any; onStatusChange: (id: 
       console.error("Failed to update status", e)
     } finally {
       setUpdatingStatus(false)
+    }
+  }
+
+  const handleSendRecoveryEmail = async () => {
+    if (!order.id) return
+    setSendingRecoveryEmail(true)
+    try {
+      const res = await fetch(`/api/orders/${order.id}/send-recovery`, {
+        method: "POST",
+      })
+      const data = await res.json()
+      if (res.ok && data.success) {
+        alert(`✅ ${data.message}`)
+      } else {
+        alert(`❌ ${data.error || "Failed to send recovery email"}`)
+      }
+    } catch (e: any) {
+      alert(`❌ Error: ${e.message}`)
+    } finally {
+      setSendingRecoveryEmail(false)
     }
   }
 
@@ -194,6 +215,33 @@ function OrderRow({ order, onStatusChange }: { order: any; onStatusChange: (id: 
                     ))}
                   </div>
                 </div>
+
+                {/* 1-Click Recovery Email with 10% Discount */}
+                {(order.status === "pending" || order.status === "failed") && (
+                  <div className="pt-3 border-t border-gray-100">
+                    <button
+                      type="button"
+                      onClick={handleSendRecoveryEmail}
+                      disabled={sendingRecoveryEmail}
+                      className="w-full text-xs font-bold py-2 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center gap-1.5 shadow-xs transition-colors cursor-pointer disabled:opacity-50"
+                    >
+                      {sendingRecoveryEmail ? (
+                        <>
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          <span>Sending Recovery Email...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Mail className="h-3.5 w-3.5" />
+                          <span>⚡ Send Recovery Email (10% OFF Link)</span>
+                        </>
+                      )}
+                    </button>
+                    <p className="text-[10px] text-gray-500 mt-1 text-center">
+                      Sends signed 1-click recovery link with 10% discount to {order.userEmail || "customer"}
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           </div>

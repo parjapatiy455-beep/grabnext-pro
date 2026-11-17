@@ -73,7 +73,7 @@ export default function CheckoutSuccessPage() {
       try {
         const res = await fetch(`/api/orders/by-payment/${encodeURIComponent(paymentRef)}`)
         const data = await res.json()
-        if (!data.error && data.id) {
+        if (!data.error && data.id && (data.status === "paid" || data.status === "completed")) {
           if (!isCancelled) {
             setOrder(data)
             setLoading(false)
@@ -84,7 +84,7 @@ export default function CheckoutSuccessPage() {
               (data.id && sessionStorage.getItem(`tracked_purchase_${data.id}`) === "true") ||
               (data.paymentId && sessionStorage.getItem(`tracked_purchase_${data.paymentId}`) === "true")
 
-            if (data.status === "paid" && !alreadyTracked && !hasFiredPurchase.current) {
+            if (!alreadyTracked && !hasFiredPurchase.current) {
               hasFiredPurchase.current = true
               try {
                 sessionStorage.setItem(`tracked_purchase_${data.id}`, "true")
@@ -131,8 +131,8 @@ export default function CheckoutSuccessPage() {
       }
 
       attempts++
-      if (attempts < 6 && !isCancelled) {
-        setTimeout(fetchOrder, 1200)
+      if (attempts < 10 && !isCancelled) {
+        setTimeout(fetchOrder, 1500)
       } else if (!isCancelled) {
         setLoading(false)
       }
@@ -233,6 +233,27 @@ export default function CheckoutSuccessPage() {
                         </p>
                         You can also find these downloads in your "My Orders" section if you need them later.
                       </div>
+                    </div>
+                  )}
+
+                  {digitalItems.length === 0 && (
+                    <div className="p-5 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-2xl text-center space-y-3">
+                      <p className="text-sm text-amber-900 dark:text-amber-200 font-bold">
+                        ⏳ Payment Confirmation in Progress
+                      </p>
+                      <p className="text-xs text-amber-700 dark:text-amber-400 max-w-md mx-auto">
+                        If you have completed your UPI payment, your transaction is being verified by the banking server. Direct download links are also dispatched to your email!
+                      </p>
+                      <Button
+                        type="button"
+                        onClick={() => {
+                          setLoading(true)
+                          window.location.reload()
+                        }}
+                        className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs px-5 h-9 rounded-xl shadow-xs cursor-pointer"
+                      >
+                        Refresh Download Links 🔄
+                      </Button>
                     </div>
                   )}
                 </>

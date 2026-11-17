@@ -19,6 +19,20 @@ export async function GET(
         )
 
         if (!Array.isArray(results) || results.length === 0) {
+            // Check if the order exists but payment confirmation is still in progress
+            const pendingResults = (await executeQuery(
+                "SELECT id, status, totalAmount, createdAt FROM orders WHERE (paymentId = ? OR id = ?) LIMIT 1",
+                [paymentId, paymentId]
+            )) as any[]
+
+            if (Array.isArray(pendingResults) && pendingResults.length > 0) {
+                return NextResponse.json({
+                    id: pendingResults[0].id,
+                    status: pendingResults[0].status,
+                    pending: true,
+                    message: "Payment verification in progress...",
+                }, { status: 200 })
+            }
             return NextResponse.json({ error: "Order not found or payment not completed" }, { status: 404 })
         }
 
