@@ -9,6 +9,7 @@ export interface VideoInfo {
   thumbnail?: string
   videoId?: string
   originalUrl: string
+  isVertical?: boolean
 }
 
 export function getVideoInfo(rawUrl?: string | null): VideoInfo | null {
@@ -28,12 +29,14 @@ export function getVideoInfo(rawUrl?: string | null): VideoInfo | null {
   )
   if (ytMatch && ytMatch[1]) {
     const id = ytMatch[1]
+    const isVertical = /youtube\.com\/shorts\//i.test(url)
     return {
       type: 'youtube',
       videoId: id,
       embedUrl: `https://www.youtube-nocookie.com/embed/${id}?rel=0&modestbranding=1&playsinline=1&enablejsapi=1`,
       thumbnail: `https://img.youtube.com/vi/${id}/hqdefault.jpg`,
       originalUrl: url,
+      isVertical,
     }
   }
 

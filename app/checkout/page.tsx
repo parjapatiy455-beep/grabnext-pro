@@ -1088,52 +1088,6 @@ export default function CheckoutPage() {
                     </div>
                   </div>
                 </div>
-
-                {/* 6. Enhanced Visual Trust Badges Strip (Instead of simple text) */}
-                <div className="pt-3 border-t border-slate-200/90 dark:border-slate-800 space-y-3">
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
-                    <div className="bg-gradient-to-b from-slate-50 to-white dark:from-slate-900 dark:to-slate-950 border border-slate-200/90 dark:border-slate-800 rounded-2xl p-2.5 flex flex-col items-center justify-center shadow-xs">
-                      <div className="h-8 w-8 rounded-xl bg-emerald-100 dark:bg-emerald-950/70 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-1">
-                        <Lock className="w-4 h-4" />
-                      </div>
-                      <span className="text-[11px] font-black text-slate-900 dark:text-slate-100">256-Bit SSL</span>
-                      <span className="text-[9px] text-emerald-600 dark:text-emerald-400 font-bold">Bank-Grade Safe</span>
-                    </div>
-
-                    <div className="bg-gradient-to-b from-slate-50 to-white dark:from-slate-900 dark:to-slate-950 border border-slate-200/90 dark:border-slate-800 rounded-2xl p-2.5 flex flex-col items-center justify-center shadow-xs">
-                      <div className="h-8 w-8 rounded-xl bg-amber-100 dark:bg-amber-950/70 text-amber-600 dark:text-amber-400 flex items-center justify-center mb-1">
-                        <Zap className="w-4 h-4 fill-current" />
-                      </div>
-                      <span className="text-[11px] font-black text-slate-900 dark:text-slate-100">Instant Access</span>
-                      <span className="text-[9px] text-amber-600 dark:text-amber-400 font-bold">Email &amp; WhatsApp</span>
-                    </div>
-
-                    <div className="bg-gradient-to-b from-slate-50 to-white dark:from-slate-900 dark:to-slate-950 border border-slate-200/90 dark:border-slate-800 rounded-2xl p-2.5 flex flex-col items-center justify-center shadow-xs">
-                      <div className="h-8 w-8 rounded-xl bg-blue-100 dark:bg-blue-950/70 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-1">
-                        <ShieldCheck className="w-4 h-4" />
-                      </div>
-                      <span className="text-[11px] font-black text-slate-900 dark:text-slate-100">100% Genuine</span>
-                      <span className="text-[9px] text-blue-600 dark:text-blue-400 font-bold">Lifetime Active</span>
-                    </div>
-
-                    <div className="bg-gradient-to-b from-slate-50 to-white dark:from-slate-900 dark:to-slate-950 border border-slate-200/90 dark:border-slate-800 rounded-2xl p-2.5 flex flex-col items-center justify-center shadow-xs">
-                      <div className="h-8 w-8 rounded-xl bg-purple-100 dark:bg-purple-950/70 text-purple-600 dark:text-purple-400 flex items-center justify-center mb-1">
-                        <Headphones className="w-4 h-4" />
-                      </div>
-                      <span className="text-[11px] font-black text-slate-900 dark:text-slate-100">Instant Support</span>
-                      <span className="text-[9px] text-purple-600 dark:text-purple-400 font-bold">WhatsApp Help</span>
-                    </div>
-                  </div>
-
-                  {/* Rating / Social Proof Strip with verified badge */}
-                  <div className="flex items-center justify-center gap-1.5 text-xs text-slate-700 dark:text-slate-300 font-semibold pt-1">
-                    <span className="inline-flex items-center gap-1 text-[11px] font-extrabold text-emerald-700 bg-emerald-50 dark:bg-emerald-950/70 border border-emerald-200 px-2 py-0.5 rounded-full">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> NPCI Verified
-                    </span>
-                    <div className="flex text-amber-400 text-sm">★★★★★</div>
-                    <span className="text-[11px]"><strong>4.9/5</strong> by 3,929+ Indian Buyers</span>
-                  </div>
-                </div>
               </form>
             </div>
           </div>

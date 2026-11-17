@@ -157,6 +157,7 @@ export function ProductDetailView({ product: initialProduct, id }: { product: Pr
         savings: number
     } | null>(null)
     const [discountTimerStr, setDiscountTimerStr] = useState<string>("")
+    const [videoAspectRatio, setVideoAspectRatio] = useState<number | null>(null)
 
     // Check discount status & launch popup with a short smart delay
     useEffect(() => {
@@ -175,10 +176,10 @@ export function ProductDetailView({ product: initialProduct, id }: { product: Pr
             localStorage.setItem(timerKey, freshEndTime.toString())
         } catch {}
 
-        // Launch popup after 2 seconds
+        // Launch popup after 15 seconds (giving user time to read before displaying flash deal)
         const t = setTimeout(() => {
             setShowDiscountPopup(true)
-        }, 2000)
+        }, 15000)
         return () => clearTimeout(t)
     }, [product?.id, product?.enableDiscountPopup, product?.price, id])
 
@@ -399,15 +400,34 @@ export function ProductDetailView({ product: initialProduct, id }: { product: Pr
                                 </div>
                             )}
 
-                            {/* Main Media Display */}
+                            {/* Main Media Display - Video auto-adapts to native aspect ratio */}
                             {activeMediaType === "video" && videoInfo ? (
-                                <div className="relative rounded-xl overflow-hidden bg-black shadow-inner aspect-video sm:aspect-[16/10] w-full flex items-center justify-center">
+                                <div
+                                    className={`relative rounded-xl overflow-hidden bg-black shadow-inner flex items-center justify-center transition-all duration-300 ${
+                                        (videoInfo.isVertical || (videoAspectRatio !== null && videoAspectRatio < 0.9))
+                                            ? "w-full max-w-[340px] mx-auto aspect-[9/16] max-h-[560px]"
+                                            : (videoAspectRatio !== null && Math.abs(videoAspectRatio - 1) < 0.15)
+                                            ? "w-full max-w-[460px] mx-auto aspect-square max-h-[480px]"
+                                            : "w-full aspect-video max-h-[500px]"
+                                    }`}
+                                    style={
+                                        videoAspectRatio !== null && videoAspectRatio >= 0.9 && Math.abs(videoAspectRatio - 1) >= 0.15
+                                            ? { aspectRatio: `${videoAspectRatio}` }
+                                            : undefined
+                                    }
+                                >
                                     {videoInfo.type === 'direct' ? (
                                         <video 
                                             src={videoInfo.embedUrl} 
                                             controls 
                                             playsInline 
                                             autoPlay 
+                                            onLoadedMetadata={(e) => {
+                                                const { videoWidth, videoHeight } = e.currentTarget
+                                                if (videoWidth && videoHeight) {
+                                                    setVideoAspectRatio(videoWidth / videoHeight)
+                                                }
+                                            }}
                                             className="w-full h-full object-contain" 
                                         />
                                     ) : (
