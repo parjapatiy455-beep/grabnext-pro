@@ -22,7 +22,14 @@ export async function GET(request: NextRequest) {
         FROM orders
       `).catch(() => [{ totalOrders: 0, totalRevenue: 0, pendingOrders: 0, completedOrders: 0 }]),
 
-      executeQuery(`SELECT COUNT(*) as totalUsers FROM users`).catch(() => [{ totalUsers: 0 }]),
+      executeQuery(`
+        SELECT 
+          COUNT(*) as totalUsers,
+          SUM(CASE WHEN role = 'admin' THEN 1 ELSE 0 END) as adminUsers,
+          SUM(CASE WHEN isGuest = 1 OR isGuest = '1' OR isGuest = true THEN 1 ELSE 0 END) as guestUsers,
+          SUM(CASE WHEN isGuest IS NULL OR isGuest = 0 OR isGuest = '0' OR isGuest = false THEN 1 ELSE 0 END) as registeredUsers
+        FROM users
+      `).catch(() => [{ totalUsers: 0, adminUsers: 0, guestUsers: 0, registeredUsers: 0 }]),
 
       executeQuery(`SELECT COUNT(*) as totalProducts FROM products WHERE isActive = 1`).catch(() => [{ totalProducts: 0 }])
     ]) as any[]
@@ -37,6 +44,9 @@ export async function GET(request: NextRequest) {
       pendingOrders: Number(o.pendingOrders || 0),
       completedOrders: Number(o.completedOrders || 0),
       users: Number(u.totalUsers || 0),
+      adminUsers: Number(u.adminUsers || 0),
+      guestUsers: Number(u.guestUsers || 0),
+      registeredUsers: Number(u.registeredUsers || 0),
       products: Number(p.totalProducts || 0)
     })
   } catch (error: any) {

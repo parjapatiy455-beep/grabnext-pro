@@ -24,14 +24,27 @@ export async function GET(request: NextRequest) {
     const limit  = Math.min(200, Math.max(1, parseInt(url.searchParams.get('limit') || '100', 10)))
     const offset = (page - 1) * limit
     const search = url.searchParams.get('search') || ''
+    const role   = url.searchParams.get('role')   || 'all'
+    const type   = url.searchParams.get('type')   || 'all'
 
     const conditions: string[] = []
     const params: any[] = []
 
     if (search.trim()) {
-      conditions.push('(email LIKE ? OR displayName LIKE ? OR phone LIKE ?)')
+      conditions.push('(email LIKE ? OR displayName LIKE ? OR phone LIKE ? OR city LIKE ? OR country LIKE ?)')
       const q = `%${search.trim().slice(0, 50)}%`
-      params.push(q, q, q)
+      params.push(q, q, q, q, q)
+    }
+
+    if (role && role !== 'all') {
+      conditions.push('role = ?')
+      params.push(role)
+    }
+
+    if (type === 'guest') {
+      conditions.push('(isGuest = 1 OR isGuest = true OR isGuest = "1")')
+    } else if (type === 'registered') {
+      conditions.push('(isGuest IS NULL OR isGuest = 0 OR isGuest = false OR isGuest = "0")')
     }
 
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''

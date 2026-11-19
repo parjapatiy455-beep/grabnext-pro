@@ -465,10 +465,21 @@ export default function AdminOrdersPage() {
     hasMore: boolean
   }>({ page: 1, limit: 50, total: 0, totalPages: 1, hasMore: false })
 
-  const loadOrders = async (pageNum = page) => {
+  const loadOrders = async (
+    pageNum = page,
+    query = search,
+    status = statusFilter
+  ) => {
     setLoading(true)
     try {
-      const res = await fetch(`/api/orders?page=${pageNum}&limit=50`, { cache: 'no-store' })
+      const params = new URLSearchParams()
+      params.set('page', String(pageNum))
+      params.set('limit', '50')
+      params.set('paginated', 'true')
+      if (status && status !== 'all') params.set('status', status)
+      if (query.trim()) params.set('search', query.trim())
+
+      const res = await fetch(`/api/orders?${params.toString()}`, { cache: 'no-store' })
       if (!res.ok) throw new Error('Failed to fetch orders')
       const data = await res.json()
       // Support both old array response and new paginated response
@@ -516,29 +527,17 @@ export default function AdminOrdersPage() {
     } catch {}
   }
 
+  // Debounced search & filter across ENTIRE database
   useEffect(() => {
-    loadOrders(1)
-    loadSummaryStats()
-  }, [])
+    const timer = setTimeout(() => {
+      loadOrders(1, search, statusFilter)
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [search, statusFilter])
 
   useEffect(() => {
-    let result = orders
-    if (statusFilter !== "all") {
-      result = result.filter(o => o.status === statusFilter)
-    }
-    if (search.trim()) {
-      const q = search.toLowerCase()
-      result = result.filter(o =>
-        o.id?.toLowerCase().includes(q) ||
-        o.userName?.toLowerCase().includes(q) ||
-        o.userEmail?.toLowerCase().includes(q) ||
-        o.userPhone?.toLowerCase().includes(q) ||
-        o.userId?.toLowerCase().includes(q) ||
-        o.paymentId?.toLowerCase().includes(q)
-      )
-    }
-    setFiltered(result)
-  }, [search, statusFilter, orders])
+    loadSummaryStats()
+  }, [])
 
   const handleStatusChange = (id: string, newStatus: string) => {
     setOrders(prev => prev.map(o => o.id === id ? { ...o, status: newStatus } : o))

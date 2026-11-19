@@ -20,18 +20,72 @@ export default function UsersAdminPage() {
     const [roleFilter, setRoleFilter] = useState("all")
     const [typeFilter, setTypeFilter] = useState("all")
     const [selectedUser, setSelectedUser] = useState<any | null>(null)
+    const [page, setPage] = useState(1)
+    const [pagination, setPagination] = useState<{
+        page: number
+        limit: number
+        total: number
+        totalPages: number
+        hasMore: boolean
+    }>({ page: 1, limit: 50, total: 0, totalPages: 1, hasMore: false })
+    const [stats, setStats] = useState<{
+        totalUsers: number
+        adminUsers: number
+        guestUsers: number
+        registeredUsers: number
+    }>({ totalUsers: 0, adminUsers: 0, guestUsers: 0, registeredUsers: 0 })
 
-    const loadUsers = async () => {
+    const loadStats = async () => {
+        try {
+            const res = await fetch('/api/admin/stats', { cache: 'no-store' })
+            if (res.ok) {
+                const d = await res.json()
+                setStats({
+                    totalUsers: d.users || 0,
+                    adminUsers: d.adminUsers || 0,
+                    guestUsers: d.guestUsers || 0,
+                    registeredUsers: d.registeredUsers || 0,
+                })
+            }
+        } catch {}
+    }
+
+    const loadUsers = async (
+        pageNum = page,
+        query = searchQuery,
+        rFilter = roleFilter,
+        tFilter = typeFilter
+    ) => {
         setLoading(true)
         try {
-            const res = await fetch('/api/users?limit=200', { cache: 'no-store' })
+            const params = new URLSearchParams()
+            params.set('page', String(pageNum))
+            params.set('limit', '50')
+            params.set('paginated', 'true')
+            if (query.trim()) params.set('search', query.trim())
+            if (rFilter !== 'all') params.set('role', rFilter)
+            if (tFilter !== 'all') params.set('type', tFilter)
+
+            const res = await fetch(`/api/users?${params.toString()}`, { cache: 'no-store' })
             if (!res.ok) {
                 const d = await res.json().catch(() => ({}))
                 throw new Error(d.error || 'Failed to load users')
             }
             const data = await res.json()
-            // Support both old array response and new paginated response
-            setUsers(Array.isArray(data) ? data : (data.users || []))
+            const usersData = Array.isArray(data) ? data : (data.users || [])
+            setUsers(usersData)
+            if (data.pagination) {
+                setPagination(data.pagination)
+                setPage(data.pagination.page)
+            } else {
+                setPagination({
+                    page: pageNum,
+                    limit: 50,
+                    total: usersData.length,
+                    totalPages: 1,
+                    hasMore: false,
+                })
+            }
         } catch (error: any) {
             console.error(error)
             toast({ title: "Error", description: error.message || "Failed to load users", variant: "destructive" })
@@ -40,7 +94,17 @@ export default function UsersAdminPage() {
         }
     }
 
-    useEffect(() => { loadUsers() }, [])
+    // Debounced search & filter across ENTIRE database
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            loadUsers(1, searchQuery, roleFilter, typeFilter)
+        }, 300)
+        return () => clearTimeout(timer)
+    }, [searchQuery, roleFilter, typeFilter])
+
+    useEffect(() => {
+        loadStats()
+    }, [])
 
     const handleToggleRole = async (uid: string, currentRole: string) => {
         const newRole = currentRole === 'admin' ? 'user' : 'admin'
@@ -61,6 +125,7 @@ export default function UsersAdminPage() {
             if (selectedUser && selectedUser.uid === uid) {
                 setSelectedUser((prev: any) => prev ? { ...prev, role: newRole } : null)
             }
+            loadStats()
         } catch (error: any) {
             toast({ title: "Error", description: error.message, variant: "destructive" })
         }
@@ -83,36 +148,20 @@ export default function UsersAdminPage() {
             if (selectedUser && selectedUser.uid === uid) {
                 setSelectedUser(null)
             }
+            loadStats()
         } catch (error: any) {
             toast({ title: "Error", description: error.message, variant: "destructive" })
         }
     }
 
-    // Stats calculations
-    const totalCount = users.length
-    const adminCount = users.filter(u => u.role === 'admin').length
-    const guestCount = users.filter(u => u.isGuest === 1 || u.isGuest === true).length
-    const registeredCount = totalCount - guestCount
+    // Database-level total counts (accurate across all users)
+    const totalCount = stats.totalUsers || pagination.total || users.length
+    const adminCount = stats.adminUsers || users.filter(u => u.role === 'admin').length
+    const guestCount = stats.guestUsers || users.filter(u => u.isGuest === 1 || u.isGuest === true).length
+    const registeredCount = stats.registeredUsers || (totalCount - guestCount)
 
-    // Dynamic Client Filtering
-    const filteredUsers = users.filter(user => {
-        const query = searchQuery.toLowerCase().trim()
-        const matchesSearch = 
-            !query ||
-            user.email?.toLowerCase().includes(query) ||
-            user.displayName?.toLowerCase().includes(query) ||
-            user.phone?.toLowerCase().includes(query) ||
-            user.city?.toLowerCase().includes(query) ||
-            user.state?.toLowerCase().includes(query) ||
-            user.country?.toLowerCase().includes(query)
-
-        const matchesRole = roleFilter === "all" || user.role === roleFilter
-        const matchesType = typeFilter === "all" || 
-            (typeFilter === "guest" && (user.isGuest === 1 || user.isGuest === true)) ||
-            (typeFilter === "registered" && (user.isGuest !== 1 && user.isGuest !== true))
-
-        return matchesSearch && matchesRole && matchesType
-    })
+    // Server has already filtered and paginated the results across the full database
+    const filteredUsers = users
 
     const getUserInitials = (name: string) => {
         if (!name) return "?"
@@ -137,7 +186,7 @@ export default function UsersAdminPage() {
                             <Send className="h-3.5 w-3.5" /> Send Bulk Offer Email
                         </Link>
                     </Button>
-                    <Button onClick={loadUsers} variant="outline" size="sm">
+                    <Button onClick={() => { loadUsers(page); loadStats(); }} variant="outline" size="sm">
                         Refresh List
                     </Button>
                 </div>
@@ -385,6 +434,37 @@ export default function UsersAdminPage() {
                         )}
                     </TableBody>
                 </Table>
+
+                {/* Pagination Controls */}
+                {pagination.totalPages > 1 && (
+                    <div className="flex items-center justify-between px-4 py-3 border-t bg-slate-50/50 dark:bg-slate-800/20">
+                        <p className="text-xs text-muted-foreground">
+                            Page <span className="font-bold text-slate-800 dark:text-slate-200">{pagination.page}</span> of{" "}
+                            <span className="font-bold text-slate-800 dark:text-slate-200">{pagination.totalPages}</span>
+                            {pagination.total > 0 && ` (${pagination.total} matching users)`}
+                        </p>
+                        <div className="flex gap-2">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={pagination.page <= 1 || loading}
+                                onClick={() => loadUsers(pagination.page - 1)}
+                                className="text-xs font-semibold"
+                            >
+                                Previous
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={!pagination.hasMore || loading}
+                                onClick={() => loadUsers(pagination.page + 1)}
+                                className="text-xs font-semibold"
+                            >
+                                Next
+                            </Button>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Profile View Details Dialog */}
