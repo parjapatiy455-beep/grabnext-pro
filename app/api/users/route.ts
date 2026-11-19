@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
 
     const url = new URL(request.url)
     const page   = Math.max(1, parseInt(url.searchParams.get('page')  || '1', 10))
-    const limit  = Math.min(200, Math.max(1, parseInt(url.searchParams.get('limit') || '100', 10)))
+    const limit  = Math.min(500, Math.max(1, parseInt(url.searchParams.get('limit') || '50', 10)))
     const offset = (page - 1) * limit
     const search = url.searchParams.get('search') || ''
     const role   = url.searchParams.get('role')   || 'all'

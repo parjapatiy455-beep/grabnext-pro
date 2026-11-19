@@ -21,6 +21,7 @@ export default function UsersAdminPage() {
     const [typeFilter, setTypeFilter] = useState("all")
     const [selectedUser, setSelectedUser] = useState<any | null>(null)
     const [page, setPage] = useState(1)
+    const [pageSize, setPageSize] = useState(50)
     const [pagination, setPagination] = useState<{
         page: number
         limit: number
@@ -54,13 +55,14 @@ export default function UsersAdminPage() {
         pageNum = page,
         query = searchQuery,
         rFilter = roleFilter,
-        tFilter = typeFilter
+        tFilter = typeFilter,
+        pSize = pageSize
     ) => {
         setLoading(true)
         try {
             const params = new URLSearchParams()
             params.set('page', String(pageNum))
-            params.set('limit', '50')
+            params.set('limit', String(pSize))
             params.set('paginated', 'true')
             if (query.trim()) params.set('search', query.trim())
             if (rFilter !== 'all') params.set('role', rFilter)
@@ -80,7 +82,7 @@ export default function UsersAdminPage() {
             } else {
                 setPagination({
                     page: pageNum,
-                    limit: 50,
+                    limit: pSize,
                     total: usersData.length,
                     totalPages: 1,
                     hasMore: false,
@@ -97,10 +99,10 @@ export default function UsersAdminPage() {
     // Debounced search & filter across ENTIRE database
     useEffect(() => {
         const timer = setTimeout(() => {
-            loadUsers(1, searchQuery, roleFilter, typeFilter)
+            loadUsers(1, searchQuery, roleFilter, typeFilter, pageSize)
         }, 300)
         return () => clearTimeout(timer)
-    }, [searchQuery, roleFilter, typeFilter])
+    }, [searchQuery, roleFilter, typeFilter, pageSize])
 
     useEffect(() => {
         loadStats()
@@ -278,6 +280,17 @@ export default function UsersAdminPage() {
                             <option value="admin">Admin Role</option>
                         </select>
                     </div>
+                    <div className="flex flex-col gap-1 w-full sm:w-[130px]">
+                        <select
+                            value={pageSize}
+                            onChange={(e) => setPageSize(Number(e.target.value))}
+                            className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background text-gray-700 dark:text-gray-200 outline-none"
+                        >
+                            <option value={50}>50 per page</option>
+                            <option value={100}>100 per page</option>
+                            <option value={200}>200 per page</option>
+                        </select>
+                    </div>
                 </div>
             </div>
 
@@ -436,35 +449,61 @@ export default function UsersAdminPage() {
                 </Table>
 
                 {/* Pagination Controls */}
-                {pagination.totalPages > 1 && (
-                    <div className="flex items-center justify-between px-4 py-3 border-t bg-slate-50/50 dark:bg-slate-800/20">
-                        <p className="text-xs text-muted-foreground">
-                            Page <span className="font-bold text-slate-800 dark:text-slate-200">{pagination.page}</span> of{" "}
-                            <span className="font-bold text-slate-800 dark:text-slate-200">{pagination.totalPages}</span>
-                            {pagination.total > 0 && ` (${pagination.total} matching users)`}
-                        </p>
-                        <div className="flex gap-2">
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                disabled={pagination.page <= 1 || loading}
-                                onClick={() => loadUsers(pagination.page - 1)}
-                                className="text-xs font-semibold"
-                            >
-                                Previous
-                            </Button>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                disabled={!pagination.hasMore || loading}
-                                onClick={() => loadUsers(pagination.page + 1)}
-                                className="text-xs font-semibold"
-                            >
-                                Next
-                            </Button>
-                        </div>
+                <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-t bg-slate-50/50 dark:bg-slate-800/20">
+                    <p className="text-xs text-muted-foreground">
+                        Showing{" "}
+                        <span className="font-bold text-slate-800 dark:text-slate-200">
+                            {pagination.total === 0 ? 0 : (pagination.page - 1) * pagination.limit + 1}
+                        </span>{" "}
+                        to{" "}
+                        <span className="font-bold text-slate-800 dark:text-slate-200">
+                            {Math.min(pagination.page * pagination.limit, pagination.total)}
+                        </span>{" "}
+                        of{" "}
+                        <span className="font-bold text-slate-800 dark:text-slate-200">{pagination.total}</span> total accounts
+                    </p>
+                    <div className="flex items-center gap-1.5">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={pagination.page <= 1 || loading}
+                            onClick={() => loadUsers(1, searchQuery, roleFilter, typeFilter, pageSize)}
+                            className="text-xs font-semibold h-8 px-2.5"
+                        >
+                            First
+                        </Button>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={pagination.page <= 1 || loading}
+                            onClick={() => loadUsers(pagination.page - 1, searchQuery, roleFilter, typeFilter, pageSize)}
+                            className="text-xs font-semibold h-8 px-2.5"
+                        >
+                            Previous
+                        </Button>
+                        <span className="text-xs px-2 font-medium text-slate-700 dark:text-slate-300">
+                            Page {pagination.page} / {Math.max(1, pagination.totalPages)}
+                        </span>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={!pagination.hasMore || loading}
+                            onClick={() => loadUsers(pagination.page + 1, searchQuery, roleFilter, typeFilter, pageSize)}
+                            className="text-xs font-semibold h-8 px-2.5"
+                        >
+                            Next
+                        </Button>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={pagination.page >= pagination.totalPages || loading}
+                            onClick={() => loadUsers(pagination.totalPages, searchQuery, roleFilter, typeFilter, pageSize)}
+                            className="text-xs font-semibold h-8 px-2.5"
+                        >
+                            Last
+                        </Button>
                     </div>
-                )}
+                </div>
             </div>
 
             {/* Profile View Details Dialog */}
