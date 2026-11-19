@@ -175,42 +175,59 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const recipients = Array.from(uniqueMap.values())
+    const allRecipients = Array.from(uniqueMap.values())
+
+    // Enforce safety limit: Cloudflare Workers Free plan has a hard limit of 50 subrequests per execution.
+    // We cap at 25 emails per batch to guarantee zero risk of hitting the 50 subrequests limit.
+    const MAX_BATCH_SIZE = 25
+    const recipients = allRecipients.slice(0, MAX_BATCH_SIZE)
+    const remainingCount = Math.max(0, allRecipients.length - MAX_BATCH_SIZE)
+
     let sentCount = 0
     let failedCount = 0
     const failedEmails: string[] = []
 
-    // Send emails sequentially or in small batches to avoid rate limits
+    // Process in small parallel chunks of 5 for optimal CPU efficiency
     let lastError = ''
-    for (const recipient of recipients) {
-      const htmlContent = generateOfferEmailHtml({
-        headline,
-        subheading,
-        couponCode,
-        discountBadge,
-        featuredProducts,
-        ctaText,
-        ctaUrl,
-        recipientName: recipient.name,
-        senderName,
-        appUrl,
-        whatsappNumber,
-        isPrimaryMode,
-      })
+    const CHUNK_SIZE = 5
+    for (let i = 0; i < recipients.length; i += CHUNK_SIZE) {
+      const chunk = recipients.slice(i, i + CHUNK_SIZE)
+      const results = await Promise.all(
+        chunk.map(async (recipient) => {
+          const htmlContent = generateOfferEmailHtml({
+            headline,
+            subheading,
+            couponCode,
+            discountBadge,
+            featuredProducts,
+            ctaText,
+            ctaUrl,
+            recipientName: recipient.name,
+            senderName,
+            appUrl,
+            whatsappNumber,
+            isPrimaryMode,
+          })
 
-      const res = await sendBrevoEmail({
-        toEmail: recipient.email,
-        toName: recipient.name,
-        subject,
-        htmlContent,
-      })
+          return await sendBrevoEmail({
+            toEmail: recipient.email,
+            toName: recipient.name,
+            subject,
+            htmlContent,
+          })
+        })
+      )
 
-      if (res.success) {
-        sentCount++
-      } else {
-        failedCount++
-        failedEmails.push(recipient.email)
-        if (!lastError) lastError = res.error || 'Unknown Brevo API error'
+      for (let j = 0; j < results.length; j++) {
+        const res = results[j]
+        const recipient = chunk[j]
+        if (res.success) {
+          sentCount++
+        } else {
+          failedCount++
+          failedEmails.push(recipient.email)
+          if (!lastError) lastError = res.error || 'Unknown Brevo API error'
+        }
       }
     }
 
@@ -229,11 +246,12 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      totalTargeted: recipients.length,
+      totalTargeted: allRecipients.length,
       sentCount,
       failedCount,
       failedEmails,
-      message: `🎉 Bulk Offer Email Campaign processed! Delivered to ${sentCount} of ${recipients.length} users. ${failedCount > 0 ? `(${failedCount} failed: ${lastError})` : ''}`,
+      remainingCount,
+      message: `🎉 Delivered to ${sentCount} recipients.${remainingCount > 0 ? ` (Remaining ${remainingCount} users can be dispatched in the next batch to protect Cloudflare limits)` : ''}`,
     })
   } catch (error: any) {
     console.error('[Bulk Email API POST Error]', error)

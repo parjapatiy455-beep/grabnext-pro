@@ -2,7 +2,6 @@
 export const runtime = 'edge'
 
 import { useState, useEffect } from "react"
-import { fetchAllOrders } from "@/lib/d1-client"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -457,13 +456,37 @@ export default function AdminOrdersPage() {
   const [search, setSearch] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
   const [showTemplatesModal, setShowTemplatesModal] = useState(false)
+  const [page, setPage] = useState(1)
+  const [pagination, setPagination] = useState<{
+    page: number
+    limit: number
+    total: number
+    totalPages: number
+    hasMore: boolean
+  }>({ page: 1, limit: 50, total: 0, totalPages: 1, hasMore: false })
 
-  const loadOrders = async () => {
+  const loadOrders = async (pageNum = page) => {
     setLoading(true)
     try {
-      const data = await fetchAllOrders()
-      setOrders(data)
-      setFiltered(data)
+      const res = await fetch(`/api/orders?page=${pageNum}&limit=50`, { cache: 'no-store' })
+      if (!res.ok) throw new Error('Failed to fetch orders')
+      const data = await res.json()
+      // Support both old array response and new paginated response
+      const ordersData = Array.isArray(data) ? data : (data.orders || [])
+      setOrders(ordersData)
+      setFiltered(ordersData)
+      if (data.pagination) {
+        setPagination(data.pagination)
+        setPage(data.pagination.page)
+      } else {
+        setPagination({
+          page: pageNum,
+          limit: 50,
+          total: ordersData.length,
+          totalPages: 1,
+          hasMore: false
+        })
+      }
     } catch (error) {
       console.error(error)
     } finally {
@@ -471,8 +494,31 @@ export default function AdminOrdersPage() {
     }
   }
 
+  const [summaryStats, setSummaryStats] = useState<{
+    orders: number
+    revenue: number
+    pendingOrders: number
+    completedOrders: number
+  } | null>(null)
+
+  const loadSummaryStats = async () => {
+    try {
+      const res = await fetch('/api/admin/stats', { cache: 'no-store' })
+      if (res.ok) {
+        const data = await res.json()
+        setSummaryStats({
+          orders: data.orders || 0,
+          revenue: data.revenue || 0,
+          pendingOrders: data.pendingOrders || 0,
+          completedOrders: data.completedOrders || 0,
+        })
+      }
+    } catch {}
+  }
+
   useEffect(() => {
-    loadOrders()
+    loadOrders(1)
+    loadSummaryStats()
   }, [])
 
   useEffect(() => {
@@ -509,7 +555,9 @@ export default function AdminOrdersPage() {
           <h1 className="text-3xl font-extrabold text-gray-900 flex items-center gap-2">
             <ShoppingBag className="h-8 w-8 text-blue-500" /> Orders
           </h1>
-          <p className="text-gray-500 text-sm mt-0.5">{orders.length} total orders</p>
+          <p className="text-gray-500 text-sm mt-0.5">
+            {summaryStats ? summaryStats.orders : (pagination.total || orders.length)} total orders
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -519,7 +567,10 @@ export default function AdminOrdersPage() {
             <MessageSquare className="h-4 w-4" /> WhatsApp Templates
           </button>
           <button
-            onClick={loadOrders}
+            onClick={() => {
+              loadOrders(page)
+              loadSummaryStats()
+            }}
             disabled={loading}
             className="flex items-center gap-2 text-sm font-semibold text-gray-600 hover:text-blue-600 bg-white border border-gray-200 hover:border-blue-300 px-4 py-2 rounded-xl transition-all"
           >
@@ -531,10 +582,26 @@ export default function AdminOrdersPage() {
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { label: "Total Orders", value: orders.length, color: "text-gray-800" },
-          { label: "Revenue", value: `₹${totalRevenue.toLocaleString("en-IN")}`, color: "text-blue-600" },
-          { label: "Pending", value: orders.filter(o => o.status === "pending").length, color: "text-yellow-600" },
-          { label: "Completed", value: orders.filter(o => o.status === "completed" || o.status === "paid").length, color: "text-green-600" },
+          {
+            label: "Total Orders",
+            value: summaryStats ? summaryStats.orders : (pagination.total || orders.length),
+            color: "text-gray-800"
+          },
+          {
+            label: "Revenue",
+            value: `₹${(summaryStats ? summaryStats.revenue : totalRevenue).toLocaleString("en-IN")}`,
+            color: "text-blue-600"
+          },
+          {
+            label: "Pending",
+            value: summaryStats ? summaryStats.pendingOrders : orders.filter(o => o.status === "pending").length,
+            color: "text-yellow-600"
+          },
+          {
+            label: "Completed",
+            value: summaryStats ? summaryStats.completedOrders : orders.filter(o => o.status === "completed" || o.status === "paid").length,
+            color: "text-green-600"
+          },
         ].map((stat) => (
           <div key={stat.label} className="bg-white border border-gray-200 rounded-xl px-4 py-3">
             <p className="text-xs text-gray-500 font-semibold uppercase tracking-wide">{stat.label}</p>
@@ -585,6 +652,37 @@ export default function AdminOrdersPage() {
           {filtered.map((order) => (
             <OrderRow key={order.id} order={order} onStatusChange={handleStatusChange} />
           ))}
+
+          {/* Pagination Controls */}
+          {pagination.totalPages > 1 && (
+            <div className="flex items-center justify-between bg-white border border-gray-200 rounded-xl px-4 py-3 mt-4">
+              <p className="text-xs text-gray-500">
+                Page <span className="font-bold text-gray-800">{pagination.page}</span> of{" "}
+                <span className="font-bold text-gray-800">{pagination.totalPages}</span>
+                {pagination.total > 0 && ` (${pagination.total} total orders)`}
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={pagination.page <= 1 || loading}
+                  onClick={() => loadOrders(pagination.page - 1)}
+                  className="text-xs font-semibold"
+                >
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={!pagination.hasMore || loading}
+                  onClick={() => loadOrders(pagination.page + 1)}
+                  className="text-xs font-semibold"
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

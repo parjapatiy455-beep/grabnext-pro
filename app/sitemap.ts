@@ -4,7 +4,6 @@ import { getSiteUrl } from '@/lib/site'
 import { BLOG_POSTS } from '@/lib/blog-data'
 
 export const runtime = 'edge'
-export const dynamic = 'force-dynamic'
 export const revalidate = 3600 // Cache for 1 hour
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {

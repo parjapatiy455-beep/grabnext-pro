@@ -1,18 +1,22 @@
-import firebase from "firebase/compat/app"
+import { getSession } from '@/lib/session'
+import { executeQuery } from '@/lib/db'
 
-const ADMIN_EMAILS = ["yk8292238@gmail.com"]
-
-export function isAdmin(user: firebase.User | null): boolean {
-  if (!user?.email) return false
-  return ADMIN_EMAILS.includes(user.email.toLowerCase())
-}
-
-export function requireAdmin(user: firebase.User | null): void {
-  if (!isAdmin(user)) {
-    throw new Error("Admin access required")
+export async function isAdminSession(): Promise<boolean> {
+  try {
+    const session = await getSession()
+    if (!session?.uid) return false
+    const rows = await executeQuery(
+      'SELECT role, email FROM users WHERE uid = ? LIMIT 1',
+      [session.uid]
+    ) as any[]
+    if (rows && rows.length > 0 && rows[0].role === 'admin') {
+      return true
+    }
+    if (session.role === 'admin' || session.email === 'yk8292238@gmail.com') {
+      return true
+    }
+  } catch (err) {
+    console.error('[Admin Auth] Admin verification failed:', err)
   }
-}
-
-export async function checkAdminAccess(user: firebase.User | null): Promise<boolean> {
-  return isAdmin(user)
+  return false
 }

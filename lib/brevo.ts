@@ -11,7 +11,20 @@ function getEnv(key: string): string | undefined {
   }
 }
 
-export async function getBrevoSettings() {
+let _cachedBrevoSettings: any = null
+let _cachedBrevoSettingsTime = 0
+
+export function clearBrevoSettingsCache() {
+  _cachedBrevoSettings = null
+  _cachedBrevoSettingsTime = 0
+}
+
+export async function getBrevoSettings(forceRefresh = false) {
+  const now = Date.now()
+  if (!forceRefresh && _cachedBrevoSettings && (now - _cachedBrevoSettingsTime < 30_000)) {
+    return _cachedBrevoSettings
+  }
+
   const envApiKey = getEnv('BREVO_API_KEY')?.trim()
   const envSenderEmail = getEnv('BREVO_SENDER_EMAIL')?.trim()
   const envSenderName = getEnv('BREVO_SENDER_NAME')?.trim()
@@ -59,7 +72,7 @@ export async function getBrevoSettings() {
     ? 'env'
     : 'none'
 
-  return {
+  const settings = {
     apiKey,
     senderEmail,
     senderName,
@@ -69,6 +82,10 @@ export async function getBrevoSettings() {
     isEnvConfigured: Boolean(envApiKey && envSenderEmail),
     isDbConfigured: Boolean(dbApiKey && dbSenderEmail),
   }
+
+  _cachedBrevoSettings = settings
+  _cachedBrevoSettingsTime = now
+  return settings
 }
 
 /**
@@ -311,30 +328,40 @@ export async function sendOrderSuccessEmail(orderId: string) {
       `
 
       if (assets.length > 0) {
-        for (const asset of assets) {
-          const isLegacy = asset.id === 'legacy'
-          const isDirectExternal =
-            (asset.provider === 'external' || asset.type === 'link') &&
-            typeof asset.url === 'string' &&
-            asset.url.trim().startsWith('http')
+        const resolvedAssets = await Promise.all(
+          assets.map(async (asset: any) => {
+            const isLegacy = asset.id === 'legacy'
+            const isDirectExternal =
+              (asset.provider === 'external' || asset.type === 'link') &&
+              typeof asset.url === 'string' &&
+              asset.url.trim().startsWith('http')
 
-          let downloadUrl = ''
-          if (isLegacy || isDirectExternal) {
-            downloadUrl = asset.url.trim()
-          } else {
-            const token = await createDownloadToken({
-              orderId: order.id,
-              productId: pId,
-              assetId: asset.id,
-            })
-            downloadUrl = `${appUrl}/api/user/secure-asset?productId=${encodeURIComponent(pId)}&assetId=${encodeURIComponent(asset.id)}&token=${encodeURIComponent(token)}`
-          }
+            let downloadUrl = ''
+            if (isLegacy || isDirectExternal) {
+              downloadUrl = asset.url.trim()
+            } else {
+              const token = await createDownloadToken({
+                orderId: order.id,
+                productId: pId,
+                assetId: asset.id,
+              })
+              downloadUrl = `${appUrl}/api/user/secure-asset?productId=${encodeURIComponent(pId)}&assetId=${encodeURIComponent(asset.id)}&token=${encodeURIComponent(token)}`
+            }
 
+            return {
+              name: asset.name || 'Download File',
+              downloadUrl,
+              isDirectExternal,
+            }
+          })
+        )
+
+        for (const resAsset of resolvedAssets) {
           downloadLinksHtml += `
             <div style="margin-top: 8px; display: flex; align-items: center; justify-content: space-between; gap: 10px;">
-              <span style="font-size: 13px; color: #475569; font-weight: 500;">🔹 ${asset.name || 'Download File'}</span>
-              <a href="${downloadUrl}" target="_blank" style="background-color: #2563eb; color: #ffffff; text-decoration: none; padding: 8px 14px; border-radius: 6px; font-size: 12px; font-weight: 600; display: inline-block; white-space: nowrap;">
-                ${isDirectExternal ? '🔗 Open / Download' : '📥 Download'}
+              <span style="font-size: 13px; color: #475569; font-weight: 500;">🔹 ${resAsset.name}</span>
+              <a href="${resAsset.downloadUrl}" target="_blank" style="background-color: #2563eb; color: #ffffff; text-decoration: none; padding: 8px 14px; border-radius: 6px; font-size: 12px; font-weight: 600; display: inline-block; white-space: nowrap;">
+                ${resAsset.isDirectExternal ? '🔗 Open / Download' : '📥 Download'}
               </a>
             </div>
           `

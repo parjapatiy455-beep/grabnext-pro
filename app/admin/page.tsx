@@ -18,10 +18,23 @@ export default function AdminDashboard() {
   useEffect(() => {
     const loadStats = async () => {
       try {
+        const statsRes = await fetch('/api/admin/stats', { cache: 'no-store' })
+        if (statsRes.ok) {
+          const statsData = await statsRes.json()
+          setStats({
+            orders: statsData.orders || 0,
+            products: statsData.products || 0,
+            users: statsData.users || 0,
+            revenue: statsData.revenue || 0,
+          })
+          return
+        }
+
+        // Fallback if stats API fails
         const [orders, products, users] = await Promise.all([
-          fetchAllOrders(),
+          fetchAllOrders({ limit: 50 }),
           fetchProducts(),
-          fetchAllUsers()
+          fetchAllUsers({ limit: 50 })
         ])
 
         const revenue = orders

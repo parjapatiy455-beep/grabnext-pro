@@ -1,28 +1,12 @@
 export const runtime = 'edge'
 import { NextRequest, NextResponse } from 'next/server'
 import { executeQuery } from '@/lib/db'
-import { getSession, createOrderRecoveryToken } from '@/lib/session'
+import { createOrderRecoveryToken } from '@/lib/session'
 import { formatWhatsAppPhone, DEFAULT_PENDING_TEMPLATE, DEFAULT_PAID_TEMPLATE } from '@/lib/whatsapp'
 import { createOrGetShortLink } from '@/lib/short-link'
+import { isAdminSession } from '@/lib/admin-auth'
 
 export const dynamic = 'force-dynamic'
-
-async function isAdminSession(): Promise<boolean> {
-  try {
-    const session = await getSession()
-    if (!session?.uid) return false
-    const rows = (await executeQuery('SELECT role, email FROM users WHERE uid = ? LIMIT 1', [session.uid])) as any[]
-    if (rows && rows.length > 0 && rows[0].role === 'admin') {
-      return true
-    }
-    if (session.role === 'admin' || session.email === 'yk8292238@gmail.com') {
-      return true
-    }
-  } catch (err) {
-    console.error('[Admin Check Error]:', err)
-  }
-  return false
-}
 
 // GET /api/orders/[id]/whatsapp?type=pending|paid&discount=15
 export async function GET(

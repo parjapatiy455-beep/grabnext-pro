@@ -24,13 +24,14 @@ export default function UsersAdminPage() {
     const loadUsers = async () => {
         setLoading(true)
         try {
-            const res = await fetch('/api/users', { cache: 'no-store' })
+            const res = await fetch('/api/users?limit=200', { cache: 'no-store' })
             if (!res.ok) {
                 const d = await res.json().catch(() => ({}))
                 throw new Error(d.error || 'Failed to load users')
             }
             const data = await res.json()
-            setUsers(Array.isArray(data) ? data : [])
+            // Support both old array response and new paginated response
+            setUsers(Array.isArray(data) ? data : (data.users || []))
         } catch (error: any) {
             console.error(error)
             toast({ title: "Error", description: error.message || "Failed to load users", variant: "destructive" })

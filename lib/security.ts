@@ -26,7 +26,10 @@ export async function securityMiddleware(request: NextRequest) {
 
 export function sanitizeInput(input: any): any {
   if (typeof input === "string") {
-    return input.trim().replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
+    return input.replace(/<\/?script\b[^>]*>/gi, "").trim()
+  }
+  if (Array.isArray(input)) {
+    return input.map(sanitizeInput)
   }
   if (typeof input === "object" && input !== null) {
     const sanitized: any = {}

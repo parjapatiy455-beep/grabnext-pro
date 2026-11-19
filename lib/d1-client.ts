@@ -292,15 +292,23 @@ export async function getUserOrders(userId: string) {
   }
 }
 
-export async function fetchAllOrders() {
+export async function fetchAllOrders(options?: { page?: number; limit?: number; status?: string; search?: string }) {
   try {
-    const res = await fetch(`/api/orders`, { cache: 'no-store' });
+    const params = new URLSearchParams()
+    if (options?.page) params.set('page', String(options.page))
+    if (options?.limit) params.set('limit', String(options.limit))
+    if (options?.status && options.status !== 'all') params.set('status', options.status)
+    if (options?.search) params.set('search', options.search)
+
+    const qs = params.toString()
+    const url = qs ? `/api/orders?${qs}` : `/api/orders`
+    const res = await fetch(url, { cache: 'no-store' });
     if (!res.ok) {
       console.error("[v0] Orders API responded with status:", res.status);
       return [];
     }
     const data = await res.json();
-    return Array.isArray(data) ? data : [];
+    return Array.isArray(data) ? data : (data.orders || []);
   } catch (error) {
     console.error("[v0] Failed to fetch orders:", error);
     return [];
@@ -308,15 +316,22 @@ export async function fetchAllOrders() {
 }
 
 // --- Users ---
-export async function fetchAllUsers() {
+export async function fetchAllUsers(options?: { page?: number; limit?: number; search?: string }) {
   try {
-    const res = await fetch(`/api/users`, { cache: 'no-store' });
+    const params = new URLSearchParams()
+    if (options?.page) params.set('page', String(options.page))
+    if (options?.limit) params.set('limit', String(options.limit))
+    if (options?.search) params.set('search', options.search)
+
+    const qs = params.toString()
+    const url = qs ? `/api/users?${qs}` : `/api/users`
+    const res = await fetch(url, { cache: 'no-store' });
     if (!res.ok) {
       console.error("[v0] Users API responded with status:", res.status);
       return [];
     }
     const data = await res.json();
-    return Array.isArray(data) ? data : [];
+    return Array.isArray(data) ? data : (data.users || []);
   } catch (error) {
     console.error("[v0] Failed to fetch users:", error);
     return [];
