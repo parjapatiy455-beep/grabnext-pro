@@ -1,6 +1,7 @@
 export const runtime = 'edge'
 import { NextRequest, NextResponse } from 'next/server'
 import { executeQuery } from '@/lib/db'
+import { normalizeImageUrl } from '@/lib/image-url'
 
 export const dynamic = 'force-dynamic';
 
@@ -10,7 +11,8 @@ export async function GET(request: NextRequest) {
       "SELECT * FROM categories ORDER BY name ASC"
     )
 
-    return NextResponse.json(results, {
+    const mapped = (Array.isArray(results) ? results : []).map((c: any) => ({ ...c, imageUrl: normalizeImageUrl(c.imageUrl) }))
+    return NextResponse.json(mapped, {
       headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=600' }
     })
   } catch (error: any) {

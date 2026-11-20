@@ -23,6 +23,7 @@ import { toast } from "@/hooks/use-toast"
 import type { Product } from "@/lib/types"
 import { trackViewContent, trackAddToCart } from "@/lib/pixel"
 import { getVideoInfo } from "@/lib/video-utils"
+import { normalizeImageUrl, normalizeHtmlContent } from "@/lib/image-url"
 
 // ─── Star Rating ─────────────────────────────────────────────────────────────
 function StarRating({ rating, interactive = false, onRate }: { rating: number; interactive?: boolean; onRate?: (r: number) => void }) {
@@ -332,14 +333,15 @@ export function ProductDetailView({ product: initialProduct, id }: { product: Pr
 
     const images: string[] = (() => {
         const arr = Array.isArray((product as any).images) ? (product as any).images : []
-        if (arr.filter(Boolean).length > 0) return arr.filter(Boolean)
-        if (product.imageUrl) return [product.imageUrl]
+        const cleaned = arr.map(normalizeImageUrl).filter(Boolean)
+        if (cleaned.length > 0) return cleaned
+        if (product.imageUrl) return [normalizeImageUrl(product.imageUrl)]
         return [`/placeholder.svg?height=400&width=400&query=${encodeURIComponent(product.title)}`]
     })()
 
     const proofImages: string[] = (() => {
         const arr = Array.isArray((product as any).proofImages) ? (product as any).proofImages : []
-        return arr.filter(Boolean)
+        return arr.map(normalizeImageUrl).filter(Boolean)
     })()
 
     const videoInfo = product.videoUrl ? getVideoInfo(product.videoUrl) : null
@@ -452,8 +454,11 @@ export function ProductDetailView({ product: initialProduct, id }: { product: Pr
                                     )}
                                     <div style={{ opacity: imgFade ? 1 : 0, transition: "opacity 0.15s ease-in-out" }}>
                                         <img
-                                            src={images[activeImg]}
+                                            src={normalizeImageUrl(images[activeImg])}
                                             alt={product.title}
+                                            onError={(e) => {
+                                                e.currentTarget.src = `/placeholder.svg?height=400&width=400&query=${encodeURIComponent(product.title)}`
+                                            }}
                                             className="w-full h-auto max-h-[300px] sm:max-h-[380px] object-contain mx-auto block py-2"
                                         />
                                     </div>
@@ -702,7 +707,7 @@ export function ProductDetailView({ product: initialProduct, id }: { product: Pr
                                     descIsHtml ? (
                                         <div
                                             className="product-description max-w-none prose prose-blue dark:prose-invert prose-img:rounded-xl prose-img:shadow-md prose-img:cursor-zoom-in"
-                                            dangerouslySetInnerHTML={{ __html: product.description }}
+                                            dangerouslySetInnerHTML={{ __html: normalizeHtmlContent(product.description) }}
                                             onClick={handleDescriptionClick}
                                         />
                                     ) : (
@@ -782,10 +787,14 @@ export function ProductDetailView({ product: initialProduct, id }: { product: Pr
                                                     className="group relative aspect-[3/4] sm:aspect-[4/5] rounded-xl overflow-hidden border border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-950 cursor-zoom-in hover:shadow-lg transition-all hover:scale-[1.02]"
                                                 >
                                                     <img
-                                                        src={proofUrl}
+                                                        src={normalizeImageUrl(proofUrl)}
                                                         alt={`Customer Proof ${idx + 1}`}
                                                         className="w-full h-full object-cover object-top transition-transform duration-300 group-hover:scale-105"
                                                         loading="lazy"
+                                                        onError={(e) => {
+                                                            const card = (e.currentTarget.parentElement as HTMLElement)
+                                                            if (card) card.style.display = 'none'
+                                                        }}
                                                     />
                                                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-between p-2.5 text-white">
                                                         <span className="text-[11px] font-medium flex items-center gap-1">

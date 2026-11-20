@@ -1,4 +1,5 @@
 // Client helper to connect to internal API Routes
+import { normalizeProductData } from './image-url'
 
 // --- Products ---
 let _productsCache: any[] | null = null
@@ -35,7 +36,8 @@ export async function fetchProducts(options?: { forceRefresh?: boolean }) {
       if (stored) {
         const parsed = JSON.parse(stored)
         if (Array.isArray(parsed) && parsed.length > 0) {
-          _productsCache = parsed
+          const normalized = parsed.map(normalizeProductData)
+          _productsCache = normalized
           // Revalidate in background
           fetchProductsFromAPI().then((fresh) => {
             if (fresh && fresh.length > 0) {
@@ -43,7 +45,7 @@ export async function fetchProducts(options?: { forceRefresh?: boolean }) {
               sessionStorage.setItem('gn_products_cache', JSON.stringify(fresh))
             }
           })
-          return parsed
+          return normalized
         }
       }
     } catch {}
@@ -70,7 +72,7 @@ async function fetchProductsFromAPI() {
       return _productsCache || []
     }
     const data = await res.json()
-    return Array.isArray(data) ? data : []
+    return Array.isArray(data) ? data.map(normalizeProductData) : []
   } catch (error) {
     console.error("[v0] Failed to fetch products:", error)
     return _productsCache || []

@@ -1,6 +1,7 @@
 export const runtime = 'edge'
 import { NextRequest, NextResponse } from 'next/server'
 import { executeQuery } from '@/lib/db'
+import { normalizeImageUrl } from '@/lib/image-url'
 
 export const dynamic = 'force-dynamic'
 
@@ -15,7 +16,11 @@ export async function GET(request: NextRequest) {
             : 'SELECT * FROM banners WHERE isActive = 1 ORDER BY sortOrder ASC, createdAt DESC'
 
         const results = await executeQuery(sql, [])
-        return NextResponse.json(results || [], {
+        const mapped = (Array.isArray(results) ? results : []).map((b: any) => ({
+            ...b,
+            imageUrl: normalizeImageUrl(b.imageUrl),
+        }))
+        return NextResponse.json(mapped, {
             headers: all ? {} : { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=600' }
         })
     } catch (error: any) {

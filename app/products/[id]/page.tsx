@@ -8,6 +8,7 @@ import { ProductDetailView } from './product-detail-view'
 import { LandingPageView } from './landing-page-view'
 import { Product } from '@/lib/types'
 import { getSiteUrl } from '@/lib/site'
+import { normalizeProductData } from '@/lib/image-url'
 
 type Props = {
     params: { id: string }
@@ -46,7 +47,7 @@ async function getProduct(id: string): Promise<Product | null> {
         if (!results || results.length === 0) return null
 
         const row = results[0]
-        return {
+        return normalizeProductData({
             ...row,
             tags: row.tags ? tryParse(row.tags) : [],
             images: row.images ? tryParse(row.images) : (row.imageUrl ? [row.imageUrl] : []),
@@ -62,7 +63,7 @@ async function getProduct(id: string): Promise<Product | null> {
             discountPopupCoupon: row.discountPopupCoupon || 'SAVE50',
             discountPopupTimerMinutes: Number(row.discountPopupTimerMinutes || 10),
             discountPopupHeadline: row.discountPopupHeadline || '',
-        } as Product
+        }) as Product
     } catch (error) {
         console.error("Error fetching product:", error)
         return null

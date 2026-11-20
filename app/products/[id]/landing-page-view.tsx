@@ -11,6 +11,7 @@ import { Zap, ShoppingCart, Star, Loader2, Trash2, GripHorizontal } from "lucide
 import { LandingSection, FloatingNode } from "@/lib/types"
 import type { Product } from "@/lib/types"
 import { trackViewContent } from "@/lib/pixel"
+import { normalizeImageUrl } from "@/lib/image-url"
 
 // ─── CSS animations (injected once) ─────────────────────────────────────────
 const ANIM_CSS = `
@@ -191,10 +192,13 @@ function HeroSection({ section, product, isBuilder, onChange }: { section: Landi
                     {section.imageUrl && (
                         <div className="flex-1 max-w-sm">
                             <img 
-                              src={section.imageUrl} 
+                              src={normalizeImageUrl(section.imageUrl)} 
                               alt={product.title} 
                               fetchPriority="high" 
                               loading="eager" 
+                              onError={(e) => {
+                                (e.currentTarget.parentElement as HTMLElement)?.style.setProperty('display', 'none')
+                              }}
                               className="w-full rounded-2xl shadow-2xl object-contain" 
                             />
                         </div>
@@ -252,7 +256,7 @@ function ImageTextSection({ section, isBuilder, onChange }: { section: LandingSe
         <AnimatedWrapper animation={(section as any).animation}>
             <section style={getSpacingStyles(section as LandingSection)} className="px-4">
                 <div className="container mx-auto max-w-5xl flex flex-col md:flex-row gap-10 items-center">
-                    {section.imageUrl && <div className="flex-1"><img src={section.imageUrl} alt={section.heading || ''} className="w-full rounded-2xl shadow-lg object-contain max-h-80" /></div>}
+                    {section.imageUrl && <div className="flex-1"><img src={normalizeImageUrl(section.imageUrl)} alt={section.heading || ''} onError={(e) => { (e.currentTarget.parentElement as HTMLElement)?.style.setProperty('display', 'none') }} className="w-full rounded-2xl shadow-lg object-contain max-h-80" /></div>}
                     <div className={`flex-1 text-${section.align || 'left'}`}>
                         <EditableText tagName="h2" className="text-2xl md:text-3xl font-bold mb-4" value={section.heading || ''} 
                             onChange={(v: string) => onChange?.({ ...section, heading: v })} isBuilder={isBuilder} placeholder="Image Heading" />

@@ -1,5 +1,6 @@
 import { executeQuery } from '@/lib/db'
 import type { Product } from '@/lib/types'
+import { normalizeProductData, normalizeImageUrl } from '@/lib/image-url'
 
 function tryParse(str: string) {
   try {
@@ -63,7 +64,7 @@ export async function getHomePageData(): Promise<{
     }
 
     const productRows = Array.isArray(productRowsRaw) ? productRowsRaw : []
-    const products: Product[] = productRows.map((p: any) => ({
+    const products: Product[] = productRows.map((p: any) => normalizeProductData({
       ...p,
       tags: p.tags ? tryParse(p.tags) : [],
       images: p.images ? tryParse(p.images) : (p.imageUrl ? [p.imageUrl] : []),
@@ -75,10 +76,16 @@ export async function getHomePageData(): Promise<{
     }))
 
     const categoryRows = Array.isArray(categoryRowsRaw) ? categoryRowsRaw : []
-    const categories: HomeCategory[] = categoryRows.filter((c: any) => c.isActive !== 0)
+    const categories: HomeCategory[] = categoryRows.filter((c: any) => c.isActive !== 0).map((c: any) => ({
+      ...c,
+      imageUrl: normalizeImageUrl(c.imageUrl),
+    }))
 
     const bannerRows = Array.isArray(bannerRowsRaw) ? bannerRowsRaw : []
-    const banners: HomeBanner[] = bannerRows
+    const banners: HomeBanner[] = bannerRows.map((b: any) => ({
+      ...b,
+      imageUrl: normalizeImageUrl(b.imageUrl),
+    }))
 
     return { products, categories, banners }
   } catch (error) {

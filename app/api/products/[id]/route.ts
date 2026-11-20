@@ -1,6 +1,7 @@
 export const runtime = 'edge'
 import { NextRequest, NextResponse } from 'next/server'
 import { executeQuery } from '@/lib/db'
+import { normalizeProductData } from '@/lib/image-url'
 
 export const dynamic = 'force-dynamic'
 
@@ -34,7 +35,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     if (!results || results.length === 0) return NextResponse.json({ error: 'Product not found' }, { status: 404 })
 
     const row = results[0]
-    return NextResponse.json({
+    return NextResponse.json(normalizeProductData({
       ...row,
       tags: row.tags ? tryParse(row.tags) : [],
       images: row.images ? tryParse(row.images) : (row.imageUrl ? [row.imageUrl] : []),
@@ -51,7 +52,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       discountPopupTimerMinutes: Number(row.discountPopupTimerMinutes || 10),
       discountPopupHeadline: row.discountPopupHeadline || '',
       metaPixelId: row.metaPixelId || null,
-    }, {
+    }), {
       headers: {
         'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300',
       }

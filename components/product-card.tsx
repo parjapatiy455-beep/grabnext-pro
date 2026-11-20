@@ -8,6 +8,7 @@ import { useCart } from "@/contexts/cart-context"
 import type { Product } from "@/lib/types"
 import { useState, useEffect, useRef } from "react"
 import { trackAddToCart } from "@/lib/pixel"
+import { normalizeImageUrl } from "@/lib/image-url"
 
 interface ProductCardProps { 
   product: Product
@@ -36,14 +37,15 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
 
   const images: string[] = (() => {
     const arr = Array.isArray(p.images) ? p.images : []
-    if (arr.filter(Boolean).length > 0) return arr.filter(Boolean)
-    if (product.imageUrl) return [product.imageUrl]
+    const cleaned = arr.map(normalizeImageUrl).filter(Boolean)
+    if (cleaned.length > 0) return cleaned
+    if (product.imageUrl) return [normalizeImageUrl(product.imageUrl)]
     return []
   })()
 
   const isValidUrl = (url: string) => url && (url.startsWith("http") || url.startsWith("/"))
   const currentImg = images[imgIdx] && isValidUrl(images[imgIdx])
-    ? images[imgIdx]
+    ? normalizeImageUrl(images[imgIdx])
     : `/placeholder.svg?height=200&width=300&query=${encodeURIComponent(product?.category || "product")}`
 
   // Smooth crossfade: set fade=false before switching, then switch and back to true
@@ -129,6 +131,9 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
             decoding="async"
             loading={priority ? "eager" : "lazy"}
             fetchPriority={priority ? "high" : "auto"}
+            onError={(e) => {
+              e.currentTarget.src = `/placeholder.svg?height=200&width=300&query=${encodeURIComponent(product?.category || "product")}`
+            }}
             className="h-full w-full object-contain transition-transform duration-500 group-hover:scale-105"
             style={{
               opacity: fade ? 1 : 0,

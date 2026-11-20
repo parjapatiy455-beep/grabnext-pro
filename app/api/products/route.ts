@@ -1,6 +1,7 @@
 export const runtime = 'edge'
 import { NextRequest, NextResponse } from 'next/server'
 import { executeQuery } from '@/lib/db'
+import { normalizeProductData } from '@/lib/image-url'
 
 export const dynamic = 'force-dynamic'
 
@@ -51,7 +52,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const products = (Array.isArray(productRows) ? productRows : []).map((p: any) => ({
+    const products = (Array.isArray(productRows) ? productRows : []).map((p: any) => normalizeProductData({
       ...p,
       tags: p.tags ? tryParse(p.tags) : [],
       images: p.images ? tryParse(p.images) : [],
