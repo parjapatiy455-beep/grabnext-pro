@@ -24,6 +24,7 @@ import {
   Phone,
   Mail,
   Sparkles,
+  Trash2,
 } from "lucide-react"
 import { useCart } from "@/contexts/cart-context"
 import { useAuth } from "@/contexts/auth-context"
@@ -40,7 +41,7 @@ declare global {
 
 export default function CheckoutPage() {
   const router = useRouter()
-  const { items, totalAmount, clearCart } = useCart()
+  const { items, totalAmount, clearCart, removeFromCart } = useCart()
   const { user, refreshUser } = useAuth()
   const [loading, setLoading] = useState(false)
   const [activeGateway, setActiveGateway] = useState<string>("xpay")
@@ -156,6 +157,39 @@ export default function CheckoutPage() {
     : totalAmount
 
   const recoveryDiscountAmount = isRecovering ? Number(recoveryOrder.discountAmount || 0) : 0
+
+  // Remove single product if more than 1 item is present in checkout
+  const handleRemoveItem = (productId: string) => {
+    if (activeItems.length <= 1) return
+    if (isRecovering) {
+      setRecoveryOrder((prev: any) => {
+        if (!prev) return prev
+        const updatedItems = (prev.items || []).filter(
+          (it: any) => String(it.productId || it.id) !== productId
+        )
+        const newOriginalTotal = updatedItems.reduce(
+          (sum: number, it: any) => sum + (Number(it.price) || 0) * (Number(it.quantity) || 1),
+          0
+        )
+        const discPercent = Number(prev.discountPercent || 10)
+        const newDiscountAmount = Math.round((newOriginalTotal * discPercent) / 100)
+        const newRecoveryTotal = Math.max(1, newOriginalTotal - newDiscountAmount)
+        return {
+          ...prev,
+          items: updatedItems,
+          originalTotal: newOriginalTotal,
+          discountAmount: newDiscountAmount,
+          recoveryTotal: newRecoveryTotal,
+        }
+      })
+    } else {
+      removeFromCart(productId)
+    }
+    toast({
+      title: "Item removed",
+      description: "Product has been removed from your checkout.",
+    })
+  }
 
   // Resolve active Meta Pixel ID strictly for these cart items / ad campaign
   const resolvedPixelId = (() => {
@@ -843,6 +877,17 @@ export default function CheckoutPage() {
                       {item.quantity > 1 && (
                         <span className="block text-[10px] text-slate-400">Qty: {item.quantity}</span>
                       )}
+                      {activeItems.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveItem(item.productId)}
+                          className="flex items-center gap-0.5 text-[10px] font-semibold text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 mt-1 ml-auto cursor-pointer transition-colors"
+                          title="Remove item"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                          <span>Remove</span>
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -1122,9 +1167,22 @@ export default function CheckoutPage() {
                       </p>
                       <p className="text-slate-400 text-[10px] mt-0.5">Qty: {item.quantity}</p>
                     </div>
-                    <span className="font-black text-slate-900 dark:text-white text-sm shrink-0">
-                      {formatPrice(item.product.price * item.quantity)}
-                    </span>
+                    <div className="text-right shrink-0">
+                      <span className="font-black text-slate-900 dark:text-white text-sm">
+                        {formatPrice(item.product.price * item.quantity)}
+                      </span>
+                      {activeItems.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveItem(item.productId)}
+                          className="flex items-center gap-0.5 text-[10px] font-semibold text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 mt-1 ml-auto cursor-pointer transition-colors"
+                          title="Remove item"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                          <span>Remove</span>
+                        </button>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
