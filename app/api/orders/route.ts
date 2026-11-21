@@ -350,7 +350,7 @@ export async function PATCH(request: NextRequest) {
     `, [newStatus, paymentId ? String(paymentId).trim() : null, now, id])
 
     let emailRes: { success: boolean; error?: string; messageId?: string } | null = null
-    if (newStatus === 'paid') {
+    if (newStatus === 'paid' || newStatus === 'completed') {
       try { emailRes = await sendOrderSuccessEmail(id) }
       catch (e: any) { console.error(`[Email Failure] Order ${id}:`, e.message) }
     } else if (newStatus === 'failed') {

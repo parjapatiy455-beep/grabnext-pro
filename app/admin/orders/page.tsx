@@ -13,6 +13,7 @@ import Link from "next/link"
 import { DigitalProductViewer } from "@/components/digital-product-viewer"
 import { AdminWhatsAppTemplatesModal } from "@/components/admin-whatsapp-templates-modal"
 import { AdminWhatsAppSendModal } from "@/components/admin-whatsapp-send-modal"
+import { toast } from "@/hooks/use-toast"
 
 function StatusBadge({ status }: { status: string }) {
   const variants: Record<string, string> = {
@@ -44,6 +45,7 @@ function OrderRow({ order, onStatusChange }: { order: any; onStatusChange: (id: 
   const [expanded, setExpanded] = useState(false)
   const [updatingStatus, setUpdatingStatus] = useState(false)
   const [loadingWhatsApp, setLoadingWhatsApp] = useState(false)
+  const [sendingEmail, setSendingEmail] = useState(false)
   const [sendModalData, setSendModalData] = useState<{
     isOpen: boolean
     phone: string
@@ -63,13 +65,80 @@ function OrderRow({ order, onStatusChange }: { order: any; onStatusChange: (id: 
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: newStatus })
       })
-      if (res.ok) {
+      const data = await res.json().catch(() => ({}))
+      if (res.ok && data.success) {
         onStatusChange(order.id, newStatus)
+        if (newStatus === "paid" || newStatus === "completed") {
+          if (data.emailSent) {
+            toast({
+              title: "🎉 Order Marked as Paid!",
+              description: `Confirmation email with download links has been triggered to ${order.userEmail || "customer"}.`,
+            })
+          } else if (data.emailError) {
+            toast({
+              title: "Status Updated (Email Notice)",
+              description: `Order is marked as paid, but email delivery reported: ${data.emailError}`,
+              variant: "destructive",
+            })
+          } else {
+            toast({
+              title: "Order Marked as Paid",
+              description: "Status successfully updated.",
+            })
+          }
+        } else {
+          toast({
+            title: "Status Updated",
+            description: `Order ${order.id} status changed to ${newStatus}.`,
+          })
+        }
+      } else {
+        toast({
+          title: "Update Failed",
+          description: data.error || "Failed to update order status.",
+          variant: "destructive",
+        })
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error("Failed to update status", e)
+      toast({
+        title: "Error",
+        description: e.message || "Failed to update status",
+        variant: "destructive",
+      })
     } finally {
       setUpdatingStatus(false)
+    }
+  }
+
+  const handleSendEmail = async () => {
+    if (!order.id) return
+    setSendingEmail(true)
+    try {
+      const res = await fetch(`/api/orders/${order.id}/send-email`, {
+        method: "POST",
+      })
+      const data = await res.json().catch(() => ({}))
+      if (res.ok && data.success) {
+        toast({
+          title: "📧 Email Sent Successfully!",
+          description: data.message || `Confirmation email sent to ${order.userEmail || "customer"}.`,
+        })
+      } else {
+        toast({
+          title: "Email Sending Failed",
+          description: data.error || "Could not send email to customer.",
+          variant: "destructive",
+        })
+      }
+    } catch (e: any) {
+      toast({
+        title: "Error",
+        description: e.message || "Failed to trigger email.",
+        variant: "destructive",
+      })
+    } finally {
+      setSendingEmail(false)
     }
   }
 
@@ -332,6 +401,32 @@ function OrderRow({ order, onStatusChange }: { order: any; onStatusChange: (id: 
                       </div>
                       <p className="text-[10px] text-gray-500 mt-1 text-center">
                         Sends thank you message with product download links to {order.userPhone || "customer's WhatsApp"}
+                      </p>
+                    </div>
+                  )}
+
+                  {(order.status === "paid" || order.status === "completed") && (
+                    <div className="pt-1.5">
+                      <button
+                        type="button"
+                        onClick={handleSendEmail}
+                        disabled={sendingEmail}
+                        className="w-full text-xs font-bold py-2.5 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center gap-1.5 shadow-xs transition-colors cursor-pointer disabled:opacity-50"
+                      >
+                        {sendingEmail ? (
+                          <>
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            <span>Sending Order Email...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Mail className="h-4 w-4" />
+                            <span>📧 Send Order Email with Downloads</span>
+                          </>
+                        )}
+                      </button>
+                      <p className="text-[10px] text-gray-500 mt-1 text-center">
+                        Sends official confirmation email with download links to {order.userEmail || "customer"}
                       </p>
                     </div>
                   )}

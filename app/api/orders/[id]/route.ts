@@ -2,26 +2,9 @@ export const runtime = 'edge'
 import { NextRequest, NextResponse } from 'next/server'
 import { executeQuery } from '@/lib/db'
 import { sendOrderSuccessEmail, sendOrderFailedEmail } from '@/lib/brevo'
-import { getSession } from '@/lib/session'
+import { isAdminSession } from '@/lib/admin-auth'
 
 export const dynamic = 'force-dynamic'
-
-async function isAdminSession(): Promise<boolean> {
-    try {
-        const session = await getSession()
-        if (!session?.uid) return false
-        const rows = await executeQuery('SELECT role, email FROM users WHERE uid = ? LIMIT 1', [session.uid]) as any[]
-        if (rows && rows.length > 0 && rows[0].role === 'admin') {
-            return true
-        }
-        if (session.role === 'admin' || session.email === 'yk8292238@gmail.com') {
-            return true
-        }
-    } catch (err) {
-        console.error("[Orders ID API] Admin check failed:", err)
-    }
-    return false
-}
 
 // GET /api/orders/[id] - Get a single order
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
@@ -34,9 +17,15 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
             return NextResponse.json({ error: "Order not found" }, { status: 404 })
         }
         const order = results[0] as any
+        let parsedItems: any[] = []
+        if (Array.isArray(order.items)) {
+            parsedItems = order.items
+        } else if (typeof order.items === 'string' && order.items.trim()) {
+            try { parsedItems = JSON.parse(order.items) } catch { parsedItems = [] }
+        }
         return NextResponse.json({
             ...order,
-            items: order.items ? JSON.parse(order.items) : []
+            items: parsedItems
         })
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 500 })
@@ -69,7 +58,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
 
         // Trigger Brevo transactional emails (await to guarantee execution on Cloudflare Edge)
         let emailRes: { success: boolean; error?: string; messageId?: string } | null = null
-        if (status === 'paid') {
+        if (status === 'paid' || status === 'completed') {
             emailRes = await sendOrderSuccessEmail(params.id)
             if (!emailRes.success) {
                 console.error(`[Order Success Email Failure] Order ${params.id}:`, emailRes.error)

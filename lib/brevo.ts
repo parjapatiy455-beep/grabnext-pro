@@ -255,16 +255,26 @@ export async function sendOrderSuccessEmail(orderId: string) {
       return { success: false, error: 'Order not found' }
     }
     const order = orderRows[0] as any
-    const recipientEmail = order.userEmail || order.u_email || (order.userId && order.userId.includes('@') ? order.userId : null)
-    const recipientName = order.userName || order.u_name || (recipientEmail ? recipientEmail.split('@')[0] : 'Valued Customer')
+    const recipientEmail = order.userEmail || order.email || order.u_email || (order.userId && order.userId.includes('@') ? order.userId : null)
+    const recipientName = order.userName || order.name || order.u_name || (recipientEmail ? recipientEmail.split('@')[0] : 'Valued Customer')
 
     if (!recipientEmail) {
       console.warn(`[Brevo] Order ${orderId} does not have a userEmail`)
       return { success: false, error: 'User email missing on order' }
     }
 
-    const items: any[] = order.items ? JSON.parse(order.items) : []
-    const productIds = items.map((item) => item.productId).filter(Boolean)
+    let items: any[] = []
+    if (Array.isArray(order.items)) {
+      items = order.items
+    } else if (typeof order.items === 'string' && order.items.trim()) {
+      try {
+        items = JSON.parse(order.items)
+      } catch (err) {
+        console.warn(`[Brevo sendOrderSuccessEmail] Could not parse items for ${orderId}:`, err)
+        items = []
+      }
+    }
+    const productIds = items.map((item) => item.productId || item.id).filter(Boolean)
 
     // 2. Fetch product download URLs
     let productsMap: Record<string, any> = {}
@@ -307,18 +317,22 @@ export async function sendOrderSuccessEmail(orderId: string) {
       const rawDownloadUrl = product.downloadUrl || item.downloadUrl
       let assets: any[] = []
       if (rawDownloadUrl) {
-        try {
-          assets = JSON.parse(rawDownloadUrl)
-        } catch {
-          assets = [
-            {
-              id: 'legacy',
-              name: title,
-              type: 'file',
-              provider: 'external',
-              url: rawDownloadUrl,
-            },
-          ]
+        if (Array.isArray(rawDownloadUrl)) {
+          assets = rawDownloadUrl
+        } else if (typeof rawDownloadUrl === 'string' && rawDownloadUrl.trim()) {
+          try {
+            assets = JSON.parse(rawDownloadUrl)
+          } catch {
+            assets = [
+              {
+                id: 'legacy',
+                name: title,
+                type: 'file',
+                provider: 'external',
+                url: rawDownloadUrl.trim(),
+              },
+            ]
+          }
         }
       }
 
