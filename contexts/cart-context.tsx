@@ -16,6 +16,7 @@ interface CartContextType {
   isInCart: (productId: string) => boolean
   isDrawerOpen: boolean
   setDrawerOpen: (open: boolean) => void
+  refreshCartPrices: () => Promise<void>
 }
 
 const CartContext = createContext<CartContextType>({
@@ -29,6 +30,7 @@ const CartContext = createContext<CartContextType>({
   isInCart: () => false,
   isDrawerOpen: false,
   setDrawerOpen: () => { },
+  refreshCartPrices: async () => { },
 })
 
 export const useCart = () => {
@@ -43,13 +45,71 @@ export const CartProvider = ({ children }: CartProviderProps) => {
   const [items, setItems] = useState<CartItem[]>([])
   const [isDrawerOpen, setDrawerOpen] = useState(false)
 
-  // Load cart from localStorage on mount
+  const refreshCartPrices = async () => {
+    try {
+      const res = await fetch("/api/products?all=1")
+      if (!res.ok) return
+      const freshProducts: any[] = await res.json()
+      if (!Array.isArray(freshProducts) || freshProducts.length === 0) return
+
+      const productMap = new Map<string, any>()
+      for (const p of freshProducts) {
+        if (p.id) {
+          productMap.set(p.id, p)
+          productMap.set(String(p.id).toLowerCase(), p)
+        }
+        if (p.slug) {
+          productMap.set(p.slug, p)
+          productMap.set(String(p.slug).toLowerCase(), p)
+        }
+      }
+
+      setItems((prevItems) => {
+        if (prevItems.length === 0) return prevItems
+        let hasChanges = false
+        const updated = prevItems.map((item) => {
+          const fresh = productMap.get(item.productId) || (item.product?.id ? productMap.get(item.product.id) : null)
+          if (!fresh) return item
+
+          const freshPrice = Number(fresh.price) || 0
+          const freshOriginalPrice = fresh.originalPrice ? Number(fresh.originalPrice) : null
+
+          if (
+            item.product.price !== freshPrice ||
+            item.product.title !== fresh.title ||
+            item.product.originalPrice !== freshOriginalPrice ||
+            item.product.imageUrl !== fresh.imageUrl
+          ) {
+            hasChanges = true
+            return {
+              ...item,
+              product: {
+                ...item.product,
+                title: fresh.title || item.product.title,
+                price: freshPrice,
+                originalPrice: freshOriginalPrice,
+                imageUrl: fresh.imageUrl || item.product.imageUrl,
+                isActive: fresh.isActive,
+                metaPixelId: fresh.metaPixelId,
+              },
+            }
+          }
+          return item
+        })
+        return hasChanges ? updated : prevItems
+      })
+    } catch (err) {
+      console.warn("[CartContext] Failed to refresh prices:", err)
+    }
+  }
+
+  // Load cart from localStorage on mount and sync with fresh database prices
   useEffect(() => {
     const savedCart = localStorage.getItem("digital-store-cart")
     if (savedCart) {
       try {
         const parsed = JSON.parse(savedCart)
-        if (Array.isArray(parsed)) {
+        if (Array.isArray(parsed) && parsed.length > 0) {
           // Normalize existing carts to max quantity 1
           setItems(parsed.map((item: CartItem) => ({ ...item, quantity: 1 })))
         }
@@ -57,6 +117,7 @@ export const CartProvider = ({ children }: CartProviderProps) => {
         console.error("Error loading cart from localStorage:", error)
       }
     }
+    refreshCartPrices()
   }, [])
 
   // Save cart to localStorage whenever items change
@@ -135,6 +196,7 @@ export const CartProvider = ({ children }: CartProviderProps) => {
         isInCart,
         isDrawerOpen,
         setDrawerOpen,
+        refreshCartPrices,
       }}
     >
       {children}

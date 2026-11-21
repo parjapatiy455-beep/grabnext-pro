@@ -2,7 +2,7 @@
 export const runtime = 'edge'
 
 import type React from "react"
-import { useState, useCallback, useEffect, useRef } from "react"
+import { useState, useCallback, useEffect, useRef, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import {
@@ -41,7 +41,12 @@ declare global {
 
 export default function CheckoutPage() {
   const router = useRouter()
-  const { items, totalAmount, clearCart, removeFromCart } = useCart()
+  const { items, totalAmount, clearCart, removeFromCart, refreshCartPrices } = useCart()
+
+  // Always sync cart items with latest database prices on checkout page load
+  useEffect(() => {
+    refreshCartPrices()
+  }, [])
   const { user, refreshUser } = useAuth()
   const [loading, setLoading] = useState(false)
   const [activeGateway, setActiveGateway] = useState<string>("xpay")
@@ -154,7 +159,7 @@ export default function CheckoutPage() {
 
   const activeSubtotal = isRecovering
     ? Number(recoveryOrder.originalTotal || recoveryOrder.recoveryTotal || 0)
-    : totalAmount
+    : items.reduce((sum, item) => sum + (Number(item.product?.price) || 0) * (Number(item.quantity) || 1), 0)
 
   const recoveryDiscountAmount = isRecovering ? Number(recoveryOrder.discountAmount || 0) : 0
 
@@ -231,7 +236,7 @@ export default function CheckoutPage() {
 
   // Dynamic Coupon Application: ONLY when explicitly provided via URL query or active campaign session
   useEffect(() => {
-    if (totalAmount > 0 && !appliedCoupon && !isRecovering && typeof window !== "undefined") {
+    if (activeSubtotal > 0 && !appliedCoupon && !isRecovering && typeof window !== "undefined") {
       const urlParams = new URLSearchParams(window.location.search)
       const urlCoupon = urlParams.get("coupon")
       const sessionCoupon = sessionStorage.getItem("copiedCouponCode") || ""
@@ -243,15 +248,22 @@ export default function CheckoutPage() {
         fetch("/api/coupons/validate", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ code: incomingCode, cartTotal: totalAmount }),
+          body: JSON.stringify({ code: incomingCode, cartTotal: activeSubtotal }),
         })
           .then((r) => r.json())
           .then((data) => {
             if (data.valid) {
-              setAppliedCoupon(data)
+              setAppliedCoupon({
+                code: data.code,
+                type: data.type,
+                value: Number(data.value),
+              })
+              const initialDiscount = data.type === "percentage"
+                ? Math.round((Number(data.value) / 100) * activeSubtotal)
+                : Math.min(activeSubtotal, Number(data.value))
               toast({
                 title: `🎉 Coupon ${incomingCode} Applied!`,
-                description: `Discount of ${formatPrice(data.discountAmount)} deducted.`,
+                description: `Discount of ${formatPrice(initialDiscount)} deducted.`,
               })
             }
           })
@@ -265,25 +277,32 @@ export default function CheckoutPage() {
           })
       }
     }
-  }, [totalAmount, appliedCoupon, isRecovering])
+  }, [activeSubtotal, appliedCoupon, isRecovering])
 
   const formatPrice = (price: number) =>
     new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(price)
 
   const handleApplyCoupon = async () => {
-    if (!couponCode.trim() || isRecovering) return
+    if (!couponCode.trim() || isRecovering || activeSubtotal <= 0) return
     setIsApplyingCoupon(true)
     setCouponError("")
     try {
       const res = await fetch("/api/coupons/validate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code: couponCode.trim(), cartTotal: totalAmount }),
+        body: JSON.stringify({ code: couponCode.trim(), cartTotal: activeSubtotal }),
       })
       const data = await res.json()
       if (data.valid) {
-        setAppliedCoupon(data)
-        toast({ title: "Coupon Applied!", description: `Discount of ${formatPrice(data.discountAmount)} deducted.` })
+        setAppliedCoupon({
+          code: data.code,
+          type: data.type,
+          value: Number(data.value),
+        })
+        const initialDiscount = data.type === "percentage"
+          ? Math.round((Number(data.value) / 100) * activeSubtotal)
+          : Math.min(activeSubtotal, Number(data.value))
+        toast({ title: "Coupon Applied!", description: `Discount of ${formatPrice(initialDiscount)} deducted.` })
       } else {
         setCouponError(data.message || "Invalid coupon code")
         setAppliedCoupon(null)
@@ -303,11 +322,21 @@ export default function CheckoutPage() {
     setIsCouponOpen(false)
   }
 
+  // Dynamic coupon discount computation: strictly in sync with current activeSubtotal
+  const couponDiscountAmount = useMemo(() => {
+    if (!appliedCoupon || isRecovering || activeSubtotal <= 0) return 0
+    if (appliedCoupon.type === "percentage") {
+      return Math.round((Number(appliedCoupon.value) / 100) * activeSubtotal)
+    }
+    if (appliedCoupon.type === "fixed") {
+      return Math.min(activeSubtotal, Math.round(Number(appliedCoupon.value)))
+    }
+    return 0
+  }, [appliedCoupon, isRecovering, activeSubtotal])
+
   const effectiveFinalAmount = isRecovering
     ? Number(recoveryOrder.recoveryTotal || 0)
-    : appliedCoupon
-    ? Math.max(0, totalAmount - appliedCoupon.discountAmount)
-    : totalAmount
+    : Math.max(0, activeSubtotal - couponDiscountAmount)
 
   const finalAmount = effectiveFinalAmount
 
@@ -653,7 +682,7 @@ export default function CheckoutPage() {
             userEmail: formData.email.trim(),
             userName: formData.name.trim(),
             userPhone: formData.phone.trim(),
-            items: items.map((i) => ({
+            items: activeItems.map((i) => ({
               productId: i.productId,
               quantity: i.quantity || 1,
             })),
@@ -672,8 +701,8 @@ export default function CheckoutPage() {
             {
               value: Number(orderData.totalAmount) || 0,
               currency: "INR",
-              content_ids: items.map((i) => i.productId),
-              contents: items.map((i) => ({
+              content_ids: activeItems.map((i) => i.productId),
+              contents: activeItems.map((i) => ({
                 id: i.productId,
                 quantity: i.quantity || 1,
                 item_price: 0,
@@ -905,7 +934,7 @@ export default function CheckoutPage() {
                   ) : appliedCoupon ? (
                     <div className="flex justify-between text-emerald-600 dark:text-emerald-400 font-bold">
                       <span>Discount ({appliedCoupon.code})</span>
-                      <span>-{formatPrice(appliedCoupon.discountAmount)}</span>
+                      <span>-{formatPrice(couponDiscountAmount)}</span>
                     </div>
                   ) : null}
                   <div className="flex justify-between text-slate-500">
@@ -1012,7 +1041,7 @@ export default function CheckoutPage() {
                             <Tag className="w-3.5 h-3.5 text-amber-500" /> Have a Coupon Code?
                           </span>
                           <span className="text-emerald-600 dark:text-emerald-400 font-extrabold">
-                            -{formatPrice(appliedCoupon.discountAmount)} OFF
+                            -{formatPrice(couponDiscountAmount)} OFF
                           </span>
                         </div>
                         <div className="flex items-center justify-between bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-xl p-2.5">
@@ -1023,7 +1052,7 @@ export default function CheckoutPage() {
                                 {appliedCoupon.code}
                               </span>
                               <span className="text-[11px] text-emerald-700 dark:text-emerald-300 font-medium ml-1.5">
-                                ({formatPrice(appliedCoupon.discountAmount)} saved)
+                                ({formatPrice(couponDiscountAmount)} saved)
                               </span>
                             </div>
                           </div>
@@ -1201,7 +1230,7 @@ export default function CheckoutPage() {
                 ) : appliedCoupon ? (
                   <div className="flex justify-between text-emerald-600 dark:text-emerald-400 font-bold">
                     <span>Discount ({appliedCoupon.code})</span>
-                    <span>-{formatPrice(appliedCoupon.discountAmount)}</span>
+                    <span>-{formatPrice(couponDiscountAmount)}</span>
                   </div>
                 ) : null}
                 <div className="flex justify-between text-slate-500">
