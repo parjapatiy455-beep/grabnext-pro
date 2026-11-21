@@ -83,6 +83,7 @@ export interface Product {
   discountPopupPercent?: number
   discountPopupCoupon?: string
   discountPopupTimerMinutes?: number
+  discountPopupDelaySeconds?: number
   discountPopupHeadline?: string
   metaPixelId?: string | null
 }

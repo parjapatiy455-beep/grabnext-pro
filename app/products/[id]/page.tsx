@@ -62,6 +62,7 @@ async function getProduct(id: string): Promise<Product | null> {
             discountPopupPercent: Number(row.discountPopupPercent || 50),
             discountPopupCoupon: row.discountPopupCoupon || 'SAVE50',
             discountPopupTimerMinutes: Number(row.discountPopupTimerMinutes || 10),
+            discountPopupDelaySeconds: Number(row.discountPopupDelaySeconds || 30),
             discountPopupHeadline: row.discountPopupHeadline || '',
         }) as Product
     } catch (error) {

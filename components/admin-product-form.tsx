@@ -42,6 +42,7 @@ const EMPTY = {
     discountPopupPercent: "50",
     discountPopupCoupon: "SAVE50",
     discountPopupTimerMinutes: "10",
+    discountPopupDelaySeconds: "30",
     discountPopupHeadline: "",
     metaPixelId: "",
 }
@@ -113,6 +114,7 @@ export function AdminProductForm({ mode, productId }: ProductFormProps) {
                     discountPopupPercent: p.discountPopupPercent ? p.discountPopupPercent.toString() : "50",
                     discountPopupCoupon: p.discountPopupCoupon || "SAVE50",
                     discountPopupTimerMinutes: p.discountPopupTimerMinutes ? p.discountPopupTimerMinutes.toString() : "10",
+                    discountPopupDelaySeconds: p.discountPopupDelaySeconds ? p.discountPopupDelaySeconds.toString() : "30",
                     discountPopupHeadline: p.discountPopupHeadline || "",
                     metaPixelId: p.metaPixelId || "",
                 })
@@ -269,6 +271,7 @@ export function AdminProductForm({ mode, productId }: ProductFormProps) {
                 discountPopupPercent: parseInt(form.discountPopupPercent, 10) || 50,
                 discountPopupCoupon: (form.discountPopupCoupon || "SAVE50").trim().toUpperCase(),
                 discountPopupTimerMinutes: parseInt(form.discountPopupTimerMinutes, 10) || 10,
+                discountPopupDelaySeconds: parseInt(form.discountPopupDelaySeconds, 10) || 30,
                 discountPopupHeadline: form.discountPopupHeadline?.trim() || null,
                 metaPixelId: form.metaPixelId.trim() || null,
             }
@@ -732,7 +735,7 @@ export function AdminProductForm({ mode, productId }: ProductFormProps) {
                                 </div>
                             </div>
 
-                            {/* Flash 50% Off Discount Popup Card */}
+                            {/* Urgency Countdown Timer & Discount Popup Card */}
                             <div className="bg-gradient-to-br from-amber-50/70 via-orange-50/40 to-purple-50/40 rounded-2xl p-6 border border-amber-200/80 shadow-sm space-y-4">
                                 <div className="flex items-center justify-between border-b border-amber-200/60 pb-3">
                                     <div className="flex items-center gap-2">
@@ -740,81 +743,107 @@ export function AdminProductForm({ mode, productId }: ProductFormProps) {
                                             ⚡
                                         </div>
                                         <div>
-                                            <h2 className="font-semibold text-gray-900 text-sm">Flash 50% Deal Popup</h2>
-                                            <p className="text-[11px] text-gray-500">Urgency countdown popup on product page</p>
+                                            <h2 className="font-semibold text-gray-900 text-sm">Urgency Timer & Discount Popup</h2>
+                                            <p className="text-[11px] text-gray-500">Live countdown urgency on product page + optional timed discount popup</p>
                                         </div>
                                     </div>
-                                    <Switch
-                                        checked={form.enableDiscountPopup}
-                                        onCheckedChange={(checked) => setForm((f) => ({ ...f, enableDiscountPopup: checked }))}
-                                    />
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-[11px] font-medium text-slate-600">Discount Popup:</span>
+                                        <Switch
+                                            checked={form.enableDiscountPopup}
+                                            onCheckedChange={(checked) => setForm((f) => ({ ...f, enableDiscountPopup: checked }))}
+                                        />
+                                    </div>
                                 </div>
 
-                                {form.enableDiscountPopup ? (
-                                    <div className="space-y-3 pt-1 text-xs">
-                                        <div className="p-2.5 bg-amber-100/60 border border-amber-200 rounded-xl text-amber-900 text-[11px]">
-                                            <p className="font-semibold">🔥 High-Converting Flash Deal Active!</p>
-                                            <p className="mt-0.5 text-amber-800">
-                                                Visitors on this product page will see a timed popup offering <strong>{form.discountPopupPercent}% OFF</strong> with a <strong>{form.discountPopupTimerMinutes}-minute</strong> countdown. Claiming immediately cuts the price on-page and in checkout!
-                                            </p>
+                                {/* Common Urgency Timer settings (active both with and without popup) */}
+                                <div className="space-y-3 pt-1 text-xs">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        <div>
+                                            <Label className="text-[11px] font-semibold text-slate-700">Urgency Timer (Minutes)</Label>
+                                            <Input
+                                                type="number"
+                                                min="1"
+                                                max="180"
+                                                value={form.discountPopupTimerMinutes}
+                                                onChange={(e) => setForm((f) => ({ ...f, discountPopupTimerMinutes: e.target.value }))}
+                                                placeholder="10"
+                                                className="h-9 mt-1 text-xs bg-white border-amber-200"
+                                            />
+                                            <p className="text-[10px] text-gray-500 mt-1">Har user visit & page refresh par timer automatic reset hoga.</p>
                                         </div>
+                                        <div>
+                                            <Label className="text-[11px] font-semibold text-slate-700">Custom Headline (Optional)</Label>
+                                            <Input
+                                                value={form.discountPopupHeadline}
+                                                onChange={(e) => setForm((f) => ({ ...f, discountPopupHeadline: e.target.value }))}
+                                                placeholder={form.enableDiscountPopup ? "Special Deal: Flat 50% Off" : "Special Price Ending Soon — Price Will Increase!"}
+                                                className="h-9 mt-1 text-xs bg-white border-amber-200 truncate"
+                                            />
+                                            <p className="text-[10px] text-gray-500 mt-1">Product page timer banner par ye headline show hogi.</p>
+                                        </div>
+                                    </div>
 
-                                        <div className="grid grid-cols-2 gap-3">
-                                            <div>
-                                                <Label className="text-[11px] font-semibold text-slate-700">Coupon Code</Label>
-                                                <Input
-                                                    value={form.discountPopupCoupon}
-                                                    onChange={(e) => setForm((f) => ({ ...f, discountPopupCoupon: e.target.value.toUpperCase() }))}
-                                                    placeholder="SAVE50"
-                                                    className="h-9 mt-1 text-xs font-mono font-bold uppercase bg-white border-amber-200"
-                                                />
+                                    {form.enableDiscountPopup ? (
+                                        <div className="space-y-3 pt-2 border-t border-amber-200/50">
+                                            <div className="p-2.5 bg-amber-100/70 border border-amber-300 rounded-xl text-amber-900 text-[11px]">
+                                                <p className="font-semibold">🔥 Timed Discount Popup Active!</p>
+                                                <p className="mt-0.5 text-amber-800">
+                                                    User ke page visit karne ke <strong>{form.discountPopupDelaySeconds || "30"} second</strong> baad screen par flash popup aayega offering <strong>{form.discountPopupPercent}% OFF</strong>.
+                                                </p>
                                             </div>
-                                            <div>
-                                                <Label className="text-[11px] font-semibold text-slate-700">Discount %</Label>
-                                                <div className="relative mt-1">
+
+                                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                                <div>
+                                                    <Label className="text-[11px] font-semibold text-slate-700">Popup Delay (Seconds)</Label>
                                                     <Input
                                                         type="number"
-                                                        min="5"
-                                                        max="95"
-                                                        value={form.discountPopupPercent}
-                                                        onChange={(e) => setForm((f) => ({ ...f, discountPopupPercent: e.target.value }))}
-                                                        placeholder="50"
-                                                        className="h-9 text-xs bg-white border-amber-200 pr-6"
+                                                        min="3"
+                                                        max="300"
+                                                        value={form.discountPopupDelaySeconds}
+                                                        onChange={(e) => setForm((f) => ({ ...f, discountPopupDelaySeconds: e.target.value }))}
+                                                        placeholder="30"
+                                                        className="h-9 mt-1 text-xs bg-white border-amber-200"
                                                     />
-                                                    <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 font-bold">%</span>
+                                                    <p className="text-[10px] text-gray-500 mt-1">Kitne sec baad popup open hoga.</p>
+                                                </div>
+                                                <div>
+                                                    <Label className="text-[11px] font-semibold text-slate-700">Coupon Code</Label>
+                                                    <Input
+                                                        value={form.discountPopupCoupon}
+                                                        onChange={(e) => setForm((f) => ({ ...f, discountPopupCoupon: e.target.value.toUpperCase() }))}
+                                                        placeholder="SAVE50"
+                                                        className="h-9 mt-1 text-xs font-mono font-bold uppercase bg-white border-amber-200"
+                                                    />
+                                                    <p className="text-[10px] text-gray-500 mt-1">Claim karne par auto-apply hoga.</p>
+                                                </div>
+                                                <div>
+                                                    <Label className="text-[11px] font-semibold text-slate-700">Discount %</Label>
+                                                    <div className="relative mt-1">
+                                                        <Input
+                                                            type="number"
+                                                            min="5"
+                                                            max="95"
+                                                            value={form.discountPopupPercent}
+                                                            onChange={(e) => setForm((f) => ({ ...f, discountPopupPercent: e.target.value }))}
+                                                            placeholder="50"
+                                                            className="h-9 text-xs bg-white border-amber-200 pr-6"
+                                                        />
+                                                        <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 font-bold">%</span>
+                                                    </div>
+                                                    <p className="text-[10px] text-gray-500 mt-1">Selling price par chhoot.</p>
                                                 </div>
                                             </div>
                                         </div>
-
-                                        <div className="grid grid-cols-2 gap-3">
-                                            <div>
-                                                <Label className="text-[11px] font-semibold text-slate-700">Timer (Minutes)</Label>
-                                                <Input
-                                                    type="number"
-                                                    min="1"
-                                                    max="120"
-                                                    value={form.discountPopupTimerMinutes}
-                                                    onChange={(e) => setForm((f) => ({ ...f, discountPopupTimerMinutes: e.target.value }))}
-                                                    placeholder="10"
-                                                    className="h-9 mt-1 text-xs bg-white border-amber-200"
-                                                />
-                                            </div>
-                                            <div>
-                                                <Label className="text-[11px] font-semibold text-slate-700">Custom Title (Optional)</Label>
-                                                <Input
-                                                    value={form.discountPopupHeadline}
-                                                    onChange={(e) => setForm((f) => ({ ...f, discountPopupHeadline: e.target.value }))}
-                                                    placeholder="Special Deal: Flat 50% Off"
-                                                    className="h-9 mt-1 text-xs bg-white border-amber-200 truncate"
-                                                />
-                                            </div>
+                                    ) : (
+                                        <div className="p-2.5 bg-orange-50 border border-orange-200/80 rounded-xl text-[11px] text-orange-950">
+                                            <p className="font-semibold text-orange-900">⚡ Always-On Urgency Banner Active (No Popup / No Coupon)</p>
+                                            <p className="mt-0.5 text-orange-800">
+                                                Popup OFF hai. Product page par bina kisi popup aur bina kisi coupon ke <strong>Urgency Countdown Timer</strong> hamesha chalega: <em>&ldquo;Special Price Ending Soon — Price Will Increase!&rdquo;</em> with original price & selling price.
+                                            </p>
                                         </div>
-                                    </div>
-                                ) : (
-                                    <p className="text-[11px] text-gray-400 italic">
-                                        Toggle switch ON to enable the 10-minute 50% discount popup on this product.
-                                    </p>
-                                )}
+                                    )}
+                                </div>
                             </div>
 
                             {/* Meta Pixel & Ad Account Isolation Card */}

@@ -50,6 +50,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       discountPopupPercent: Number(row.discountPopupPercent || 50),
       discountPopupCoupon: row.discountPopupCoupon || 'SAVE50',
       discountPopupTimerMinutes: Number(row.discountPopupTimerMinutes || 10),
+      discountPopupDelaySeconds: Number(row.discountPopupDelaySeconds || 30),
       discountPopupHeadline: row.discountPopupHeadline || '',
       metaPixelId: row.metaPixelId || null,
     }), {
@@ -84,6 +85,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     const discountPopupPercent = typeof data.discountPopupPercent === 'number' ? data.discountPopupPercent : (parseInt(data.discountPopupPercent, 10) || 50)
     const discountPopupCoupon = (data.discountPopupCoupon || 'SAVE50').trim().toUpperCase()
     const discountPopupTimerMinutes = typeof data.discountPopupTimerMinutes === 'number' ? data.discountPopupTimerMinutes : (parseInt(data.discountPopupTimerMinutes, 10) || 10)
+    const discountPopupDelaySeconds = typeof data.discountPopupDelaySeconds === 'number' ? data.discountPopupDelaySeconds : (parseInt(data.discountPopupDelaySeconds, 10) || 30)
     const discountPopupHeadline = data.discountPopupHeadline ? String(data.discountPopupHeadline).trim() : null
     const metaPixelId = data.metaPixelId !== undefined ? (data.metaPixelId ? String(data.metaPixelId).trim() : null) : null
 
@@ -95,16 +97,17 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     await executeQuery('ALTER TABLE products ADD COLUMN discountPopupPercent INTEGER DEFAULT 50').catch(() => {})
     await executeQuery("ALTER TABLE products ADD COLUMN discountPopupCoupon TEXT DEFAULT 'SAVE50'").catch(() => {})
     await executeQuery('ALTER TABLE products ADD COLUMN discountPopupTimerMinutes INTEGER DEFAULT 10').catch(() => {})
+    await executeQuery('ALTER TABLE products ADD COLUMN discountPopupDelaySeconds INTEGER DEFAULT 30').catch(() => {})
     await executeQuery('ALTER TABLE products ADD COLUMN discountPopupHeadline TEXT').catch(() => {})
     await executeQuery('ALTER TABLE products ADD COLUMN metaPixelId TEXT').catch(() => {})
 
     try {
       await executeQuery(
-        `UPDATE products SET title=?, description=?, price=?, originalPrice=?, category=?, tags=?, imageUrl=?, images=?, videoUrl=?, proofImages=?, slug=?, downloadUrl=?, isActive=?, pageCode=?, pageType=?, displayOrder=?, enableDiscountPopup=?, discountPopupPercent=?, discountPopupCoupon=?, discountPopupTimerMinutes=?, discountPopupHeadline=?, metaPixelId=?, updatedAt=? WHERE id=?`,
+        `UPDATE products SET title=?, description=?, price=?, originalPrice=?, category=?, tags=?, imageUrl=?, images=?, videoUrl=?, proofImages=?, slug=?, downloadUrl=?, isActive=?, pageCode=?, pageType=?, displayOrder=?, enableDiscountPopup=?, discountPopupPercent=?, discountPopupCoupon=?, discountPopupTimerMinutes=?, discountPopupDelaySeconds=?, discountPopupHeadline=?, metaPixelId=?, updatedAt=? WHERE id=?`,
         [data.title, data.description || '', data.price, data.originalPrice || null, data.category,
         JSON.stringify(data.tags || []), imageUrl, JSON.stringify(images), videoUrl, JSON.stringify(proofImages), slug,
         data.downloadUrl || '', data.isActive ? 1 : 0, data.pageCode || null, data.pageType || 'shop', displayOrder,
-        enableDiscountPopup, discountPopupPercent, discountPopupCoupon, discountPopupTimerMinutes, discountPopupHeadline, metaPixelId, now, params.id]
+        enableDiscountPopup, discountPopupPercent, discountPopupCoupon, discountPopupTimerMinutes, discountPopupDelaySeconds, discountPopupHeadline, metaPixelId, now, params.id]
       )
     } catch (err: any) {
       await executeQuery(

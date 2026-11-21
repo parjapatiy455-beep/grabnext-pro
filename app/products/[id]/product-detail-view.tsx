@@ -6,7 +6,7 @@ import Link from "next/link"
 import {
     Star, Zap, Shield,
     Heart, Share2, Loader2, X, ChevronLeft, ChevronRight, Clock, CheckCircle2,
-    Play, Video, ShieldCheck, ZoomIn, ImageIcon, Sparkles, Tag
+    Play, Video, ShieldCheck, ZoomIn, ImageIcon, Sparkles, Tag, Flame
 } from "lucide-react"
 import { ProductDiscountPopup } from "@/components/product-discount-popup"
 import { Badge } from "@/components/ui/badge"
@@ -160,35 +160,19 @@ export function ProductDetailView({ product: initialProduct, id }: { product: Pr
     const [discountTimerStr, setDiscountTimerStr] = useState<string>("")
     const [videoAspectRatio, setVideoAspectRatio] = useState<number | null>(null)
 
-    // Check discount status & launch popup with a short smart delay
+    // 1. Live ticking Urgency Countdown Timer (Resets freshly on every page refresh/visit)
     useEffect(() => {
-        if (!product?.enableDiscountPopup) return
+        if (!product?.id) return
 
         const prodId = product.id || id
         const timerKey = `discount_timer_end_${prodId}`
-
-        const percent = Number(product.discountPopupPercent || 50)
-        const code = (product.discountPopupCoupon || "SAVE50").trim().toUpperCase()
-        const timerMinutes = Number(product.discountPopupTimerMinutes || 10)
+        const timerMinutes = Math.max(1, Number(product.discountPopupTimerMinutes || 10))
 
         // Reset timer freshly on every page refresh/visit as requested
         const freshEndTime = Date.now() + timerMinutes * 60 * 1000
         try {
             localStorage.setItem(timerKey, freshEndTime.toString())
         } catch {}
-
-        // Launch popup after 30 seconds (giving user time to read before displaying flash deal)
-        const t = setTimeout(() => {
-            setShowDiscountPopup(true)
-        }, 30000)
-        return () => clearTimeout(t)
-    }, [product?.id, product?.enableDiscountPopup, product?.price, id])
-
-    // Live ticking countdown when discount is applied
-    useEffect(() => {
-        if (!appliedDiscount || !product?.id) return
-        const prodId = product.id || id
-        const timerKey = `discount_timer_end_${prodId}`
 
         const tick = () => {
             const savedEndTime = localStorage.getItem(timerKey)
@@ -197,7 +181,8 @@ export function ProductDetailView({ product: initialProduct, id }: { product: Pr
             const m = Math.floor(remaining / 60)
             const s = remaining % 60
             setDiscountTimerStr(`${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`)
-            if (remaining <= 0) {
+
+            if (remaining <= 0 && appliedDiscount) {
                 setAppliedDiscount(null)
                 try {
                     sessionStorage.removeItem(`discount_claimed_${prodId}`)
@@ -209,7 +194,18 @@ export function ProductDetailView({ product: initialProduct, id }: { product: Pr
         tick()
         const interval = setInterval(tick, 1000)
         return () => clearInterval(interval)
-    }, [appliedDiscount, product?.id, id])
+    }, [product?.id, product?.discountPopupTimerMinutes, id, appliedDiscount])
+
+    // 2. Launch discount popup after admin-configured delay in seconds
+    useEffect(() => {
+        if (!product?.enableDiscountPopup) return
+
+        const delaySeconds = Math.max(3, Number(product.discountPopupDelaySeconds || 30))
+        const t = setTimeout(() => {
+            setShowDiscountPopup(true)
+        }, delaySeconds * 1000)
+        return () => clearTimeout(t)
+    }, [product?.id, product?.enableDiscountPopup, product?.discountPopupDelaySeconds])
 
     const handleClaimDiscount = (info: { code: string; percent: number; discountedPrice: number; savings: number }) => {
         const prodId = product.id || id
@@ -535,7 +531,7 @@ export function ProductDetailView({ product: initialProduct, id }: { product: Pr
 
                             {/* Price block */}
                             <div>
-                                {appliedDiscount && (
+                                {appliedDiscount ? (
                                     <div className="mb-3 p-3 rounded-2xl bg-gradient-to-r from-amber-500/15 via-red-500/10 to-emerald-500/10 border-2 border-red-500/30 dark:border-red-500/40 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
                                         <div className="flex items-center gap-2">
                                             <span className="flex h-2.5 w-2.5 relative shrink-0">
@@ -549,6 +545,33 @@ export function ProductDetailView({ product: initialProduct, id }: { product: Pr
                                                 </div>
                                                 <p className="text-[11px] text-slate-500 dark:text-slate-400">
                                                     Coupon <strong className="font-mono text-emerald-600 dark:text-emerald-400">{appliedDiscount.code}</strong> applied automatically
+                                                </p>
+                                            </div>
+                                        </div>
+                                        {discountTimerStr && (
+                                            <div className="flex items-center gap-2 self-start sm:self-auto bg-slate-900 text-white dark:bg-black px-3.5 py-1.5 rounded-xl border border-red-500/40 shadow-xs">
+                                                <Clock className="h-4 w-4 text-red-400 animate-pulse shrink-0" />
+                                                <span className="text-[10px] font-bold text-slate-300 uppercase tracking-wider">Ends In:</span>
+                                                <span className="font-mono font-black text-amber-400 text-base sm:text-lg tracking-wider">
+                                                    {discountTimerStr}
+                                                </span>
+                                            </div>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <div className="mb-3 p-3 rounded-2xl bg-gradient-to-r from-amber-500/15 via-red-500/10 to-orange-500/10 border-2 border-red-500/30 dark:border-red-500/40 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                                        <div className="flex items-center gap-2">
+                                            <span className="flex h-2.5 w-2.5 relative shrink-0">
+                                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-600"></span>
+                                            </span>
+                                            <div>
+                                                <div className="flex items-center gap-1.5 font-black text-xs sm:text-sm text-slate-900 dark:text-white">
+                                                    <Flame className="h-4 w-4 text-orange-500 fill-orange-500 shrink-0 animate-pulse" />
+                                                    <span>{product.discountPopupHeadline || "Special Price Ending Soon — Price Will Increase!"}</span>
+                                                </div>
+                                                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                                                    Order now at current introductory price before the timer ends!
                                                 </p>
                                             </div>
                                         </div>
