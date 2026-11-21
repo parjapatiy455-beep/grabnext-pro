@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react"
+import { createContext, useContext, useEffect, useState, useRef, type ReactNode } from "react"
 import { toast } from "@/hooks/use-toast"
 import type { Product, CartItem } from "@/lib/types"
 
@@ -16,7 +16,7 @@ interface CartContextType {
   isInCart: (productId: string) => boolean
   isDrawerOpen: boolean
   setDrawerOpen: (open: boolean) => void
-  refreshCartPrices: () => Promise<void>
+  refreshCartPrices: (force?: boolean) => Promise<void>
 }
 
 const CartContext = createContext<CartContextType>({
@@ -30,7 +30,7 @@ const CartContext = createContext<CartContextType>({
   isInCart: () => false,
   isDrawerOpen: false,
   setDrawerOpen: () => { },
-  refreshCartPrices: async () => { },
+  refreshCartPrices: async (_force?: boolean) => { },
 })
 
 export const useCart = () => {
@@ -44,8 +44,27 @@ interface CartProviderProps {
 export const CartProvider = ({ children }: CartProviderProps) => {
   const [items, setItems] = useState<CartItem[]>([])
   const [isDrawerOpen, setDrawerOpen] = useState(false)
+  const lastRefreshTimeRef = useRef<number>(0)
 
-  const refreshCartPrices = async () => {
+  const refreshCartPrices = async (force = false) => {
+    // Zero-overhead guard: Only fetch if cart actually has items
+    const savedCart = typeof window !== "undefined" ? localStorage.getItem("digital-store-cart") : null
+    let hasItems = items.length > 0
+    if (!hasItems && savedCart) {
+      try {
+        const parsed = JSON.parse(savedCart)
+        if (Array.isArray(parsed) && parsed.length > 0) hasItems = true
+      } catch {}
+    }
+    if (!hasItems) return
+
+    // Throttle guard: Prevent spamming server within 30 seconds unless explicitly forced
+    const now = Date.now()
+    if (!force && now - lastRefreshTimeRef.current < 30000) {
+      return
+    }
+    lastRefreshTimeRef.current = now
+
     try {
       const res = await fetch("/api/products?all=1")
       if (!res.ok) return
@@ -103,21 +122,25 @@ export const CartProvider = ({ children }: CartProviderProps) => {
     }
   }
 
-  // Load cart from localStorage on mount and sync with fresh database prices
+  // Load cart from localStorage on mount and sync with fresh database prices only if cart has items
   useEffect(() => {
     const savedCart = localStorage.getItem("digital-store-cart")
+    let hasItems = false
     if (savedCart) {
       try {
         const parsed = JSON.parse(savedCart)
         if (Array.isArray(parsed) && parsed.length > 0) {
           // Normalize existing carts to max quantity 1
           setItems(parsed.map((item: CartItem) => ({ ...item, quantity: 1 })))
+          hasItems = true
         }
       } catch (error) {
         console.error("Error loading cart from localStorage:", error)
       }
     }
-    refreshCartPrices()
+    if (hasItems) {
+      refreshCartPrices(true)
+    }
   }, [])
 
   // Save cart to localStorage whenever items change

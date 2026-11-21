@@ -43,9 +43,11 @@ export default function CheckoutPage() {
   const router = useRouter()
   const { items, totalAmount, clearCart, removeFromCart, refreshCartPrices } = useCart()
 
-  // Always sync cart items with latest database prices on checkout page load
+  // Sync cart items with latest database prices if cart has items
   useEffect(() => {
-    refreshCartPrices()
+    if (items.length > 0) {
+      refreshCartPrices(true)
+    }
   }, [])
   const { user, refreshUser } = useAuth()
   const [loading, setLoading] = useState(false)
