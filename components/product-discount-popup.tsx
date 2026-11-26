@@ -10,7 +10,9 @@ interface ProductDiscountPopupProps {
   onClose: () => void
   onClaim: (info: {
     code: string
-    percent: number
+    type?: "percentage" | "fixed"
+    value?: number
+    percent?: number
     discountedPrice: number
     savings: number
   }) => void
@@ -22,16 +24,39 @@ export function ProductDiscountPopup({
   onClose,
   onClaim,
 }: ProductDiscountPopupProps) {
-  const percent = Number(product.discountPopupPercent || 50)
-  const couponCode = (product.discountPopupCoupon || "SAVE50").trim().toUpperCase()
-  const timerMinutes = Number(product.discountPopupTimerMinutes || 10)
-  const headline =
-    product.discountPopupHeadline ||
-    `Special Offer: Flat ${percent}% OFF`
-
+  const isFixed = product.discountPopupType === "fixed"
   const originalPrice = product.price
-  const discountedPrice = Math.max(1, Math.round(originalPrice * (1 - percent / 100)))
-  const savings = originalPrice - discountedPrice
+  const timerMinutes = Number(product.discountPopupTimerMinutes || 10)
+
+  let savings = 0
+  let discountedPrice = originalPrice
+  let tagText = ""
+  let savingsText = ""
+  let defaultHeadline = ""
+  let defaultCoupon = "SAVE50"
+  let percentValue = 50
+
+  if (isFixed) {
+    const fixedAmount = Math.round(Number(product.discountPopupAmount || 0))
+    savings = Math.min(originalPrice, fixedAmount)
+    discountedPrice = Math.max(1, originalPrice - savings)
+    percentValue = originalPrice > 0 ? Math.round((savings / originalPrice) * 100) : 0
+    tagText = `Limited Time Deal • Flat ₹${savings} OFF`
+    savingsText = `Save ₹${savings} Flat`
+    defaultHeadline = `Special Offer: Flat ₹${savings} OFF`
+    defaultCoupon = "FLAT" + savings
+  } else {
+    percentValue = Number(product.discountPopupPercent || 50)
+    savings = Math.round(originalPrice * (percentValue / 100))
+    discountedPrice = Math.max(1, originalPrice - savings)
+    tagText = `Limited Time Deal • Flat ${percentValue}% OFF`
+    savingsText = `Save ₹${savings} (${percentValue}% OFF)`
+    defaultHeadline = `Special Offer: Flat ${percentValue}% OFF`
+    defaultCoupon = "SAVE" + percentValue
+  }
+
+  const couponCode = (product.discountPopupCoupon || defaultCoupon).trim().toUpperCase()
+  const headline = product.discountPopupHeadline || defaultHeadline
 
   // Fresh countdown timer on every page load/refresh
   const [timeLeft, setTimeLeft] = useState<number>(timerMinutes * 60)
@@ -62,7 +87,9 @@ export function ProductDiscountPopup({
     setTimeout(() => {
       onClaim({
         code: couponCode,
-        percent,
+        type: isFixed ? "fixed" : "percentage",
+        value: isFixed ? Number(product.discountPopupAmount || 0) : percentValue,
+        percent: percentValue,
         discountedPrice,
         savings,
       })
@@ -74,7 +101,9 @@ export function ProductDiscountPopup({
   const handleCloseAndApply = () => {
     onClaim({
       code: couponCode,
-      percent,
+      type: isFixed ? "fixed" : "percentage",
+      value: isFixed ? Number(product.discountPopupAmount || 0) : percentValue,
+      percent: percentValue,
       discountedPrice,
       savings,
     })
@@ -114,7 +143,7 @@ export function ProductDiscountPopup({
           <div className="space-y-1.5 pr-8">
             <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
               <Tag className="h-3 w-3" />
-              <span>Limited Time Deal • Flat {percent}% OFF</span>
+              <span>{tagText}</span>
             </div>
 
             <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight leading-snug">
@@ -140,7 +169,7 @@ export function ProductDiscountPopup({
               </div>
 
               <div className="mt-1.5 inline-flex items-center gap-1 text-xs font-bold text-emerald-800 dark:text-emerald-300 bg-emerald-100/90 dark:bg-emerald-950/80 px-2.5 py-0.5 rounded-md w-fit">
-                <span>Save {formatPrice(savings)} ({percent}% OFF)</span>
+                <span>{savingsText}</span>
               </div>
             </div>
 

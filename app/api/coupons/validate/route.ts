@@ -36,6 +36,36 @@ export async function POST(request: NextRequest) {
         }
 
         if (!coupons || coupons.length === 0) {
+            // Check if code matches an active product discount popup coupon
+            try {
+                const prodCoupons: any[] = await executeQuery(
+                    'SELECT discountPopupCoupon, discountPopupType, discountPopupPercent, discountPopupAmount FROM products WHERE UPPER(discountPopupCoupon) = ? AND enableDiscountPopup = 1 LIMIT 1',
+                    [cleanCode]
+                )
+                if (prodCoupons && prodCoupons.length > 0) {
+                    const pc = prodCoupons[0]
+                    const pType = pc.discountPopupType === 'fixed' ? 'fixed' : 'percentage'
+                    const pVal = pType === 'fixed' ? Number(pc.discountPopupAmount || 0) : Number(pc.discountPopupPercent || 50)
+                    const pDisc = pType === 'fixed' ? Math.min(total, pVal) : Math.round((pVal / 100) * total)
+
+                    // Seed into coupons table
+                    executeQuery(
+                        'INSERT OR IGNORE INTO coupons (code, type, value, isActive, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?)',
+                        [cleanCode, pType, pVal, 1, Date.now(), Date.now()]
+                    ).catch(() => {})
+
+                    return NextResponse.json({
+                        valid: true,
+                        code: cleanCode,
+                        type: pType,
+                        value: pVal,
+                        discountAmount: Math.max(0, pDisc)
+                    })
+                }
+            } catch (err) {
+                console.warn('[Validate Coupon] Product popup coupon check failed:', err)
+            }
+
             if (cleanCode === 'SAVE50' || cleanCode === 'SAVE40') {
                 const percentage = cleanCode === 'SAVE40' ? 40 : 50
                 const discountAmount = Math.round(total * (percentage / 100))

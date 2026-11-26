@@ -234,6 +234,22 @@ export async function POST(request: NextRequest) {
                 discountAmount = Math.min(calculatedSubtotal, Number(c.value))
               }
             }
+          } else {
+            // Check active products for discountPopupCoupon
+            const prodCoupons: any[] = await executeQuery(
+              'SELECT discountPopupCoupon, discountPopupType, discountPopupPercent, discountPopupAmount FROM products WHERE UPPER(discountPopupCoupon) = ? AND enableDiscountPopup = 1 LIMIT 1',
+              [clean]
+            ).catch(() => [])
+            if (prodCoupons && prodCoupons.length > 0) {
+              const pc = prodCoupons[0]
+              verifiedCouponCode = (pc.discountPopupCoupon || clean).toUpperCase()
+              const pType = pc.discountPopupType === 'fixed' ? 'fixed' : 'percentage'
+              if (pType === 'fixed') {
+                discountAmount = Math.min(calculatedSubtotal, Math.round(Number(pc.discountPopupAmount || 0)))
+              } else {
+                discountAmount = Math.round((Number(pc.discountPopupPercent || 50) / 100) * calculatedSubtotal)
+              }
+            }
           }
         } catch (e) {
           console.warn('[Orders API] Coupon lookup error:', e)

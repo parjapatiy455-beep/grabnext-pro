@@ -39,7 +39,9 @@ const EMPTY = {
     proofImages: [] as string[],
     displayOrder: "0",
     enableDiscountPopup: false,
+    discountPopupType: "percentage" as "percentage" | "fixed",
     discountPopupPercent: "50",
+    discountPopupAmount: "50",
     discountPopupCoupon: "SAVE50",
     discountPopupTimerMinutes: "10",
     discountPopupDelaySeconds: "30",
@@ -111,7 +113,9 @@ export function AdminProductForm({ mode, productId }: ProductFormProps) {
                     proofImages: Array.isArray(p.proofImages) ? p.proofImages : [],
                     displayOrder: p.displayOrder ? p.displayOrder.toString() : "0",
                     enableDiscountPopup: Boolean(p.enableDiscountPopup),
+                    discountPopupType: (p.discountPopupType || "percentage") as "percentage" | "fixed",
                     discountPopupPercent: p.discountPopupPercent ? p.discountPopupPercent.toString() : "50",
+                    discountPopupAmount: p.discountPopupAmount ? p.discountPopupAmount.toString() : "50",
                     discountPopupCoupon: p.discountPopupCoupon || "SAVE50",
                     discountPopupTimerMinutes: p.discountPopupTimerMinutes ? p.discountPopupTimerMinutes.toString() : "10",
                     discountPopupDelaySeconds: p.discountPopupDelaySeconds ? p.discountPopupDelaySeconds.toString() : "30",
@@ -268,8 +272,10 @@ export function AdminProductForm({ mode, productId }: ProductFormProps) {
                 displayOrder: parseInt(form.displayOrder, 10) || 0,
                 pageType: "shop",
                 enableDiscountPopup: form.enableDiscountPopup,
+                discountPopupType: form.discountPopupType,
                 discountPopupPercent: parseInt(form.discountPopupPercent, 10) || 50,
-                discountPopupCoupon: (form.discountPopupCoupon || "SAVE50").trim().toUpperCase(),
+                discountPopupAmount: parseFloat(form.discountPopupAmount) || 0,
+                discountPopupCoupon: (form.discountPopupCoupon || (form.discountPopupType === 'fixed' ? 'FLAT' : 'SAVE50')).trim().toUpperCase(),
                 discountPopupTimerMinutes: parseInt(form.discountPopupTimerMinutes, 10) || 10,
                 discountPopupDelaySeconds: parseInt(form.discountPopupDelaySeconds, 10) || 30,
                 discountPopupHeadline: form.discountPopupHeadline?.trim() || null,
@@ -789,8 +795,37 @@ export function AdminProductForm({ mode, productId }: ProductFormProps) {
                                             <div className="p-2.5 bg-amber-100/70 border border-amber-300 rounded-xl text-amber-900 text-[11px]">
                                                 <p className="font-semibold">🔥 Timed Discount Popup Active!</p>
                                                 <p className="mt-0.5 text-amber-800">
-                                                    User ke page visit karne ke <strong>{form.discountPopupDelaySeconds || "30"} second</strong> baad screen par flash popup aayega offering <strong>{form.discountPopupPercent}% OFF</strong>.
+                                                    User ke page visit karne ke <strong>{form.discountPopupDelaySeconds || "30"} second</strong> baad screen par flash popup aayega offering <strong>{form.discountPopupType === "fixed" ? `Flat ₹${form.discountPopupAmount || 0} OFF` : `${form.discountPopupPercent || 50}% OFF`}</strong>.
                                                 </p>
+                                            </div>
+
+                                            {/* Discount Type Selector: Percentage vs Fixed Amount */}
+                                            <div>
+                                                <Label className="text-[11px] font-semibold text-slate-700">Discount Calculation Mode</Label>
+                                                <div className="grid grid-cols-2 gap-2 mt-1">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setForm((f) => ({ ...f, discountPopupType: "percentage" }))}
+                                                        className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                                                            form.discountPopupType === "percentage"
+                                                                ? "bg-amber-600 text-white border-amber-600 shadow-xs"
+                                                                : "bg-white text-slate-700 border-amber-200 hover:bg-amber-50"
+                                                        }`}
+                                                    >
+                                                        <span>Percentage (% OFF)</span>
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setForm((f) => ({ ...f, discountPopupType: "fixed" }))}
+                                                        className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                                                            form.discountPopupType === "fixed"
+                                                                ? "bg-amber-600 text-white border-amber-600 shadow-xs"
+                                                                : "bg-white text-slate-700 border-amber-200 hover:bg-amber-50"
+                                                        }`}
+                                                    >
+                                                        <span>Fixed Amount (₹ OFF)</span>
+                                                    </button>
+                                                </div>
                                             </div>
 
                                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -812,28 +847,68 @@ export function AdminProductForm({ mode, productId }: ProductFormProps) {
                                                     <Input
                                                         value={form.discountPopupCoupon}
                                                         onChange={(e) => setForm((f) => ({ ...f, discountPopupCoupon: e.target.value.toUpperCase() }))}
-                                                        placeholder="SAVE50"
+                                                        placeholder={form.discountPopupType === "fixed" ? "FLAT50" : "SAVE50"}
                                                         className="h-9 mt-1 text-xs font-mono font-bold uppercase bg-white border-amber-200"
                                                     />
                                                     <p className="text-[10px] text-gray-500 mt-1">Claim karne par auto-apply hoga.</p>
                                                 </div>
-                                                <div>
-                                                    <Label className="text-[11px] font-semibold text-slate-700">Discount %</Label>
-                                                    <div className="relative mt-1">
-                                                        <Input
-                                                            type="number"
-                                                            min="5"
-                                                            max="95"
-                                                            value={form.discountPopupPercent}
-                                                            onChange={(e) => setForm((f) => ({ ...f, discountPopupPercent: e.target.value }))}
-                                                            placeholder="50"
-                                                            className="h-9 text-xs bg-white border-amber-200 pr-6"
-                                                        />
-                                                        <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 font-bold">%</span>
+                                                {form.discountPopupType === "fixed" ? (
+                                                    <div>
+                                                        <Label className="text-[11px] font-semibold text-slate-700">Discount Amount (₹)</Label>
+                                                        <div className="relative mt-1">
+                                                            <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-500 font-bold">₹</span>
+                                                            <Input
+                                                                type="number"
+                                                                min="1"
+                                                                value={form.discountPopupAmount}
+                                                                onChange={(e) => setForm((f) => ({ ...f, discountPopupAmount: e.target.value }))}
+                                                                placeholder="50"
+                                                                className="h-9 text-xs bg-white border-amber-200 pl-6"
+                                                            />
+                                                        </div>
+                                                        <p className="text-[10px] text-gray-500 mt-1">Direct itne rupaye kam honge.</p>
                                                     </div>
-                                                    <p className="text-[10px] text-gray-500 mt-1">Selling price par chhoot.</p>
-                                                </div>
+                                                ) : (
+                                                    <div>
+                                                        <Label className="text-[11px] font-semibold text-slate-700">Discount %</Label>
+                                                        <div className="relative mt-1">
+                                                            <Input
+                                                                type="number"
+                                                                min="5"
+                                                                max="95"
+                                                                value={form.discountPopupPercent}
+                                                                onChange={(e) => setForm((f) => ({ ...f, discountPopupPercent: e.target.value }))}
+                                                                placeholder="50"
+                                                                className="h-9 text-xs bg-white border-amber-200 pr-6"
+                                                            />
+                                                            <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 font-bold">%</span>
+                                                        </div>
+                                                        <p className="text-[10px] text-gray-500 mt-1">Selling price par chhoot %.</p>
+                                                    </div>
+                                                )}
                                             </div>
+
+                                            {/* Live Calculation Preview */}
+                                            {(() => {
+                                                const sellingPrice = parseFloat(form.price) || 0
+                                                if (sellingPrice <= 0) return null
+                                                const previewDiscount = form.discountPopupType === "fixed"
+                                                    ? Math.min(sellingPrice, parseFloat(form.discountPopupAmount) || 0)
+                                                    : Math.round(sellingPrice * ((parseFloat(form.discountPopupPercent) || 50) / 100))
+                                                const previewPayPrice = Math.max(1, sellingPrice - previewDiscount)
+                                                return (
+                                                    <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-950 text-xs flex flex-wrap items-center justify-between gap-2">
+                                                        <div>
+                                                            <span className="font-semibold text-emerald-800">Popup Offer Preview:</span>
+                                                            <span className="text-slate-600 ml-1.5">Original: ₹{sellingPrice}</span>
+                                                            <span className="text-red-500 font-bold ml-1.5">(-₹{previewDiscount})</span>
+                                                        </div>
+                                                        <div className="font-black text-emerald-700 bg-white px-2 py-0.5 rounded border border-emerald-300">
+                                                            Customer Pays: ₹{previewPayPrice}
+                                                        </div>
+                                                    </div>
+                                                )
+                                            })()}
                                         </div>
                                     ) : (
                                         <div className="p-2.5 bg-orange-50 border border-orange-200/80 rounded-xl text-[11px] text-orange-950">

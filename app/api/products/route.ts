@@ -64,7 +64,9 @@ export async function GET(request: NextRequest) {
       salesCount: Number(p.salesCount || 0),
       displayOrder: Number(p.displayOrder || 0),
       enableDiscountPopup: Boolean(p.enableDiscountPopup),
+      discountPopupType: p.discountPopupType || 'percentage',
       discountPopupPercent: Number(p.discountPopupPercent || 50),
+      discountPopupAmount: Number(p.discountPopupAmount || 0),
       discountPopupCoupon: p.discountPopupCoupon || 'SAVE50',
       discountPopupTimerMinutes: Number(p.discountPopupTimerMinutes || 10),
       discountPopupDelaySeconds: Number(p.discountPopupDelaySeconds || 30),
@@ -97,8 +99,10 @@ export async function POST(request: NextRequest) {
     const videoUrl = data.videoUrl ? String(data.videoUrl).trim() : null
     const proofImages = Array.isArray(data.proofImages) ? data.proofImages : []
     const enableDiscountPopup = data.enableDiscountPopup ? 1 : 0
+    const discountPopupType = data.discountPopupType === 'fixed' ? 'fixed' : 'percentage'
     const discountPopupPercent = typeof data.discountPopupPercent === 'number' ? data.discountPopupPercent : (parseInt(data.discountPopupPercent, 10) || 50)
-    const discountPopupCoupon = (data.discountPopupCoupon || 'SAVE50').trim().toUpperCase()
+    const discountPopupAmount = typeof data.discountPopupAmount === 'number' ? data.discountPopupAmount : (parseFloat(data.discountPopupAmount) || 0)
+    const discountPopupCoupon = (data.discountPopupCoupon || (discountPopupType === 'fixed' ? 'FLAT' : 'SAVE50')).trim().toUpperCase()
     const discountPopupTimerMinutes = typeof data.discountPopupTimerMinutes === 'number' ? data.discountPopupTimerMinutes : (parseInt(data.discountPopupTimerMinutes, 10) || 10)
     const discountPopupDelaySeconds = typeof data.discountPopupDelaySeconds === 'number' ? data.discountPopupDelaySeconds : (parseInt(data.discountPopupDelaySeconds, 10) || 30)
     const discountPopupHeadline = data.discountPopupHeadline ? String(data.discountPopupHeadline).trim() : null
@@ -109,7 +113,9 @@ export async function POST(request: NextRequest) {
     await executeQuery('ALTER TABLE products ADD COLUMN videoUrl TEXT').catch(() => {})
     await executeQuery('ALTER TABLE products ADD COLUMN proofImages TEXT').catch(() => {})
     await executeQuery('ALTER TABLE products ADD COLUMN enableDiscountPopup INTEGER DEFAULT 0').catch(() => {})
+    await executeQuery("ALTER TABLE products ADD COLUMN discountPopupType TEXT DEFAULT 'percentage'").catch(() => {})
     await executeQuery('ALTER TABLE products ADD COLUMN discountPopupPercent INTEGER DEFAULT 50').catch(() => {})
+    await executeQuery('ALTER TABLE products ADD COLUMN discountPopupAmount REAL DEFAULT 0').catch(() => {})
     await executeQuery("ALTER TABLE products ADD COLUMN discountPopupCoupon TEXT DEFAULT 'SAVE50'").catch(() => {})
     await executeQuery('ALTER TABLE products ADD COLUMN discountPopupTimerMinutes INTEGER DEFAULT 10').catch(() => {})
     await executeQuery('ALTER TABLE products ADD COLUMN discountPopupDelaySeconds INTEGER DEFAULT 30').catch(() => {})
@@ -118,27 +124,49 @@ export async function POST(request: NextRequest) {
 
     try {
       await executeQuery(
+        `INSERT INTO products (id, title, description, price, originalPrice, category, tags, imageUrl, images, videoUrl, proofImages, slug, downloadUrl, isActive, salesCount, pageCode, pageType, createdBy, displayOrder, enableDiscountPopup, discountPopupType, discountPopupPercent, discountPopupAmount, discountPopupCoupon, discountPopupTimerMinutes, discountPopupDelaySeconds, discountPopupHeadline, metaPixelId, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [id, data.title || '', data.description || '', data.price || 0, data.originalPrice || null,
+          data.category || 'general', JSON.stringify(data.tags || []), imageUrl, JSON.stringify(images),
+          videoUrl, JSON.stringify(proofImages), slug,
+          data.downloadUrl || '', data.isActive !== false ? 1 : 0, 0, data.pageCode || null, data.pageType || 'shop', data.createdBy || 'admin', displayOrder,
+          enableDiscountPopup, discountPopupType, discountPopupPercent, discountPopupAmount, discountPopupCoupon, discountPopupTimerMinutes, discountPopupDelaySeconds, discountPopupHeadline, metaPixelId, now, now]
+      )
+    } catch (err: any) {
+      await executeQuery(
         `INSERT INTO products (id, title, description, price, originalPrice, category, tags, imageUrl, images, videoUrl, proofImages, slug, downloadUrl, isActive, salesCount, pageCode, pageType, createdBy, displayOrder, enableDiscountPopup, discountPopupPercent, discountPopupCoupon, discountPopupTimerMinutes, discountPopupDelaySeconds, discountPopupHeadline, metaPixelId, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [id, data.title || '', data.description || '', data.price || 0, data.originalPrice || null,
           data.category || 'general', JSON.stringify(data.tags || []), imageUrl, JSON.stringify(images),
           videoUrl, JSON.stringify(proofImages), slug,
           data.downloadUrl || '', data.isActive !== false ? 1 : 0, 0, data.pageCode || null, data.pageType || 'shop', data.createdBy || 'admin', displayOrder,
           enableDiscountPopup, discountPopupPercent, discountPopupCoupon, discountPopupTimerMinutes, discountPopupDelaySeconds, discountPopupHeadline, metaPixelId, now, now]
-      )
-    } catch (err: any) {
-      await executeQuery(
-        `INSERT INTO products (id, title, description, price, originalPrice, category, tags, imageUrl, images, slug, downloadUrl, isActive, salesCount, pageCode, pageType, createdBy, displayOrder, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [id, data.title || '', data.description || '', data.price || 0, data.originalPrice || null,
-          data.category || 'general', JSON.stringify(data.tags || []), imageUrl, JSON.stringify(images), slug,
-          data.downloadUrl || '', data.isActive !== false ? 1 : 0, 0, data.pageCode || null, data.pageType || 'shop', data.createdBy || 'admin', displayOrder, now, now]
       ).catch(async () => {
         await executeQuery(
-          `INSERT INTO products (id, title, description, price, originalPrice, category, tags, imageUrl, images, slug, downloadUrl, isActive, salesCount, pageCode, pageType, createdBy, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          `INSERT INTO products (id, title, description, price, originalPrice, category, tags, imageUrl, images, slug, downloadUrl, isActive, salesCount, pageCode, pageType, createdBy, displayOrder, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [id, data.title || '', data.description || '', data.price || 0, data.originalPrice || null,
             data.category || 'general', JSON.stringify(data.tags || []), imageUrl, JSON.stringify(images), slug,
-            data.downloadUrl || '', data.isActive !== false ? 1 : 0, 0, data.pageCode || null, data.pageType || 'shop', data.createdBy || 'admin', now, now]
-        )
+            data.downloadUrl || '', data.isActive !== false ? 1 : 0, 0, data.pageCode || null, data.pageType || 'shop', data.createdBy || 'admin', displayOrder, now, now]
+        ).catch(async () => {
+          await executeQuery(
+            `INSERT INTO products (id, title, description, price, originalPrice, category, tags, imageUrl, images, slug, downloadUrl, isActive, salesCount, pageCode, pageType, createdBy, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [id, data.title || '', data.description || '', data.price || 0, data.originalPrice || null,
+              data.category || 'general', JSON.stringify(data.tags || []), imageUrl, JSON.stringify(images), slug,
+              data.downloadUrl || '', data.isActive !== false ? 1 : 0, 0, data.pageCode || null, data.pageType || 'shop', data.createdBy || 'admin', now, now]
+          )
+        })
       })
+    }
+
+    // Auto-sync coupon into coupons table so checkout validates seamlessly
+    if (enableDiscountPopup && discountPopupCoupon) {
+      const cVal = discountPopupType === 'fixed' ? discountPopupAmount : discountPopupPercent
+      if (cVal > 0) {
+        await executeQuery(
+          `INSERT INTO coupons (code, type, value, isActive, createdAt, updatedAt)
+           VALUES (?, ?, ?, 1, ?, ?)
+           ON CONFLICT(code) DO UPDATE SET type=excluded.type, value=excluded.value, isActive=1, updatedAt=excluded.updatedAt`,
+          [discountPopupCoupon, discountPopupType, cVal, now, now]
+        ).catch(() => {})
+      }
     }
     return NextResponse.json({ success: true, id, slug }, { status: 201 })
   } catch (error: any) {

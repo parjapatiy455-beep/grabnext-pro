@@ -675,7 +675,7 @@ export default function ProductsPage() {
                           try {
                             await toggleProductDiscountPopup(product.id, checked)
                             toast({
-                              title: checked ? "⚡ 50% Popup Enabled" : "50% Popup Disabled",
+                              title: checked ? "⚡ Deal Popup Enabled" : "Deal Popup Disabled",
                               description: `${product.title.substring(0, 30)}... popup is now ${checked ? "Active" : "Disabled"}.`,
                             })
                           } catch (err: any) {
@@ -685,7 +685,7 @@ export default function ProductsPage() {
                         }}
                       />
                       <span className={`text-[11px] font-bold ${product.enableDiscountPopup ? "text-amber-600 bg-amber-50 px-2 py-0.5 rounded border border-amber-200" : "text-gray-400"}`}>
-                        {product.enableDiscountPopup ? "ON (50%)" : "OFF"}
+                        {product.enableDiscountPopup ? `ON (${product.discountPopupType === 'fixed' ? `₹${product.discountPopupAmount || 0}` : `${product.discountPopupPercent || 50}%`})` : "OFF"}
                       </span>
                     </div>
                   </TableCell>

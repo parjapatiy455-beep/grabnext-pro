@@ -153,7 +153,9 @@ export function ProductDetailView({ product: initialProduct, id }: { product: Pr
     const [showDiscountPopup, setShowDiscountPopup] = useState(false)
     const [appliedDiscount, setAppliedDiscount] = useState<{
         code: string
-        percent: number
+        type?: "percentage" | "fixed"
+        value?: number
+        percent?: number
         discountedPrice: number
         savings: number
     } | null>(null)
@@ -207,7 +209,14 @@ export function ProductDetailView({ product: initialProduct, id }: { product: Pr
         return () => clearTimeout(t)
     }, [product?.id, product?.enableDiscountPopup, product?.discountPopupDelaySeconds])
 
-    const handleClaimDiscount = (info: { code: string; percent: number; discountedPrice: number; savings: number }) => {
+    const handleClaimDiscount = (info: {
+        code: string
+        type?: "percentage" | "fixed"
+        value?: number
+        percent?: number
+        discountedPrice: number
+        savings: number
+    }) => {
         const prodId = product.id || id
         setAppliedDiscount(info)
         setShowDiscountPopup(false)
@@ -215,24 +224,44 @@ export function ProductDetailView({ product: initialProduct, id }: { product: Pr
             sessionStorage.setItem(`discount_claimed_${prodId}`, "true")
             sessionStorage.setItem("copiedCouponCode", info.code)
         } catch {}
+
+        const label = info.type === "fixed" ? `Flat ${formatPrice(info.savings)} OFF` : `Flat ${info.percent}% OFF`
         toast({
-            title: `🎉 Flat ${info.percent}% OFF Applied!`,
+            title: `🎉 ${label} Applied!`,
             description: `Price cut from ${formatPrice(product.price)} to ${formatPrice(info.discountedPrice)}!`,
         })
     }
 
     const handleDismissDiscountPopup = () => {
         const prodId = product.id || id
-        const percent = Number(product.discountPopupPercent || 50)
-        const code = (product.discountPopupCoupon || "SAVE50").trim().toUpperCase()
-        const discPrice = Math.max(1, Math.round(product.price * (1 - percent / 100)))
+        const isFixed = product.discountPopupType === "fixed"
+        const originalPrice = product.price
+        let savings = 0
+        let discPrice = originalPrice
+        let percentValue = 50
+
+        if (isFixed) {
+            const fixedAmount = Math.round(Number(product.discountPopupAmount || 0))
+            savings = Math.min(originalPrice, fixedAmount)
+            discPrice = Math.max(1, originalPrice - savings)
+            percentValue = originalPrice > 0 ? Math.round((savings / originalPrice) * 100) : 0
+        } else {
+            percentValue = Number(product.discountPopupPercent || 50)
+            savings = Math.round(originalPrice * (percentValue / 100))
+            discPrice = Math.max(1, originalPrice - savings)
+        }
+
+        const defaultCode = isFixed ? `FLAT${savings}` : `SAVE${percentValue}`
+        const code = (product.discountPopupCoupon || defaultCode).trim().toUpperCase()
 
         // Auto-apply offer even if closed
         const discountInfo = {
             code,
-            percent,
+            type: (isFixed ? "fixed" : "percentage") as "fixed" | "percentage",
+            value: isFixed ? Number(product.discountPopupAmount || 0) : percentValue,
+            percent: percentValue,
             discountedPrice: discPrice,
-            savings: product.price - discPrice,
+            savings,
         }
         setAppliedDiscount(discountInfo)
         setShowDiscountPopup(false)
@@ -241,8 +270,9 @@ export function ProductDetailView({ product: initialProduct, id }: { product: Pr
             sessionStorage.setItem("copiedCouponCode", code)
         } catch {}
 
+        const label = isFixed ? `Flat ${formatPrice(savings)} OFF` : `Flat ${percentValue}% OFF`
         toast({
-            title: `🎉 Flat ${percent}% OFF Auto-Applied!`,
+            title: `🎉 ${label} Auto-Applied!`,
             description: `We applied the special offer for you. Pay only ${formatPrice(discPrice)}!`,
         })
     }
@@ -541,7 +571,7 @@ export function ProductDetailView({ product: initialProduct, id }: { product: Pr
                                             <div>
                                                 <div className="flex items-center gap-1.5 font-black text-xs sm:text-sm text-slate-900 dark:text-white">
                                                     <Sparkles className="h-4 w-4 text-amber-500 fill-amber-500 shrink-0" />
-                                                    <span>Flat {appliedDiscount.percent}% Flash Deal Active!</span>
+                                                    <span>{appliedDiscount.type === "fixed" ? `Flat ${formatPrice(appliedDiscount.savings)} Flash Deal Active!` : `Flat ${appliedDiscount.percent}% Flash Deal Active!`}</span>
                                                 </div>
                                                 <p className="text-[11px] text-slate-500 dark:text-slate-400">
                                                     Coupon <strong className="font-mono text-emerald-600 dark:text-emerald-400">{appliedDiscount.code}</strong> applied automatically
@@ -603,7 +633,7 @@ export function ProductDetailView({ product: initialProduct, id }: { product: Pr
                                             )}
                                             <span className="text-xs font-bold text-emerald-800 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-800 px-2.5 py-1 rounded-full flex items-center gap-1 shadow-sm animate-pulse">
                                                 <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
-                                                {appliedDiscount.code} (-{appliedDiscount.percent}%)
+                                                {appliedDiscount.code} (-{appliedDiscount.type === "fixed" ? formatPrice(appliedDiscount.savings) : `${appliedDiscount.percent}%`})
                                             </span>
                                         </>
                                     ) : (

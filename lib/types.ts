@@ -80,7 +80,9 @@ export interface Product {
   createdBy: string // Admin user ID who created this product
   displayOrder?: number
   enableDiscountPopup?: boolean | number
+  discountPopupType?: 'percentage' | 'fixed'
   discountPopupPercent?: number
+  discountPopupAmount?: number
   discountPopupCoupon?: string
   discountPopupTimerMinutes?: number
   discountPopupDelaySeconds?: number
