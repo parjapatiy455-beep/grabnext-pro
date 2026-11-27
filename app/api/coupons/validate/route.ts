@@ -1,114 +1,104 @@
 export const runtime = 'edge'
 import { NextRequest, NextResponse } from 'next/server'
 import { executeQuery } from '@/lib/db'
-import { runMigrations } from '@/lib/migrations'
+import { evaluateCouponForItems, type CouponCartItem } from '@/lib/coupon-utils'
 
 export const dynamic = 'force-dynamic'
 
 // POST /api/coupons/validate
 export async function POST(request: NextRequest) {
     try {
-        const { code, cartTotal } = await request.json()
+        const { code, cartTotal, items, couponProductId } = await request.json()
 
-        if (!code || cartTotal === undefined) {
-            return NextResponse.json({ valid: false, message: "Code and cart total are required" }, { status: 400 })
+        if (!code || (cartTotal === undefined && (!Array.isArray(items) || items.length === 0))) {
+            return NextResponse.json({ valid: false, message: "Code and cart items are required" }, { status: 400 })
         }
 
-        const cleanCode = code.toUpperCase().trim()
-        const total = Number(cartTotal)
+        const cleanCode = String(code).toUpperCase().trim()
+        const clientItems = Array.isArray(items) ? items : []
 
-        if (isNaN(total) || total < 0) {
-            return NextResponse.json({ valid: false, message: "Invalid cart total" }, { status: 400 })
+        if (clientItems.length === 0) {
+            return NextResponse.json({ valid: false, message: "Cart items are required to validate coupon" }, { status: 400 })
         }
 
-        // Fetch coupon from D1 with self-healing migration fallback
-        let coupons: any[]
+        const productIds = clientItems
+            .map((i: any) => i.productId || i.id)
+            .filter((pid: any) => typeof pid === 'string' && pid.length > 0)
+
+        if (productIds.length === 0) {
+            return NextResponse.json({ valid: false, message: "Invalid cart items" }, { status: 400 })
+        }
+
+        const placeholders = productIds.map(() => '?').join(',')
+        let dbProducts: any[] = []
         try {
-            coupons = await executeQuery('SELECT * FROM coupons WHERE code = ? LIMIT 1', [cleanCode]) as any[]
-        } catch (dbError: any) {
-            if (dbError.message?.includes('no such table') || dbError.message?.includes('no such column')) {
-                console.log('[Validate Coupon API] Missing table/column. Running migrations...');
-                await runMigrations()
-                coupons = await executeQuery('SELECT * FROM coupons WHERE code = ? LIMIT 1', [cleanCode]) as any[]
-            } else {
-                throw dbError
+            dbProducts = await executeQuery(
+                `SELECT id, price, slug FROM products WHERE id IN (${placeholders}) OR slug IN (${placeholders})`,
+                [...productIds, ...productIds]
+            ) as any[]
+        } catch {
+            dbProducts = await executeQuery(
+                `SELECT id, price FROM products WHERE id IN (${placeholders})`,
+                productIds
+            ) as any[]
+        }
+
+        const productMap = new Map<string, any>()
+        for (const p of (dbProducts || [])) {
+            if (p.id) {
+                productMap.set(p.id, p)
+                productMap.set(String(p.id).toLowerCase(), p)
+            }
+            if (p.slug) {
+                productMap.set(p.slug, p)
+                productMap.set(String(p.slug).toLowerCase(), p)
             }
         }
 
-        if (!coupons || coupons.length === 0) {
-            // Check if code matches an active product discount popup coupon
-            try {
-                const prodCoupons: any[] = await executeQuery(
-                    'SELECT discountPopupCoupon, discountPopupType, discountPopupPercent, discountPopupAmount FROM products WHERE UPPER(discountPopupCoupon) = ? AND enableDiscountPopup = 1 LIMIT 1',
-                    [cleanCode]
-                )
-                if (prodCoupons && prodCoupons.length > 0) {
-                    const pc = prodCoupons[0]
-                    const pType = pc.discountPopupType === 'fixed' ? 'fixed' : 'percentage'
-                    const pVal = pType === 'fixed' ? Number(pc.discountPopupAmount || 0) : Number(pc.discountPopupPercent || 50)
-                    const pDisc = pType === 'fixed' ? Math.min(total, pVal) : Math.round((pVal / 100) * total)
-
-                    // Seed into coupons table
-                    executeQuery(
-                        'INSERT OR IGNORE INTO coupons (code, type, value, isActive, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?)',
-                        [cleanCode, pType, pVal, 1, Date.now(), Date.now()]
-                    ).catch(() => {})
-
-                    return NextResponse.json({
-                        valid: true,
-                        code: cleanCode,
-                        type: pType,
-                        value: pVal,
-                        discountAmount: Math.max(0, pDisc)
-                    })
-                }
-            } catch (err) {
-                console.warn('[Validate Coupon] Product popup coupon check failed:', err)
-            }
-
-            if (cleanCode === 'SAVE50' || cleanCode === 'SAVE40') {
-                const percentage = cleanCode === 'SAVE40' ? 40 : 50
-                const discountAmount = Math.round(total * (percentage / 100))
-                // Asynchronously attempt to seed into database
-                executeQuery(
-                    'INSERT OR IGNORE INTO coupons (code, type, value, isActive, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?)',
-                    [cleanCode, 'percentage', percentage, 1, Date.now(), Date.now()]
-                ).catch(() => {})
-
-                return NextResponse.json({
-                    valid: true,
-                    code: cleanCode,
-                    type: 'percentage',
-                    value: percentage,
-                    discountAmount: Math.max(0, discountAmount)
+        const verifiedItems: CouponCartItem[] = []
+        for (const ci of clientItems) {
+            const pid = String(ci.productId || ci.id || '')
+            const dbProd = productMap.get(pid) || productMap.get(pid.toLowerCase())
+            const qty = Math.max(1, parseInt(ci.quantity, 10) || 1)
+            if (dbProd) {
+                verifiedItems.push({
+                    productId: pid,
+                    slug: dbProd.slug || null,
+                    price: Number(dbProd.price) || 0,
+                    quantity: qty,
+                })
+            } else if (ci.price !== undefined) {
+                verifiedItems.push({
+                    productId: pid,
+                    slug: null,
+                    price: Number(ci.price) || 0,
+                    quantity: qty,
                 })
             }
-            return NextResponse.json({ valid: false, message: "Coupon code does not exist" })
         }
 
-        const coupon = coupons[0]
-
-        // Check if active
-        if (coupon.isActive !== 1 && coupon.isActive !== true) {
-            return NextResponse.json({ valid: false, message: "This coupon is expired or inactive" })
+        if (verifiedItems.length === 0) {
+            return NextResponse.json({ valid: false, message: "No valid products found in cart" }, { status: 400 })
         }
 
-        // Calculate discount amount
-        let discountAmount = 0
-        if (coupon.type === 'percentage') {
-            discountAmount = Math.round((Number(coupon.value) / 100) * total)
-        } else if (coupon.type === 'fixed') {
-            discountAmount = Math.min(total, Number(coupon.value))
-        } else {
-            return NextResponse.json({ valid: false, message: "Invalid coupon type configuration" })
+        const result = await evaluateCouponForItems(cleanCode, verifiedItems, couponProductId)
+
+        if (!result.valid) {
+            return NextResponse.json({
+                valid: false,
+                message: result.message || "Invalid coupon code",
+            })
         }
 
         return NextResponse.json({
             valid: true,
-            code: coupon.code,
-            type: coupon.type,
-            value: coupon.value,
-            discountAmount: Math.max(0, discountAmount)
+            code: result.code,
+            type: result.type,
+            value: result.value,
+            discountAmount: result.discountAmount,
+            eligibleProductIds: result.eligibleProductIds,
+            isProductScoped: result.isProductScoped,
+            productRules: result.productRules || null,
         })
     } catch (error: any) {
         console.error('[Coupons Validation Error]', error)

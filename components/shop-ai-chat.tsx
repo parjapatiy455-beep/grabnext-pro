@@ -84,7 +84,7 @@ export function ShopAIChat() {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const typewriterRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const { addToCart } = useCart()
+  const { addToCart, replaceCart } = useCart()
   const router = useRouter()
 
   // ── Icon spin ──
@@ -158,11 +158,11 @@ export function ShopAIChat() {
   }, [addToCart])
 
   const handleBuyNow = useCallback((product: SuggestedProduct) => {
-    addToCart(toCartProduct(product), 1)
+    replaceCart(toCartProduct(product), 1, false)
     setAddedIds((prev) => new Set(prev).add(product.id))
     setIsOpen(false)
     router.push("/checkout")
-  }, [addToCart, router])
+  }, [replaceCart, router])
 
   // ── ChatGPT-style typewriter animation ─────────────────────────────────────
   const startTypewriter = useCallback((fullText: string, products: SuggestedProduct[], action: string | null) => {

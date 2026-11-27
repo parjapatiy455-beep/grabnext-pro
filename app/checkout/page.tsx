@@ -31,6 +31,7 @@ import { useAuth } from "@/contexts/auth-context"
 import { toast } from "@/hooks/use-toast"
 import { trackInitiateCheckout, trackAddPaymentInfo, trackPurchase } from "@/lib/pixel"
 import { Logo } from "@/components/logo"
+import { readScopedCoupon, clearScopedCoupon } from "@/lib/coupon-session"
 
 declare global {
   interface Window {
@@ -236,21 +237,54 @@ export default function CheckoutPage() {
     }
   }, [user, recoveryOrder])
 
-  // Dynamic Coupon Application: ONLY when explicitly provided via URL query or active campaign session
+  // Dynamic Coupon Application: ONLY when explicitly provided via URL query or product-scoped session
+  const hasAttemptedAutoCoupon = useRef(false)
   useEffect(() => {
-    if (activeSubtotal > 0 && !appliedCoupon && !isRecovering && typeof window !== "undefined") {
+    if (hasAttemptedAutoCoupon.current) return
+    if (activeSubtotal > 0 && activeItems.length > 0 && !appliedCoupon && !isRecovering && typeof window !== "undefined") {
+      const activeProductIds = activeItems.flatMap((i) => {
+        const ids = [String(i.productId)]
+        const slug = (i.product as any)?.slug
+        if (slug) ids.push(String(slug))
+        return ids
+      })
+      const normalizedActiveIds = new Set(activeProductIds.map((id) => id.toLowerCase()))
+
       const urlParams = new URLSearchParams(window.location.search)
       const urlCoupon = urlParams.get("coupon")
-      const sessionCoupon = sessionStorage.getItem("copiedCouponCode") || ""
+      const urlCouponProduct = urlParams.get("couponProduct")
+      const scopedSession = readScopedCoupon(activeProductIds)
 
-      const incomingCode = (urlCoupon || sessionCoupon || "").toUpperCase().trim()
+      let incomingCode = ""
+      let incomingProductId: string | null = null
+
+      if (urlCoupon) {
+        if (urlCouponProduct && !normalizedActiveIds.has(urlCouponProduct.trim().toLowerCase())) {
+          return
+        }
+        incomingCode = urlCoupon.toUpperCase().trim()
+        incomingProductId = urlCouponProduct ? urlCouponProduct.trim() : null
+      } else if (scopedSession) {
+        incomingCode = scopedSession.code
+        incomingProductId = scopedSession.productId
+      }
+
       if (incomingCode) {
+        hasAttemptedAutoCoupon.current = true
         setCouponCode(incomingCode)
         setIsApplyingCoupon(true)
         fetch("/api/coupons/validate", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ code: incomingCode, cartTotal: activeSubtotal }),
+          body: JSON.stringify({
+            code: incomingCode,
+            cartTotal: activeSubtotal,
+            couponProductId: incomingProductId,
+            items: activeItems.map((i) => ({
+              productId: i.productId,
+              quantity: i.quantity || 1,
+            })),
+          }),
         })
           .then((r) => r.json())
           .then((data) => {
@@ -259,13 +293,13 @@ export default function CheckoutPage() {
                 code: data.code,
                 type: data.type,
                 value: Number(data.value),
+                eligibleProductIds: Array.isArray(data.eligibleProductIds) ? data.eligibleProductIds : [],
+                isProductScoped: Boolean(data.isProductScoped),
+                productRules: data.productRules || null,
               })
-              const initialDiscount = data.type === "percentage"
-                ? Math.round((Number(data.value) / 100) * activeSubtotal)
-                : Math.min(activeSubtotal, Number(data.value))
               toast({
-                title: `🎉 Coupon ${incomingCode} Applied!`,
-                description: `Discount of ${formatPrice(initialDiscount)} deducted.`,
+                title: `🎉 Coupon ${data.code || incomingCode} Applied!`,
+                description: `Discount of ${formatPrice(Number(data.discountAmount) || 0)} deducted.`,
               })
             }
           })
@@ -273,13 +307,21 @@ export default function CheckoutPage() {
           .finally(() => {
             setIsApplyingCoupon(false)
             // Clear single-use session coupon once checked so it doesn't persist across future sessions
-            try {
-              sessionStorage.removeItem("copiedCouponCode")
-            } catch {}
+            clearScopedCoupon()
           })
       }
     }
-  }, [activeSubtotal, appliedCoupon, isRecovering])
+  }, [activeSubtotal, activeItems, appliedCoupon, isRecovering])
+
+  // Clear scoped coupon if all eligible items are removed from checkout
+  useEffect(() => {
+    if (!appliedCoupon?.isProductScoped || !Array.isArray(appliedCoupon.eligibleProductIds)) return
+    const eligibleSet = new Set(appliedCoupon.eligibleProductIds.map((id: string) => String(id).toLowerCase()))
+    const stillHasEligible = activeItems.some((item) => eligibleSet.has(String(item.productId).toLowerCase()))
+    if (!stillHasEligible) {
+      setAppliedCoupon(null)
+    }
+  }, [activeItems, appliedCoupon])
 
   const formatPrice = (price: number) =>
     new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(price)
@@ -292,7 +334,14 @@ export default function CheckoutPage() {
       const res = await fetch("/api/coupons/validate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code: couponCode.trim(), cartTotal: activeSubtotal }),
+        body: JSON.stringify({
+          code: couponCode.trim(),
+          cartTotal: activeSubtotal,
+          items: activeItems.map((i) => ({
+            productId: i.productId,
+            quantity: i.quantity || 1,
+          })),
+        }),
       })
       const data = await res.json()
       if (data.valid) {
@@ -300,11 +349,11 @@ export default function CheckoutPage() {
           code: data.code,
           type: data.type,
           value: Number(data.value),
+          eligibleProductIds: Array.isArray(data.eligibleProductIds) ? data.eligibleProductIds : [],
+          isProductScoped: Boolean(data.isProductScoped),
+          productRules: data.productRules || null,
         })
-        const initialDiscount = data.type === "percentage"
-          ? Math.round((Number(data.value) / 100) * activeSubtotal)
-          : Math.min(activeSubtotal, Number(data.value))
-        toast({ title: "Coupon Applied!", description: `Discount of ${formatPrice(initialDiscount)} deducted.` })
+        toast({ title: "Coupon Applied!", description: `Discount of ${formatPrice(Number(data.discountAmount) || 0)} deducted.` })
       } else {
         setCouponError(data.message || "Invalid coupon code")
         setAppliedCoupon(null)
@@ -322,19 +371,41 @@ export default function CheckoutPage() {
     setCouponCode("")
     setCouponError("")
     setIsCouponOpen(false)
+    clearScopedCoupon()
   }
 
-  // Dynamic coupon discount computation: strictly in sync with current activeSubtotal
+  // Dynamic coupon discount computation: strictly in sync with eligible items only
   const couponDiscountAmount = useMemo(() => {
     if (!appliedCoupon || isRecovering || activeSubtotal <= 0) return 0
+
+    if (appliedCoupon.isProductScoped && Array.isArray(appliedCoupon.eligibleProductIds)) {
+      const eligibleSet = new Set(appliedCoupon.eligibleProductIds.map((id: string) => String(id).toLowerCase()))
+      let scopedDiscount = 0
+      for (const item of activeItems) {
+        if (!eligibleSet.has(String(item.productId).toLowerCase())) continue
+        const itemSubtotal = (Number(item.product?.price) || 0) * (Number(item.quantity) || 1)
+        if (itemSubtotal <= 0) continue
+
+        const rule = appliedCoupon.productRules?.[item.productId]
+        const rType = rule?.type || appliedCoupon.type
+        const rVal = Number(rule?.value ?? appliedCoupon.value ?? 0)
+        if (rType === "percentage") {
+          scopedDiscount += Math.min(itemSubtotal, Math.round((rVal / 100) * itemSubtotal))
+        } else if (rType === "fixed") {
+          scopedDiscount += Math.min(itemSubtotal, Math.round(rVal))
+        }
+      }
+      return Math.min(activeSubtotal, scopedDiscount)
+    }
+
     if (appliedCoupon.type === "percentage") {
-      return Math.round((Number(appliedCoupon.value) / 100) * activeSubtotal)
+      return Math.min(activeSubtotal, Math.round((Number(appliedCoupon.value) / 100) * activeSubtotal))
     }
     if (appliedCoupon.type === "fixed") {
       return Math.min(activeSubtotal, Math.round(Number(appliedCoupon.value)))
     }
     return 0
-  }, [appliedCoupon, isRecovering, activeSubtotal])
+  }, [appliedCoupon, isRecovering, activeSubtotal, activeItems])
 
   const effectiveFinalAmount = isRecovering
     ? Number(recoveryOrder.recoveryTotal || 0)
@@ -467,7 +538,8 @@ export default function CheckoutPage() {
             resolvedPixelId
           )
 
-          clearCart()
+          clearCart(true)
+          clearScopedCoupon()
           router.push(`/checkout/success?utr=${encodeURIComponent(data.utr || orderId)}&orderId=${encodeURIComponent(orderId)}`)
         } catch (err: any) {
           console.error("XPay verify error:", err)
@@ -594,7 +666,8 @@ export default function CheckoutPage() {
             resolvedPixelId
           )
 
-          clearCart()
+          clearCart(true)
+          clearScopedCoupon()
           router.push(`/checkout/success?utr=${encodeURIComponent(response.razorpay_payment_id || orderId)}&orderId=${encodeURIComponent(orderId)}`)
         } catch (err: any) {
           toast({
@@ -689,6 +762,7 @@ export default function CheckoutPage() {
               quantity: i.quantity || 1,
             })),
             couponCode: appliedCoupon?.code || null,
+            couponProductId: appliedCoupon?.isProductScoped ? (appliedCoupon.eligibleProductIds?.[0] || null) : null,
           }),
         })
 
@@ -720,7 +794,8 @@ export default function CheckoutPage() {
           try {
             sessionStorage.setItem(`tracked_purchase_${orderData.id}`, "true")
           } catch {}
-          clearCart()
+          clearCart(true)
+          clearScopedCoupon()
           router.push(`/checkout/success?utr=${encodeURIComponent(orderData.id)}&orderId=${encodeURIComponent(orderData.id)}`)
           return
         }

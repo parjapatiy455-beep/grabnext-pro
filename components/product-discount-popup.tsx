@@ -97,16 +97,8 @@ export function ProductDiscountPopup({
     }, 150)
   }
 
-  // Auto-apply offer even if closed so the user still gets the benefit
-  const handleCloseAndApply = () => {
-    onClaim({
-      code: couponCode,
-      type: isFixed ? "fixed" : "percentage",
-      value: isFixed ? Number(product.discountPopupAmount || 0) : percentValue,
-      percent: percentValue,
-      discountedPrice,
-      savings,
-    })
+  // Close modal without silently auto-applying coupon across the session
+  const handleCloseOnly = () => {
     onClose()
   }
 
@@ -120,7 +112,7 @@ export function ProductDiscountPopup({
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-xs animate-in fade-in duration-200"
-      onClick={handleCloseAndApply}
+      onClick={handleCloseOnly}
     >
       <div
         className="relative w-full max-w-md sm:max-w-lg bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden transform animate-in zoom-in-95 duration-200 flex flex-col"
@@ -129,9 +121,9 @@ export function ProductDiscountPopup({
         {/* Subtle top brand accent line */}
         <div className="h-1.5 bg-emerald-600" />
 
-        {/* Close Button (Auto-applies offer on close) */}
+        {/* Close Button */}
         <button
-          onClick={handleCloseAndApply}
+          onClick={handleCloseOnly}
           className="absolute top-3.5 right-3.5 z-20 h-8 w-8 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-full flex items-center justify-center transition-colors cursor-pointer"
           aria-label="Close"
         >

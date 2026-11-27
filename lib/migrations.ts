@@ -132,16 +132,6 @@ export async function runMigrations() {
   `)
 
   await executeQuery(`
-    INSERT OR IGNORE INTO coupons (code, type, value, isActive, createdAt, updatedAt)
-    VALUES ('SAVE50', 'percentage', 50, 1, 1700000000000, 1700000000000);
-  `).catch(() => {})
-
-  await executeQuery(`
-    INSERT OR IGNORE INTO coupons (code, type, value, isActive, createdAt, updatedAt)
-    VALUES ('SAVE40', 'percentage', 40, 1, 1700000000000, 1700000000000);
-  `).catch(() => {})
-
-  await executeQuery(`
     CREATE TABLE IF NOT EXISTS password_resets (
       id TEXT PRIMARY KEY,
       email TEXT NOT NULL,

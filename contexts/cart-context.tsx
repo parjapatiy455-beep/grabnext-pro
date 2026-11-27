@@ -5,14 +5,71 @@ import { createContext, useContext, useEffect, useState, useRef, type ReactNode 
 import { toast } from "@/hooks/use-toast"
 import type { Product, CartItem } from "@/lib/types"
 
+const CART_STORAGE_KEY = "digital-store-cart"
+const CART_TTL_MS = 30 * 60 * 1000 // 30 minutes expiry for uncompleted carts
+
+interface StoredCartPayload {
+  items: CartItem[]
+  updatedAt: number
+}
+
+function readValidCartFromStorage(): { items: CartItem[]; expired: boolean } {
+  if (typeof window === "undefined") return { items: [], expired: false }
+  const raw = localStorage.getItem(CART_STORAGE_KEY)
+  if (!raw) return { items: [], expired: false }
+
+  try {
+    const parsed = JSON.parse(raw)
+
+    // New timestamped format: { items, updatedAt }
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed) && Array.isArray(parsed.items)) {
+      const updatedAt = Number(parsed.updatedAt) || 0
+      if (!updatedAt || Date.now() - updatedAt > CART_TTL_MS) {
+        localStorage.removeItem(CART_STORAGE_KEY)
+        return { items: [], expired: true }
+      }
+      const normalized = parsed.items.map((item: CartItem) => ({ ...item, quantity: 1 }))
+      return { items: normalized, expired: false }
+    }
+
+    // Legacy array format without timestamp: clear stale un-timestamped carts
+    if (Array.isArray(parsed)) {
+      localStorage.removeItem(CART_STORAGE_KEY)
+      return { items: [], expired: true }
+    }
+  } catch (error) {
+    console.error("Error loading cart from localStorage:", error)
+  }
+
+  return { items: [], expired: false }
+}
+
+function writeCartToStorage(items: CartItem[]) {
+  if (typeof window === "undefined") return
+  try {
+    if (items.length === 0) {
+      localStorage.removeItem(CART_STORAGE_KEY)
+    } else {
+      const payload: StoredCartPayload = {
+        items,
+        updatedAt: Date.now(),
+      }
+      localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(payload))
+    }
+  } catch (error) {
+    console.error("Error saving cart to localStorage:", error)
+  }
+}
+
 interface CartContextType {
   items: CartItem[]
   totalItems: number
   totalAmount: number
   addToCart: (product: Product, quantity?: number, openDrawer?: boolean) => void
+  replaceCart: (product: Product, quantity?: number, openDrawer?: boolean) => void
   removeFromCart: (productId: string) => void
   updateQuantity: (productId: string, quantity: number) => void
-  clearCart: () => void
+  clearCart: (silent?: boolean) => void
   isInCart: (productId: string) => boolean
   isDrawerOpen: boolean
   setDrawerOpen: (open: boolean) => void
@@ -24,6 +81,7 @@ const CartContext = createContext<CartContextType>({
   totalItems: 0,
   totalAmount: 0,
   addToCart: () => { },
+  replaceCart: () => { },
   removeFromCart: () => { },
   updateQuantity: () => { },
   clearCart: () => { },
@@ -45,17 +103,11 @@ export const CartProvider = ({ children }: CartProviderProps) => {
   const [items, setItems] = useState<CartItem[]>([])
   const [isDrawerOpen, setDrawerOpen] = useState(false)
   const lastRefreshTimeRef = useRef<number>(0)
+  const hasHydratedRef = useRef<boolean>(false)
 
   const refreshCartPrices = async (force = false) => {
-    // Zero-overhead guard: Only fetch if cart actually has items
-    const savedCart = typeof window !== "undefined" ? localStorage.getItem("digital-store-cart") : null
-    let hasItems = items.length > 0
-    if (!hasItems && savedCart) {
-      try {
-        const parsed = JSON.parse(savedCart)
-        if (Array.isArray(parsed) && parsed.length > 0) hasItems = true
-      } catch {}
-    }
+    const { items: storedItems } = readValidCartFromStorage()
+    const hasItems = items.length > 0 || storedItems.length > 0
     if (!hasItems) return
 
     // Throttle guard: Prevent spamming server within 30 seconds unless explicitly forced
@@ -122,49 +174,49 @@ export const CartProvider = ({ children }: CartProviderProps) => {
     }
   }
 
-  // Load cart from localStorage on mount and sync with fresh database prices only if cart has items
+  // Load cart from localStorage on mount (respecting 30-min TTL) and sync fresh prices
   useEffect(() => {
-    const savedCart = localStorage.getItem("digital-store-cart")
-    let hasItems = false
-    if (savedCart) {
-      try {
-        const parsed = JSON.parse(savedCart)
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          // Normalize existing carts to max quantity 1
-          setItems(parsed.map((item: CartItem) => ({ ...item, quantity: 1 })))
-          hasItems = true
-        }
-      } catch (error) {
-        console.error("Error loading cart from localStorage:", error)
-      }
-    }
-    if (hasItems) {
+    const { items: loadedItems } = readValidCartFromStorage()
+    if (loadedItems.length > 0) {
+      setItems(loadedItems)
+      hasHydratedRef.current = true
       refreshCartPrices(true)
+    } else {
+      hasHydratedRef.current = true
     }
   }, [])
 
-  // Save cart to localStorage whenever items change
+  // Save cart to localStorage whenever items change (after initial hydration)
   useEffect(() => {
-    localStorage.setItem("digital-store-cart", JSON.stringify(items))
+    if (!hasHydratedRef.current) return
+    writeCartToStorage(items)
   }, [items])
 
-  const addToCart = (product: Product, quantity = 1, openDrawer = true) => {
+  const addToCart = (product: Product, _quantity = 1, openDrawer = true) => {
+    // Before adding, check if existing stored cart has expired (> 30 min)
+    const { expired } = readValidCartFromStorage()
     setItems((prevItems) => {
-      const existingItem = prevItems.find((item) => item.productId === product.id)
+      const baseItems = expired ? [] : prevItems
+      const existingItem = baseItems.find((item) => item.productId === product.id)
 
       if (existingItem) {
-        // Digital downloads store: quantity is capped at 1 per product
-        return prevItems.map((item) =>
-          item.productId === product.id ? { ...item, quantity: 1 } : item,
+        return baseItems.map((item) =>
+          item.productId === product.id ? { ...item, product, quantity: 1 } : item,
         )
-      } else {
-        // Add new item with maximum quantity of 1
-        return [...prevItems, { productId: product.id, product, quantity: 1 }]
       }
+      return [...baseItems, { productId: product.id, product, quantity: 1 }]
     })
     if (openDrawer) {
       setDrawerOpen(true)
     }
+  }
+
+  // Replace entire cart with a single product (used by "Buy Now" so old uncompleted items do not mix in checkout)
+  const replaceCart = (product: Product, _quantity = 1, openDrawer = false) => {
+    const nextItems: CartItem[] = [{ productId: product.id, product, quantity: 1 }]
+    setItems(nextItems)
+    writeCartToStorage(nextItems)
+    setDrawerOpen(openDrawer)
   }
 
   const removeFromCart = (productId: string) => {
@@ -191,12 +243,19 @@ export const CartProvider = ({ children }: CartProviderProps) => {
     setItems((prevItems) => prevItems.map((item) => (item.productId === productId ? { ...item, quantity: cappedQuantity } : item)))
   }
 
-  const clearCart = () => {
+  const clearCart = (silent = false) => {
     setItems([])
-    toast({
-      title: "Cart cleared",
-      description: "All items have been removed from your cart",
-    })
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.removeItem(CART_STORAGE_KEY)
+      } catch {}
+    }
+    if (silent !== true) {
+      toast({
+        title: "Cart cleared",
+        description: "All items have been removed from your cart",
+      })
+    }
   }
 
   const isInCart = (productId: string) => {
@@ -213,6 +272,7 @@ export const CartProvider = ({ children }: CartProviderProps) => {
         totalItems,
         totalAmount,
         addToCart,
+        replaceCart,
         removeFromCart,
         updateQuantity,
         clearCart,

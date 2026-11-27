@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useCart } from "@/contexts/cart-context"
+import { saveScopedCoupon } from "@/lib/coupon-session"
 import { ChevronDown, MessageSquare, ShieldCheck, CheckCircle2, Play, Volume2, VolumeX, Clock, Lock, Shield, Zap, Sparkles, Copy, Check, X, Gift, Tag } from "lucide-react"
 
 // Fallback product info in case API fetch takes time or isn't loaded yet
@@ -35,7 +36,7 @@ interface NotificationState {
 
 export function EditingLandingPageClient() {
   const router = useRouter()
-  const { addToCart, clearCart } = useCart()
+  const { replaceCart } = useCart()
   const [product, setProduct] = useState<any>(null)
   const [activeFaq, setActiveFaq] = useState<number | null>(null)
   const [notification, setNotification] = useState<NotificationState>({
@@ -98,9 +99,8 @@ export function EditingLandingPageClient() {
     if (typeof navigator !== "undefined" && navigator.clipboard) {
       navigator.clipboard.writeText("SAVE50")
     }
-    try {
-      sessionStorage.setItem("copiedCouponCode", "SAVE50")
-    } catch {}
+    const targetId = product?.id || FALLBACK_PRODUCT.id
+    saveScopedCoupon("SAVE50", targetId)
     setCopiedCoupon(true)
     setTimeout(() => {
       setCopiedCoupon(false)
@@ -212,8 +212,7 @@ export function EditingLandingPageClient() {
     e.preventDefault()
     const targetProduct = product || FALLBACK_PRODUCT
     const purchaseProduct = { ...targetProduct, price: 199 }
-    clearCart()
-    addToCart(purchaseProduct)
+    replaceCart(purchaseProduct, 1, false)
     
     // Track Meta Pixel AddToCart event
     try {

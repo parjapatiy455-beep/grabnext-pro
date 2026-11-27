@@ -4,6 +4,7 @@ export const dynamic = 'force-dynamic'
 import { useState, useEffect } from "react";
 import { PRODUCT_BUY_URL, INCLUDED_SOFTWARE, TESTIMONIALS, FAQS, FEATURES } from "../data";
 import { useCart } from "@/contexts/cart-context";
+import { saveScopedCoupon, readScopedCoupon, clearScopedCoupon } from "@/lib/coupon-session";
 import { useRouter } from "next/navigation";
 import { trackAddToCart } from "@/lib/pixel";
 import { toast } from "@/hooks/use-toast";
@@ -447,16 +448,19 @@ export default function SoftwareFunnelPage({ params }: { params?: { slug?: strin
   const [copiedCoupon, setCopiedCoupon] = useState(false);
   const [isDiscountClaimed, setIsDiscountClaimed] = useState(false);
 
-  // Check if SAVE50 coupon was already saved in sessionStorage or present in URL
+  const ADOBE_FALLBACK_ID = "adobe-all-premium-software-bundle-2026-for-windows-mac-420947";
+
+  // Check if SAVE50 coupon was already saved for this product in sessionStorage or present in URL
   useEffect(() => {
     try {
-      const saved = sessionStorage.getItem("copiedCouponCode");
+      const targetId = adobeProduct?.id || ADOBE_FALLBACK_ID;
+      const saved = readScopedCoupon([targetId, ADOBE_FALLBACK_ID]);
       const urlCoupon = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("coupon") : null;
-      if (saved === "SAVE50" || urlCoupon === "SAVE50") {
+      if (saved?.code === "SAVE50" || urlCoupon === "SAVE50") {
         setIsDiscountClaimed(true);
       }
     } catch {}
-  }, []);
+  }, [adobeProduct?.id]);
 
   // Base price from DB (default 499) and 50% discount price (249)
   const basePrice = adobeProduct?.price || 499;
@@ -470,7 +474,7 @@ export default function SoftwareFunnelPage({ params }: { params?: { slug?: strin
       if (typeof navigator !== "undefined" && navigator.clipboard) {
         navigator.clipboard.writeText("SAVE50").catch(() => {});
       }
-      sessionStorage.setItem("copiedCouponCode", "SAVE50");
+      saveScopedCoupon("SAVE50", adobeProduct?.id || ADOBE_FALLBACK_ID);
       setIsDiscountClaimed(true);
     } catch {}
     setIsDiscountClaimed(true);
@@ -486,9 +490,7 @@ export default function SoftwareFunnelPage({ params }: { params?: { slug?: strin
 
   const handleRemoveDiscount = (e: React.MouseEvent) => {
     e.preventDefault();
-    try {
-      sessionStorage.removeItem("copiedCouponCode");
-    } catch {}
+    clearScopedCoupon();
     setIsDiscountClaimed(false);
     toast({
       title: "Discount Removed",
@@ -548,7 +550,7 @@ export default function SoftwareFunnelPage({ params }: { params?: { slug?: strin
       navigator.clipboard.writeText("SAVE50");
     }
     try {
-      sessionStorage.setItem("copiedCouponCode", "SAVE50");
+      saveScopedCoupon("SAVE50", adobeProduct?.id || ADOBE_FALLBACK_ID);
       setIsDiscountClaimed(true);
     } catch {}
     setCopiedCoupon(true);
@@ -559,7 +561,7 @@ export default function SoftwareFunnelPage({ params }: { params?: { slug?: strin
   };
 
   const router = useRouter();
-  const { addToCart, clearCart } = useCart();
+  const { addToCart, replaceCart, clearCart } = useCart();
 
   useEffect(() => {
     const productSlug = params?.slug?.[0];
@@ -626,7 +628,7 @@ export default function SoftwareFunnelPage({ params }: { params?: { slug?: strin
     const shouldApplyDiscount = isDiscountClaimed || forceDiscount;
     if (shouldApplyDiscount) {
       try {
-        sessionStorage.setItem("copiedCouponCode", "SAVE50");
+        saveScopedCoupon("SAVE50", adobeProduct?.id || ADOBE_FALLBACK_ID);
       } catch {}
       setIsDiscountClaimed(true);
     }
@@ -653,11 +655,15 @@ export default function SoftwareFunnelPage({ params }: { params?: { slug?: strin
     });
 
     // Clear cart and add Adobe product
-    clearCart();
-    addToCart(targetProduct);
+    clearCart(true);
+    addToCart(targetProduct, 1, false);
     
     // Redirect to checkout
-    router.push(shouldApplyDiscount ? "/checkout?coupon=SAVE50" : "/checkout");
+    router.push(
+      shouldApplyDiscount
+        ? `/checkout?coupon=SAVE50&couponProduct=${encodeURIComponent(targetProduct.id)}`
+        : "/checkout"
+    );
   };
 
   const handleClaimClick = (e: React.MouseEvent) => {
@@ -682,9 +688,9 @@ export default function SoftwareFunnelPage({ params }: { params?: { slug?: strin
     };
 
     // Add both items to the cart
-    clearCart();
-    addToCart(targetProduct);
-    addToCart(freeProduct);
+    clearCart(true);
+    addToCart(targetProduct, 1, false);
+    addToCart(freeProduct, 1, false);
 
     // Track AddToCart event with both products for Facebook matching
     trackAddToCart({

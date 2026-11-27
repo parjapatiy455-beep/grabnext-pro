@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { executeQuery } from '@/lib/db'
 import { sendOrderSuccessEmail, sendOrderFailedEmail } from '@/lib/brevo'
 import { isAdminSession } from '@/lib/admin-auth'
+import { evaluateCouponForItems, type CouponCartItem } from '@/lib/coupon-utils'
 
 export const dynamic = 'force-dynamic'
 
@@ -181,6 +182,7 @@ export async function POST(request: NextRequest) {
 
     let calculatedSubtotal = 0
     const verifiedItems: any[] = []
+    const couponItems: CouponCartItem[] = []
 
     for (const clientItem of clientItems) {
       const pid = clientItem.productId || clientItem.id
@@ -202,58 +204,33 @@ export async function POST(request: NextRequest) {
         imageUrl:    dbProd.imageUrl    || clientItem.imageUrl || null,
         downloadUrl: dbProd.downloadUrl || null,
       })
+
+      couponItems.push({
+        productId: dbProd.id,
+        slug:      dbProd.slug || null,
+        price:     unitPrice,
+        quantity:  qty,
+      })
     }
 
-    // 2. TAMPER PROTECTION: Server-side coupon validation
+    // 2. TAMPER PROTECTION: Server-side product-aware coupon validation
     let discountAmount    = 0
     let verifiedCouponCode: string | null = null
 
     const rawCoupon = (data.couponCode || data.coupon || '').toString().trim()
     if (rawCoupon) {
-      const clean = rawCoupon.toUpperCase()
-      if (clean === 'SAVE50') {
-        verifiedCouponCode = 'SAVE50'
-        discountAmount = Math.round(calculatedSubtotal * 0.50)
-      } else if (clean === 'SAVE40') {
-        verifiedCouponCode = 'SAVE40'
-        discountAmount = Math.round(calculatedSubtotal * 0.40)
-      } else {
-        try {
-          const coupons: any[] = await executeQuery(
-            'SELECT * FROM coupons WHERE UPPER(code) = ? LIMIT 1',
-            [clean]
-          )
-          if (coupons?.length > 0) {
-            const c = coupons[0]
-            const isActive = c.isActive === 1 || c.isActive === true || c.isActive === '1'
-            if (isActive) {
-              verifiedCouponCode = c.code || clean
-              if (c.type === 'percentage') {
-                discountAmount = Math.round((Number(c.value) / 100) * calculatedSubtotal)
-              } else if (c.type === 'fixed') {
-                discountAmount = Math.min(calculatedSubtotal, Number(c.value))
-              }
-            }
-          } else {
-            // Check active products for discountPopupCoupon
-            const prodCoupons: any[] = await executeQuery(
-              'SELECT discountPopupCoupon, discountPopupType, discountPopupPercent, discountPopupAmount FROM products WHERE UPPER(discountPopupCoupon) = ? AND enableDiscountPopup = 1 LIMIT 1',
-              [clean]
-            ).catch(() => [])
-            if (prodCoupons && prodCoupons.length > 0) {
-              const pc = prodCoupons[0]
-              verifiedCouponCode = (pc.discountPopupCoupon || clean).toUpperCase()
-              const pType = pc.discountPopupType === 'fixed' ? 'fixed' : 'percentage'
-              if (pType === 'fixed') {
-                discountAmount = Math.min(calculatedSubtotal, Math.round(Number(pc.discountPopupAmount || 0)))
-              } else {
-                discountAmount = Math.round((Number(pc.discountPopupPercent || 50) / 100) * calculatedSubtotal)
-              }
-            }
-          }
-        } catch (e) {
-          console.warn('[Orders API] Coupon lookup error:', e)
+      try {
+        const evalResult = await evaluateCouponForItems(
+          rawCoupon,
+          couponItems,
+          data.couponProductId || null
+        )
+        if (evalResult.valid && evalResult.discountAmount > 0) {
+          verifiedCouponCode = evalResult.code
+          discountAmount = evalResult.discountAmount
         }
+      } catch (e) {
+        console.warn('[Orders API] Coupon lookup error:', e)
       }
     }
 

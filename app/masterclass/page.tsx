@@ -59,7 +59,7 @@ const MASTERCLASS_PRODUCT: Product = {
 
 export default function MasterclassPage() {
   const router = useRouter()
-  const { addToCart } = useCart()
+  const { replaceCart } = useCart()
   const [openFaq, setOpenFaq] = useState<number | null>(0)
 
   // Countdown timer state (starts at 14m 45s)
@@ -107,7 +107,7 @@ export default function MasterclassPage() {
     } catch (e) {
       console.error("AddToCart tracking error", e)
     }
-    addToCart(MASTERCLASS_PRODUCT, 1)
+    replaceCart(MASTERCLASS_PRODUCT, 1, false)
     toast({
       title: "🎉 Masterclass Added to Cart!",
       description: "Redirecting to checkout for instant enrollment @ ₹49 only...",

@@ -24,6 +24,7 @@ import type { Product } from "@/lib/types"
 import { trackViewContent, trackAddToCart } from "@/lib/pixel"
 import { getVideoInfo } from "@/lib/video-utils"
 import { normalizeImageUrl, normalizeHtmlContent } from "@/lib/image-url"
+import { saveScopedCoupon } from "@/lib/coupon-session"
 
 // ─── Star Rating ─────────────────────────────────────────────────────────────
 function StarRating({ rating, interactive = false, onRate }: { rating: number; interactive?: boolean; onRate?: (r: number) => void }) {
@@ -99,7 +100,7 @@ function RatingBar({ label, count, total }: { label: string; count: number; tota
 
 export function ProductDetailView({ product: initialProduct, id }: { product: Product; id: string }) {
     const router = useRouter()
-    const { addToCart, setDrawerOpen } = useCart()
+    const { addToCart, replaceCart, setDrawerOpen } = useCart()
     const { user } = useAuth()
 
     const [product] = useState<Product>(initialProduct)
@@ -222,7 +223,7 @@ export function ProductDetailView({ product: initialProduct, id }: { product: Pr
         setShowDiscountPopup(false)
         try {
             sessionStorage.setItem(`discount_claimed_${prodId}`, "true")
-            sessionStorage.setItem("copiedCouponCode", info.code)
+            saveScopedCoupon(info.code, prodId)
         } catch {}
 
         const label = info.type === "fixed" ? `Flat ${formatPrice(info.savings)} OFF` : `Flat ${info.percent}% OFF`
@@ -233,55 +234,13 @@ export function ProductDetailView({ product: initialProduct, id }: { product: Pr
     }
 
     const handleDismissDiscountPopup = () => {
-        const prodId = product.id || id
-        const isFixed = product.discountPopupType === "fixed"
-        const originalPrice = product.price
-        let savings = 0
-        let discPrice = originalPrice
-        let percentValue = 50
-
-        if (isFixed) {
-            const fixedAmount = Math.round(Number(product.discountPopupAmount || 0))
-            savings = Math.min(originalPrice, fixedAmount)
-            discPrice = Math.max(1, originalPrice - savings)
-            percentValue = originalPrice > 0 ? Math.round((savings / originalPrice) * 100) : 0
-        } else {
-            percentValue = Number(product.discountPopupPercent || 50)
-            savings = Math.round(originalPrice * (percentValue / 100))
-            discPrice = Math.max(1, originalPrice - savings)
-        }
-
-        const defaultCode = isFixed ? `FLAT${savings}` : `SAVE${percentValue}`
-        const code = (product.discountPopupCoupon || defaultCode).trim().toUpperCase()
-
-        // Auto-apply offer even if closed
-        const discountInfo = {
-            code,
-            type: (isFixed ? "fixed" : "percentage") as "fixed" | "percentage",
-            value: isFixed ? Number(product.discountPopupAmount || 0) : percentValue,
-            percent: percentValue,
-            discountedPrice: discPrice,
-            savings,
-        }
-        setAppliedDiscount(discountInfo)
         setShowDiscountPopup(false)
-        try {
-            sessionStorage.setItem(`discount_claimed_${prodId}`, "true")
-            sessionStorage.setItem("copiedCouponCode", code)
-        } catch {}
-
-        const label = isFixed ? `Flat ${formatPrice(savings)} OFF` : `Flat ${percentValue}% OFF`
-        toast({
-            title: `🎉 ${label} Auto-Applied!`,
-            description: `We applied the special offer for you. Pay only ${formatPrice(discPrice)}!`,
-        })
     }
 
     const executeBuyNow = () => {
         setBuyingNow(true)
-        // Direct checkout: explicitly prevent opening cart drawer
-        setDrawerOpen(false)
-        addToCart(product, 1, false)
+        // Direct checkout: replace any stale cart items with only this product and keep drawer closed
+        replaceCart(product, 1, false)
         trackAddToCart(
             {
                 content_name: product.title,
@@ -292,7 +251,10 @@ export function ProductDetailView({ product: initialProduct, id }: { product: Pr
             undefined,
             resolvedPixel
         )
-        const checkoutUrl = appliedDiscount ? `/checkout?coupon=${encodeURIComponent(appliedDiscount.code)}` : "/checkout"
+        const prodId = product.id || id
+        const checkoutUrl = appliedDiscount
+            ? `/checkout?coupon=${encodeURIComponent(appliedDiscount.code)}&couponProduct=${encodeURIComponent(prodId)}`
+            : "/checkout"
         router.push(checkoutUrl)
     }
 

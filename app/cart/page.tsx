@@ -27,7 +27,7 @@ export default function CartPage() {
           <div className="flex items-center justify-between mb-8">
             <h1 className="text-3xl font-bold">Shopping Cart</h1>
             {items.length > 0 && (
-              <Button variant="outline" onClick={clearCart}>
+              <Button variant="outline" onClick={() => clearCart()}>
                 Clear Cart
               </Button>
             )}

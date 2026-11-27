@@ -154,7 +154,7 @@ function EditableText({ value, onChange, isBuilder, className, tagName: Tag = 'd
 // ─── Section renderers ────────────────────────────────────────────────────────
 function HeroSection({ section, product, isBuilder, onChange }: { section: LandingSection; product: Product; isBuilder?: boolean; onChange?: (s: LandingSection) => void }) {
     const router = useRouter()
-    const { addToCart, setDrawerOpen } = useCart()
+    const { addToCart, replaceCart, setDrawerOpen } = useCart()
     const fmt = (p: number) => new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(p)
     return (
         <AnimatedWrapper animation={(section as any).animation}>
@@ -173,7 +173,7 @@ function HeroSection({ section, product, isBuilder, onChange }: { section: Landi
                                 <ShoppingCart className="h-5 w-5 mr-2" /> Add to Cart
                             </Button>
                             <Button size="lg" className="bg-white hover:bg-gray-100 text-blue-700 font-bold px-8"
-                                onClick={() => { addToCart(product); router.push("/checkout") }}>
+                                onClick={() => { replaceCart(product, 1, false); router.push("/checkout") }}>
                                 <Zap className="h-5 w-5 mr-2" />
                                 <EditableText tagName="span" value={section.buttonText || "Buy Now"} 
                                     onChange={(v: string) => onChange?.({ ...section, buttonText: v })} isBuilder={isBuilder} placeholder="Buy Now" />
