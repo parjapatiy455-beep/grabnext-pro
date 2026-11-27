@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { memo, useCallback, useMemo, useRef, useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import {
@@ -98,6 +98,103 @@ function RatingBar({ label, count, total }: { label: string; count: number; tota
     )
 }
 
+// ─── Isolated 1-second Countdown Timer (prevents parent re-render / video reload) ─
+function useSharedOfferCountdown(prodId: string, timerMinutes: number, onExpire?: () => void) {
+    const [timerStr, setTimerStr] = useState<string>("")
+    const onExpireRef = useRef(onExpire)
+    onExpireRef.current = onExpire
+
+    useEffect(() => {
+        if (!prodId) return
+        const mins = Math.max(1, Number(timerMinutes || 10))
+        const timerKey = `discount_timer_end_${prodId}`
+        const fallbackEnd = Date.now() + mins * 60 * 1000
+
+        const tick = () => {
+            let endTime = fallbackEnd
+            try {
+                const saved = localStorage.getItem(timerKey)
+                if (saved) endTime = parseInt(saved, 10) || fallbackEnd
+            } catch {}
+            const remaining = Math.max(0, Math.floor((endTime - Date.now()) / 1000))
+            const m = Math.floor(remaining / 60)
+            const s = remaining % 60
+            setTimerStr(`${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`)
+            if (remaining <= 0) {
+                onExpireRef.current?.()
+            }
+        }
+
+        tick()
+        const interval = setInterval(tick, 1000)
+        return () => clearInterval(interval)
+    }, [prodId, timerMinutes])
+
+    return timerStr
+}
+
+const DesktopOfferCountdown = memo(function DesktopOfferCountdown({
+    prodId,
+    timerMinutes,
+    onExpire,
+}: {
+    prodId: string
+    timerMinutes: number
+    onExpire?: () => void
+}) {
+    const timerStr = useSharedOfferCountdown(prodId, timerMinutes, onExpire)
+    if (!timerStr) return null
+    return (
+        <div className="flex items-center gap-2 self-start sm:self-auto bg-slate-900 text-white dark:bg-black px-3.5 py-1.5 rounded-xl border border-red-500/40 shadow-xs">
+            <Clock className="h-4 w-4 text-red-400 animate-pulse shrink-0" />
+            <span className="text-[10px] font-bold text-slate-300 uppercase tracking-wider">Ends In:</span>
+            <span className="font-mono font-black text-amber-400 text-base sm:text-lg tracking-wider">
+                {timerStr}
+            </span>
+        </div>
+    )
+})
+
+const MobileOfferCountdown = memo(function MobileOfferCountdown({
+    prodId,
+    timerMinutes,
+}: {
+    prodId: string
+    timerMinutes: number
+}) {
+    const timerStr = useSharedOfferCountdown(prodId, timerMinutes)
+    if (!timerStr) return null
+    return (
+        <span className="font-mono text-red-600 dark:text-red-400 bg-red-500/15 border border-red-500/30 px-1.5 py-0.5 rounded text-[10px] animate-pulse">
+            ⏳ {timerStr}
+        </span>
+    )
+})
+
+// ─── Memoized HTML Description (keeps embedded iframes/videos stable) ────────
+const ProductDescriptionHtml = memo(function ProductDescriptionHtml({
+    html,
+    onImageClick,
+}: {
+    html: string
+    onImageClick: (src: string) => void
+}) {
+    const markup = useMemo(() => ({ __html: normalizeHtmlContent(html) }), [html])
+    return (
+        <div
+            className="product-description max-w-none prose prose-blue dark:prose-invert prose-img:rounded-xl prose-img:shadow-md prose-img:cursor-zoom-in"
+            dangerouslySetInnerHTML={markup}
+            onClick={(e) => {
+                const target = e.target as HTMLElement
+                if (target.tagName === "IMG") {
+                    const src = (target as HTMLImageElement).src
+                    if (src) onImageClick(src)
+                }
+            }}
+        />
+    )
+})
+
 export function ProductDetailView({ product: initialProduct, id }: { product: Product; id: string }) {
     const router = useRouter()
     const { addToCart, replaceCart, setDrawerOpen } = useCart()
@@ -160,44 +257,31 @@ export function ProductDetailView({ product: initialProduct, id }: { product: Pr
         discountedPrice: number
         savings: number
     } | null>(null)
-    const [discountTimerStr, setDiscountTimerStr] = useState<string>("")
     const [videoAspectRatio, setVideoAspectRatio] = useState<number | null>(null)
 
-    // 1. Live ticking Urgency Countdown Timer (Resets freshly on every page refresh/visit)
+    // 1. Initialize fresh Urgency Countdown endTime on page load/refresh (ticking is isolated in Countdown components)
     useEffect(() => {
         if (!product?.id) return
-
         const prodId = product.id || id
         const timerKey = `discount_timer_end_${prodId}`
         const timerMinutes = Math.max(1, Number(product.discountPopupTimerMinutes || 10))
-
-        // Reset timer freshly on every page refresh/visit as requested
         const freshEndTime = Date.now() + timerMinutes * 60 * 1000
         try {
             localStorage.setItem(timerKey, freshEndTime.toString())
         } catch {}
+    }, [product?.id, product?.discountPopupTimerMinutes, id])
 
-        const tick = () => {
-            const savedEndTime = localStorage.getItem(timerKey)
-            if (!savedEndTime) return
-            const remaining = Math.max(0, Math.floor((parseInt(savedEndTime, 10) - Date.now()) / 1000))
-            const m = Math.floor(remaining / 60)
-            const s = remaining % 60
-            setDiscountTimerStr(`${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`)
-
-            if (remaining <= 0 && appliedDiscount) {
-                setAppliedDiscount(null)
-                try {
-                    sessionStorage.removeItem(`discount_claimed_${prodId}`)
-                    localStorage.removeItem(timerKey)
-                } catch {}
-            }
-        }
-
-        tick()
-        const interval = setInterval(tick, 1000)
-        return () => clearInterval(interval)
-    }, [product?.id, product?.discountPopupTimerMinutes, id, appliedDiscount])
+    const handleOfferExpire = useCallback(() => {
+        const prodId = product?.id || id
+        setAppliedDiscount((prev) => {
+            if (!prev) return null
+            try {
+                sessionStorage.removeItem(`discount_claimed_${prodId}`)
+                localStorage.removeItem(`discount_timer_end_${prodId}`)
+            } catch {}
+            return null
+        })
+    }, [product?.id, id])
 
     // 2. Launch discount popup after admin-configured delay in seconds
     useEffect(() => {
@@ -332,22 +416,16 @@ export function ProductDetailView({ product: initialProduct, id }: { product: Pr
         return arr.map(normalizeImageUrl).filter(Boolean)
     })()
 
-    const videoInfo = product.videoUrl ? getVideoInfo(product.videoUrl) : null
+    const videoInfo = useMemo(() => (product.videoUrl ? getVideoInfo(product.videoUrl) : null), [product.videoUrl])
 
     const originalPrice = (product as any).originalPrice || product.price * 1.25
     const discount = Math.round(((originalPrice - product.price) / originalPrice) * 100)
     const avgRating = parseFloat(reviewStats.avgRating)
     const descIsHtml = product.description?.includes("<") && product.description?.includes(">")
 
-    const handleDescriptionClick = (e: React.MouseEvent<HTMLDivElement>) => {
-        const target = e.target as HTMLElement
-        if (target.tagName === "IMG") {
-            const src = (target as HTMLImageElement).src
-            if (src) {
-                setZoomModalData({ images: [src], startIdx: 0 })
-            }
-        }
-    }
+    const handleDescriptionImageClick = useCallback((src: string) => {
+        setZoomModalData({ images: [src], startIdx: 0 })
+    }, [])
 
     return (
         <div className="min-h-screen bg-gray-50 dark:bg-slate-950 flex flex-col text-slate-900 dark:text-slate-100 transition-colors">
@@ -412,6 +490,8 @@ export function ProductDetailView({ product: initialProduct, id }: { product: Pr
                                             controls 
                                             playsInline 
                                             autoPlay 
+                                            muted
+                                            preload="metadata"
                                             onLoadedMetadata={(e) => {
                                                 const { videoWidth, videoHeight } = e.currentTarget
                                                 if (videoWidth && videoHeight) {
@@ -423,6 +503,9 @@ export function ProductDetailView({ product: initialProduct, id }: { product: Pr
                                     ) : (
                                         <iframe
                                             src={videoInfo.embedUrl}
+                                            title={product.title || "Product demo video"}
+                                            referrerPolicy="strict-origin-when-cross-origin"
+                                            loading="eager"
                                             className="w-full h-full border-0"
                                             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                                             allowFullScreen
@@ -540,15 +623,11 @@ export function ProductDetailView({ product: initialProduct, id }: { product: Pr
                                                 </p>
                                             </div>
                                         </div>
-                                        {discountTimerStr && (
-                                            <div className="flex items-center gap-2 self-start sm:self-auto bg-slate-900 text-white dark:bg-black px-3.5 py-1.5 rounded-xl border border-red-500/40 shadow-xs">
-                                                <Clock className="h-4 w-4 text-red-400 animate-pulse shrink-0" />
-                                                <span className="text-[10px] font-bold text-slate-300 uppercase tracking-wider">Ends In:</span>
-                                                <span className="font-mono font-black text-amber-400 text-base sm:text-lg tracking-wider">
-                                                    {discountTimerStr}
-                                                </span>
-                                            </div>
-                                        )}
+                                        <DesktopOfferCountdown
+                                            prodId={product.id || id}
+                                            timerMinutes={Number(product.discountPopupTimerMinutes || 10)}
+                                            onExpire={handleOfferExpire}
+                                        />
                                     </div>
                                 ) : (
                                     <div className="mb-3 p-3 rounded-2xl bg-gradient-to-r from-amber-500/15 via-red-500/10 to-orange-500/10 border-2 border-red-500/30 dark:border-red-500/40 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
@@ -567,15 +646,11 @@ export function ProductDetailView({ product: initialProduct, id }: { product: Pr
                                                 </p>
                                             </div>
                                         </div>
-                                        {discountTimerStr && (
-                                            <div className="flex items-center gap-2 self-start sm:self-auto bg-slate-900 text-white dark:bg-black px-3.5 py-1.5 rounded-xl border border-red-500/40 shadow-xs">
-                                                <Clock className="h-4 w-4 text-red-400 animate-pulse shrink-0" />
-                                                <span className="text-[10px] font-bold text-slate-300 uppercase tracking-wider">Ends In:</span>
-                                                <span className="font-mono font-black text-amber-400 text-base sm:text-lg tracking-wider">
-                                                    {discountTimerStr}
-                                                </span>
-                                            </div>
-                                        )}
+                                        <DesktopOfferCountdown
+                                            prodId={product.id || id}
+                                            timerMinutes={Number(product.discountPopupTimerMinutes || 10)}
+                                            onExpire={handleOfferExpire}
+                                        />
                                     </div>
                                 )}
 
@@ -714,10 +789,9 @@ export function ProductDetailView({ product: initialProduct, id }: { product: Pr
                             <div className="space-y-8">
                                 {product.description ? (
                                     descIsHtml ? (
-                                        <div
-                                            className="product-description max-w-none prose prose-blue dark:prose-invert prose-img:rounded-xl prose-img:shadow-md prose-img:cursor-zoom-in"
-                                            dangerouslySetInnerHTML={{ __html: normalizeHtmlContent(product.description) }}
-                                            onClick={handleDescriptionClick}
+                                        <ProductDescriptionHtml
+                                            html={product.description}
+                                            onImageClick={handleDescriptionImageClick}
                                         />
                                     ) : (
                                         <div className="space-y-3">
@@ -991,11 +1065,10 @@ export function ProductDetailView({ product: initialProduct, id }: { product: Pr
                             {appliedDiscount ? (
                                 <span className="flex items-center gap-1 font-black">
                                     Flash {appliedDiscount.percent}% Deal
-                                    {discountTimerStr && (
-                                        <span className="font-mono text-red-600 dark:text-red-400 bg-red-500/15 border border-red-500/30 px-1.5 py-0.5 rounded text-[10px] animate-pulse">
-                                            ⏳ {discountTimerStr}
-                                        </span>
-                                    )}
+                                    <MobileOfferCountdown
+                                        prodId={product.id || id}
+                                        timerMinutes={Number(product.discountPopupTimerMinutes || 10)}
+                                    />
                                 </span>
                             ) : "Instant Access"}
                         </div>

@@ -33,7 +33,7 @@ export function getVideoInfo(rawUrl?: string | null): VideoInfo | null {
     return {
       type: 'youtube',
       videoId: id,
-      embedUrl: `https://www.youtube-nocookie.com/embed/${id}?rel=0&modestbranding=1&playsinline=1&enablejsapi=1`,
+      embedUrl: `https://www.youtube.com/embed/${id}?rel=0&playsinline=1`,
       thumbnail: `https://img.youtube.com/vi/${id}/hqdefault.jpg`,
       originalUrl: url,
       isVertical,
