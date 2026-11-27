@@ -6,7 +6,8 @@ import Link from "next/link"
 import {
     Star, Zap, Shield,
     Heart, Share2, Loader2, X, ChevronLeft, ChevronRight, Clock, CheckCircle2,
-    Play, Video, ShieldCheck, ZoomIn, ImageIcon, Sparkles, Tag, Flame
+    Play, Video, ShieldCheck, ZoomIn, ImageIcon, Sparkles, Tag, Flame,
+    Copy, Check, ChevronDown, ChevronUp
 } from "lucide-react"
 import { ProductDiscountPopup } from "@/components/product-discount-popup"
 import { Badge } from "@/components/ui/badge"
@@ -24,7 +25,7 @@ import type { Product } from "@/lib/types"
 import { trackViewContent, trackAddToCart } from "@/lib/pixel"
 import { getVideoInfo } from "@/lib/video-utils"
 import { normalizeImageUrl, normalizeHtmlContent } from "@/lib/image-url"
-import { saveScopedCoupon } from "@/lib/coupon-session"
+import { saveScopedCoupon, readScopedCoupon, clearScopedCoupon } from "@/lib/coupon-session"
 
 // ─── Star Rating ─────────────────────────────────────────────────────────────
 function StarRating({ rating, interactive = false, onRate }: { rating: number; interactive?: boolean; onRate?: (r: number) => void }) {
@@ -247,7 +248,7 @@ export function ProductDetailView({ product: initialProduct, id }: { product: Pr
         }
     }, [initialProduct, id])
 
-    // ── 50% Off Flash Deal Popup State & Timer ──
+    // ── 50% Off Flash Deal Popup & Product Coupon State ──
     const [showDiscountPopup, setShowDiscountPopup] = useState(false)
     const [appliedDiscount, setAppliedDiscount] = useState<{
         code: string
@@ -257,6 +258,19 @@ export function ProductDetailView({ product: initialProduct, id }: { product: Pr
         discountedPrice: number
         savings: number
     } | null>(null)
+    const appliedDiscountRef = useRef(appliedDiscount)
+    appliedDiscountRef.current = appliedDiscount
+
+    const offerCouponCode = product?.enableDiscountPopup
+        ? String(product.discountPopupCoupon || (product.discountPopupType === "fixed" ? "FLAT" : "SAVE50")).trim().toUpperCase()
+        : ""
+    const hasProductCouponOffer = Boolean(product?.enableDiscountPopup && offerCouponCode)
+
+    const [isCouponBoxOpen, setIsCouponBoxOpen] = useState(false)
+    const [couponInput, setCouponInput] = useState("")
+    const [isApplyingCoupon, setIsApplyingCoupon] = useState(false)
+    const [couponError, setCouponError] = useState("")
+    const [copiedCouponCode, setCopiedCouponCode] = useState<string | null>(null)
     const [videoAspectRatio, setVideoAspectRatio] = useState<number | null>(null)
 
     // 1. Initialize fresh Urgency Countdown endTime on page load/refresh (ticking is isolated in Countdown components)
@@ -278,21 +292,143 @@ export function ProductDetailView({ product: initialProduct, id }: { product: Pr
             try {
                 sessionStorage.removeItem(`discount_claimed_${prodId}`)
                 localStorage.removeItem(`discount_timer_end_${prodId}`)
+                clearScopedCoupon()
             } catch {}
             return null
         })
     }, [product?.id, id])
 
-    // 2. Launch discount popup after admin-configured delay in seconds
+    // 2. Launch discount popup after admin-configured delay in seconds (skip if coupon already applied)
     useEffect(() => {
         if (!product?.enableDiscountPopup) return
 
         const delaySeconds = Math.max(3, Number(product.discountPopupDelaySeconds || 30))
         const t = setTimeout(() => {
-            setShowDiscountPopup(true)
+            if (!appliedDiscountRef.current) {
+                setShowDiscountPopup(true)
+            }
         }, delaySeconds * 1000)
         return () => clearTimeout(t)
     }, [product?.id, product?.enableDiscountPopup, product?.discountPopupDelaySeconds])
+
+    const validateAndApplyProductCoupon = useCallback(async (rawCode: string, silent = false) => {
+        const cleanCode = String(rawCode || "").trim().toUpperCase()
+        if (!cleanCode) {
+            setCouponError("Please enter a coupon code")
+            return false
+        }
+
+        const prodId = product.id || id
+        const prodSlug = (product as any).slug as string | undefined
+        setIsApplyingCoupon(true)
+        setCouponError("")
+        try {
+            const res = await fetch("/api/coupons/validate", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    code: cleanCode,
+                    cartTotal: product.price,
+                    items: [{
+                        productId: prodId,
+                        slug: prodSlug || undefined,
+                        price: product.price,
+                        quantity: 1,
+                    }],
+                    couponProductId: prodId,
+                }),
+            })
+            const data = await res.json().catch(() => ({ valid: false, message: "Unable to validate coupon" }))
+            if (!res.ok || !data.valid) {
+                const msg = data.message || "Invalid or expired coupon code"
+                if (!silent) {
+                    setCouponError(msg)
+                }
+                return false
+            }
+
+            const savings = Math.min(product.price, Math.max(0, Math.round(Number(data.discountAmount) || 0)))
+            const discountedPrice = Math.max(0, product.price - savings)
+            const pct = data.type === "percentage"
+                ? Number(data.value || 0)
+                : (product.price > 0 ? Math.round((savings / product.price) * 100) : 0)
+            const finalCode = String(data.code || cleanCode).trim().toUpperCase()
+
+            setAppliedDiscount({
+                code: finalCode,
+                type: data.type,
+                value: data.value,
+                percent: pct,
+                discountedPrice,
+                savings,
+            })
+            setCouponInput(finalCode)
+            setCouponError("")
+            setIsCouponBoxOpen(false)
+            try {
+                sessionStorage.setItem(`discount_claimed_${prodId}`, "true")
+                saveScopedCoupon(finalCode, data.isProductScoped ? prodId : null)
+            } catch {}
+
+            if (!silent) {
+                const label = data.type === "fixed"
+                    ? `Flat ${formatPrice(savings)} OFF`
+                    : `Flat ${pct}% OFF`
+                toast({
+                    title: `🎉 ${label} Applied!`,
+                    description: `Price cut from ${formatPrice(product.price)} to ${formatPrice(discountedPrice)}!`,
+                })
+            }
+            return true
+        } catch {
+            if (!silent) {
+                setCouponError("Unable to apply coupon right now. Please try again.")
+            }
+            return false
+        } finally {
+            setIsApplyingCoupon(false)
+        }
+    }, [product.id, (product as any).slug, product.price, id])
+
+    // 3. Restore previously applied session coupon for this product (if any) without blocking initial load
+    useEffect(() => {
+        if (!hasProductCouponOffer || appliedDiscountRef.current) return
+        const prodSlug = (product as any)?.slug as string | undefined
+        const activeIds = [product?.id, prodSlug, id].filter(Boolean) as string[]
+        if (activeIds.length === 0) return
+        const saved = readScopedCoupon(activeIds)
+        if (saved?.code) {
+            validateAndApplyProductCoupon(saved.code, true)
+        }
+    }, [hasProductCouponOffer, product?.id, (product as any)?.slug, id, validateAndApplyProductCoupon])
+
+    const handleCopyCouponCode = async (codeToCopy: string) => {
+        const cleanCode = String(codeToCopy || "").trim().toUpperCase()
+        if (!cleanCode) return
+        setCouponInput(cleanCode)
+        setCouponError("")
+        try {
+            await navigator.clipboard.writeText(cleanCode)
+            setCopiedCouponCode(cleanCode)
+            toast({ title: `Copied code "${cleanCode}"!` })
+            setTimeout(() => {
+                setCopiedCouponCode((prev) => (prev === cleanCode ? null : prev))
+            }, 2000)
+        } catch {
+            toast({ title: `Code: ${cleanCode}`, description: "Ready in coupon field below." })
+        }
+    }
+
+    const handleRemoveProductCoupon = () => {
+        const prodId = product.id || id
+        setAppliedDiscount(null)
+        setCouponError("")
+        clearScopedCoupon()
+        try {
+            sessionStorage.removeItem(`discount_claimed_${prodId}`)
+        } catch {}
+        toast({ title: "Coupon removed" })
+    }
 
     const handleClaimDiscount = (info: {
         code: string
@@ -689,6 +825,121 @@ export function ProductDetailView({ product: initialProduct, id }: { product: Pr
                                     {appliedDiscount ? `You save ${formatPrice(appliedDiscount.savings)}! Inclusive of all taxes.` : "Inclusive of all taxes. Instant Delivery."}
                                 </p>
                             </div>
+
+                            {/* ── COUPON CODE SECTION (ONLY WHEN POPUP / OFFER COUPON IS ENABLED) ── */}
+                            {(hasProductCouponOffer || appliedDiscount) && (
+                                <div className="rounded-xl border border-dashed border-amber-300 dark:border-amber-800/70 bg-amber-50/70 dark:bg-amber-950/20 px-3 py-2.5 transition-all">
+                                    {appliedDiscount ? (
+                                        <div className="flex items-center justify-between gap-2 flex-wrap">
+                                            <div className="flex items-center gap-2 min-w-0">
+                                                <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                                                <div className="text-xs leading-tight">
+                                                    <span className="font-bold text-emerald-800 dark:text-emerald-300 font-mono">
+                                                        {appliedDiscount.code}
+                                                    </span>{" "}
+                                                    <span className="text-emerald-700 dark:text-emerald-400 font-medium">
+                                                        applied (-{formatPrice(appliedDiscount.savings)})
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-1.5 shrink-0">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleCopyCouponCode(appliedDiscount.code)}
+                                                    className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-1 rounded-md border border-emerald-200 dark:border-emerald-800 bg-white dark:bg-slate-900 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition-colors"
+                                                >
+                                                    {copiedCouponCode === appliedDiscount.code ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                                                    {copiedCouponCode === appliedDiscount.code ? "Copied" : "Copy"}
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={handleRemoveProductCoupon}
+                                                    className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-1 rounded-md text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
+                                                >
+                                                    <X className="h-3 w-3" />
+                                                    Remove
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-2">
+                                            <div className="flex items-center justify-between gap-2 flex-wrap">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setIsCouponBoxOpen((open) => !open)
+                                                        setCouponError("")
+                                                    }}
+                                                    className="flex items-center gap-1.5 text-xs font-semibold text-amber-900 dark:text-amber-300 hover:text-amber-700 dark:hover:text-amber-200 transition-colors"
+                                                >
+                                                    <Tag className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
+                                                    <span>Apply Coupon Code</span>
+                                                    {isCouponBoxOpen ? <ChevronUp className="h-3.5 w-3.5 opacity-70" /> : <ChevronDown className="h-3.5 w-3.5 opacity-70" />}
+                                                </button>
+                                                {offerCouponCode && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            handleCopyCouponCode(offerCouponCode)
+                                                            setIsCouponBoxOpen(true)
+                                                        }}
+                                                        title="Copy coupon code"
+                                                        className="inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-md border border-amber-300 dark:border-amber-700 bg-white dark:bg-slate-900 text-amber-800 dark:text-amber-200 hover:bg-amber-100/70 dark:hover:bg-amber-900/40 transition-colors"
+                                                    >
+                                                        <span className="font-mono tracking-wide">{offerCouponCode}</span>
+                                                        {copiedCouponCode === offerCouponCode ? (
+                                                            <>
+                                                                <Check className="h-3 w-3 text-emerald-600" />
+                                                                <span className="text-emerald-600">Copied</span>
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <Copy className="h-3 w-3" />
+                                                                <span>Copy</span>
+                                                            </>
+                                                        )}
+                                                    </button>
+                                                )}
+                                            </div>
+
+                                            {isCouponBoxOpen && (
+                                                <form
+                                                    onSubmit={(e) => {
+                                                        e.preventDefault()
+                                                        validateAndApplyProductCoupon(couponInput)
+                                                    }}
+                                                    className="space-y-1.5 pt-1"
+                                                >
+                                                    <div className="flex gap-2">
+                                                        <Input
+                                                            value={couponInput}
+                                                            onChange={(e) => {
+                                                                setCouponInput(e.target.value.toUpperCase())
+                                                                if (couponError) setCouponError("")
+                                                            }}
+                                                            placeholder={offerCouponCode ? `Enter code (e.g. ${offerCouponCode})` : "Enter coupon code"}
+                                                            className="h-9 text-xs font-mono uppercase bg-white dark:bg-slate-900 border-amber-200 dark:border-amber-800/80"
+                                                            disabled={isApplyingCoupon}
+                                                        />
+                                                        <button
+                                                            type="submit"
+                                                            disabled={isApplyingCoupon || !couponInput.trim()}
+                                                            className="h-9 px-3.5 rounded-md text-xs font-bold bg-amber-600 hover:bg-amber-700 text-white disabled:opacity-50 shrink-0 inline-flex items-center justify-center gap-1.5 transition-colors"
+                                                        >
+                                                            {isApplyingCoupon ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Apply"}
+                                                        </button>
+                                                    </div>
+                                                    {couponError && (
+                                                        <p className="text-[11px] font-medium text-red-600 dark:text-red-400">
+                                                            {couponError}
+                                                        </p>
+                                                    )}
+                                                </form>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
 
                             {/* ── BUY NOW BUTTON (DIRECT CHECKOUT) ── */}
                             <div className="mt-1">
