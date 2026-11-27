@@ -2,6 +2,7 @@ export const runtime = 'edge'
 import { NextRequest, NextResponse } from 'next/server'
 import { executeQuery } from '@/lib/db'
 import { normalizeProductData } from '@/lib/image-url'
+import { isAdminSession } from '@/lib/admin-auth'
 
 export const dynamic = 'force-dynamic'
 
@@ -34,8 +35,9 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     }
     if (!results || results.length === 0) return NextResponse.json({ error: 'Product not found' }, { status: 404 })
 
+    const isAdmin = await isAdminSession()
     const row = results[0]
-    return NextResponse.json(normalizeProductData({
+    const normalized = normalizeProductData({
       ...row,
       tags: row.tags ? tryParse(row.tags) : [],
       images: row.images ? tryParse(row.images) : (row.imageUrl ? [row.imageUrl] : []),
@@ -55,9 +57,17 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       discountPopupDelaySeconds: Number(row.discountPopupDelaySeconds || 30),
       discountPopupHeadline: row.discountPopupHeadline || '',
       metaPixelId: row.metaPixelId || null,
-    }), {
+    })
+
+    if (!isAdmin) {
+      delete (normalized as any).downloadUrl
+    }
+
+    return NextResponse.json(normalized, {
       headers: {
-        'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300',
+        'Cache-Control': isAdmin
+          ? 'private, no-store'
+          : 'public, s-maxage=60, stale-while-revalidate=300',
       }
     })
   } catch (error: any) {
@@ -68,6 +78,11 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 // PUT /api/products/[id]
 export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
   try {
+    const isAdmin = await isAdminSession()
+    if (!isAdmin) {
+      return NextResponse.json({ error: 'Unauthorized: Admin access required' }, { status: 403 })
+    }
+
     const data = await request.json()
     const now = Date.now()
     
@@ -139,18 +154,6 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       })
     }
 
-    // Auto-sync coupon into coupons table so checkout validates seamlessly
-    if (enableDiscountPopup && discountPopupCoupon) {
-      const cVal = discountPopupType === 'fixed' ? discountPopupAmount : discountPopupPercent
-      if (cVal > 0) {
-        await executeQuery(
-          `INSERT INTO coupons (code, type, value, isActive, createdAt, updatedAt)
-           VALUES (?, ?, ?, 1, ?, ?)
-           ON CONFLICT(code) DO UPDATE SET type=excluded.type, value=excluded.value, isActive=1, updatedAt=excluded.updatedAt`,
-          [discountPopupCoupon, discountPopupType, cVal, now, now]
-        ).catch(() => {})
-      }
-    }
     return NextResponse.json({ success: true, slug })
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 })
@@ -160,6 +163,11 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 // PATCH /api/products/[id] — Quick toggle of fields (e.g. discount popup)
 export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
   try {
+    const isAdmin = await isAdminSession()
+    if (!isAdmin) {
+      return NextResponse.json({ error: 'Unauthorized: Admin access required' }, { status: 403 })
+    }
+
     const data = await request.json()
     const now = Date.now()
 
@@ -180,6 +188,11 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
 // DELETE /api/products/[id]
 export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
   try {
+    const isAdmin = await isAdminSession()
+    if (!isAdmin) {
+      return NextResponse.json({ error: 'Unauthorized: Admin access required' }, { status: 403 })
+    }
+
     await executeQuery('DELETE FROM products WHERE id = ?', [params.id])
     return NextResponse.json({ success: true })
   } catch (error: any) {

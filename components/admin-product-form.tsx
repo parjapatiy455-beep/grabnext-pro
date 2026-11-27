@@ -90,7 +90,7 @@ export function AdminProductForm({ mode, productId }: ProductFormProps) {
 
     useEffect(() => {
         if (mode !== "edit" || !productId) return
-        fetch(`/api/products/${productId}`)
+        fetch(`/api/products/${productId}?admin=1`, { cache: 'no-store' })
             .then(r => r.json())
             .then(p => {
                 let parsedAssets: DigitalAsset[] = []

@@ -1,6 +1,7 @@
 export const runtime = 'edge'
 import { NextRequest, NextResponse } from 'next/server'
 import { executeQuery } from '@/lib/db'
+import { isAdminSession } from '@/lib/admin-auth'
 
 export const dynamic = 'force-dynamic'
 
@@ -8,6 +9,11 @@ export const dynamic = 'force-dynamic'
 // Accepts: { items: [{ id: string, displayOrder: number }] } or { orderedIds: string[] }
 export async function POST(request: NextRequest) {
   try {
+    const isAdmin = await isAdminSession()
+    if (!isAdmin) {
+      return NextResponse.json({ error: 'Unauthorized: Admin access required' }, { status: 403 })
+    }
+
     const data = await request.json()
     const now = Date.now()
 

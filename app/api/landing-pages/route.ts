@@ -1,6 +1,7 @@
 export const runtime = 'edge'
 import { NextRequest, NextResponse } from 'next/server'
 import { executeQuery } from '@/lib/db'
+import { isAdminSession } from '@/lib/admin-auth'
 
 export const dynamic = 'force-dynamic'
 
@@ -21,6 +22,9 @@ async function ensureTable() {
 
 export async function GET() {
     try {
+        if (!(await isAdminSession())) {
+            return NextResponse.json({ error: 'Unauthorized: Admin access required' }, { status: 403 })
+        }
         await ensureTable()
         const rows = await executeQuery(
             'SELECT id, title, slug, isPublished, productIds, createdAt, updatedAt FROM landing_pages ORDER BY createdAt DESC'
@@ -35,6 +39,9 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
     try {
+        if (!(await isAdminSession())) {
+            return NextResponse.json({ error: 'Unauthorized: Admin access required' }, { status: 403 })
+        }
         await ensureTable()
         const data = await request.json()
         const id = crypto.randomUUID()

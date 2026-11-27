@@ -1,6 +1,6 @@
 export const runtime = 'edge'
 export const dynamic = 'force-dynamic'
-export const revalidate = 0
+import { cache } from 'react'
 import { Metadata, ResolvingMetadata } from 'next'
 import { notFound } from 'next/navigation'
 import { executeQuery } from '@/lib/db'
@@ -17,7 +17,8 @@ type Props = {
 
 function tryParse(str: string) { try { return JSON.parse(str) } catch { return [] } }
 
-async function getProduct(id: string): Promise<Product | null> {
+// Deduplicate D1 lookup between generateMetadata and ProductPage within the same request
+const getProduct = cache(async (id: string): Promise<Product | null> => {
     try {
         // 1. Try by exact slug
         let results = await executeQuery('SELECT * FROM products WHERE slug = ? LIMIT 1', [id])
@@ -47,7 +48,7 @@ async function getProduct(id: string): Promise<Product | null> {
         if (!results || results.length === 0) return null
 
         const row = results[0]
-        return normalizeProductData({
+        const normalized = normalizeProductData({
             ...row,
             tags: row.tags ? tryParse(row.tags) : [],
             images: row.images ? tryParse(row.images) : (row.imageUrl ? [row.imageUrl] : []),
@@ -67,11 +68,14 @@ async function getProduct(id: string): Promise<Product | null> {
             discountPopupDelaySeconds: Number(row.discountPopupDelaySeconds || 30),
             discountPopupHeadline: row.discountPopupHeadline || '',
         }) as Product
+        // Never expose paid downloadUrl in public SSR product payload
+        delete (normalized as any).downloadUrl
+        return normalized
     } catch (error) {
         console.error("Error fetching product:", error)
         return null
     }
-}
+})
 
 export async function generateMetadata(
     { params }: Props,

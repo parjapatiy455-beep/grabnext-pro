@@ -1,11 +1,15 @@
 export const runtime = 'edge'
 import { NextRequest, NextResponse } from 'next/server'
 import { sendTestBrevoEmail, sendBrevoEmail, sendGuestAccountEmail, getBrevoSettings, getBrevoAccountInfo } from '@/lib/brevo'
+import { isAdminSession } from '@/lib/admin-auth'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET() {
   try {
+    if (!(await isAdminSession())) {
+      return NextResponse.json({ error: 'Unauthorized: Admin access required' }, { status: 403 })
+    }
     const settings = await getBrevoSettings()
     let accountInfo: any = null
     if (settings.apiKey) {
@@ -30,6 +34,9 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    if (!(await isAdminSession())) {
+      return NextResponse.json({ error: 'Unauthorized: Admin access required' }, { status: 403 })
+    }
     const { email, type = 'test' } = await request.json()
     if (!email || !email.includes('@')) {
       return NextResponse.json({ error: 'Valid recipient email address is required' }, { status: 400 })

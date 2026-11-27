@@ -2,6 +2,7 @@ export const runtime = 'edge'
 import { NextRequest, NextResponse } from 'next/server'
 import { executeQuery } from '@/lib/db'
 import { normalizeProductData } from '@/lib/image-url'
+import { isAdminSession } from '@/lib/admin-auth'
 
 export const dynamic = 'force-dynamic'
 
@@ -14,11 +15,18 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const all = searchParams.get('all') === '1'
+    const full = searchParams.get('full') === '1'
+    const isAdmin = await isAdminSession()
+
+    // Lightweight catalog projection by default; full details only when ?full=1
+    const selectCols = (full || (all && isAdmin))
+      ? '*'
+      : 'id, title, price, originalPrice, category, tags, imageUrl, images, slug, isActive, salesCount, displayOrder, pageType, enableDiscountPopup, discountPopupType, discountPopupPercent, discountPopupAmount, metaPixelId, createdAt, updatedAt'
 
     // Try primary query with displayOrder sorting
     const primarySql = all
-      ? 'SELECT * FROM products ORDER BY displayOrder ASC, createdAt DESC'
-      : 'SELECT * FROM products WHERE isActive = 1 ORDER BY displayOrder ASC, createdAt DESC'
+      ? `SELECT ${selectCols} FROM products ORDER BY displayOrder ASC, createdAt DESC`
+      : `SELECT ${selectCols} FROM products WHERE isActive = 1 ORDER BY displayOrder ASC, createdAt DESC`
 
     const fallbackSql = all
       ? 'SELECT * FROM products ORDER BY createdAt DESC'
@@ -52,33 +60,45 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const products = (Array.isArray(productRows) ? productRows : []).map((p: any) => normalizeProductData({
-      ...p,
-      tags: p.tags ? tryParse(p.tags) : [],
-      images: p.images ? tryParse(p.images) : [],
-      proofImages: p.proofImages ? tryParse(p.proofImages) : [],
-      videoUrl: p.videoUrl || "",
-      isActive: Boolean(p.isActive),
-      price: Number(p.price),
-      originalPrice: p.originalPrice ? Number(p.originalPrice) : null,
-      salesCount: Number(p.salesCount || 0),
-      displayOrder: Number(p.displayOrder || 0),
-      enableDiscountPopup: Boolean(p.enableDiscountPopup),
-      discountPopupType: p.discountPopupType || 'percentage',
-      discountPopupPercent: Number(p.discountPopupPercent || 50),
-      discountPopupAmount: Number(p.discountPopupAmount || 0),
-      discountPopupCoupon: p.discountPopupCoupon || 'SAVE50',
-      discountPopupTimerMinutes: Number(p.discountPopupTimerMinutes || 10),
-      discountPopupDelaySeconds: Number(p.discountPopupDelaySeconds || 30),
-      discountPopupHeadline: p.discountPopupHeadline || '',
-      metaPixelId: p.metaPixelId || null,
-      avgRating: ratingsMap[p.id]?.avgRating ?? 0,
-      reviewCount: ratingsMap[p.id]?.reviewCount ?? 0,
-    }))
+    const products = (Array.isArray(productRows) ? productRows : []).map((p: any) => {
+      const normalized = normalizeProductData({
+        ...p,
+        description: full ? (p.description || '') : '',
+        tags: p.tags ? tryParse(p.tags) : [],
+        images: p.images ? tryParse(p.images) : [],
+        proofImages: full && p.proofImages ? tryParse(p.proofImages) : [],
+        videoUrl: full ? (p.videoUrl || "") : "",
+        isActive: Boolean(p.isActive),
+        price: Number(p.price),
+        originalPrice: p.originalPrice ? Number(p.originalPrice) : null,
+        salesCount: Number(p.salesCount || 0),
+        displayOrder: Number(p.displayOrder || 0),
+        enableDiscountPopup: Boolean(p.enableDiscountPopup),
+        discountPopupType: p.discountPopupType || 'percentage',
+        discountPopupPercent: Number(p.discountPopupPercent || 50),
+        discountPopupAmount: Number(p.discountPopupAmount || 0),
+        discountPopupCoupon: p.discountPopupCoupon || 'SAVE50',
+        discountPopupTimerMinutes: Number(p.discountPopupTimerMinutes || 10),
+        discountPopupDelaySeconds: Number(p.discountPopupDelaySeconds || 30),
+        discountPopupHeadline: p.discountPopupHeadline || '',
+        metaPixelId: p.metaPixelId || null,
+        avgRating: ratingsMap[p.id]?.avgRating ?? 0,
+        reviewCount: ratingsMap[p.id]?.reviewCount ?? 0,
+      })
+      if (!isAdmin) {
+        delete (normalized as any).downloadUrl
+      }
+      if (!full && !(all && isAdmin)) {
+        delete (normalized as any).pageCode
+      }
+      return normalized
+    })
 
     return NextResponse.json(products, {
       headers: {
-        'Cache-Control': 'public, max-age=30, s-maxage=120, stale-while-revalidate=600',
+        'Cache-Control': isAdmin
+          ? 'private, no-store'
+          : 'public, max-age=30, s-maxage=120, stale-while-revalidate=600',
       }
     })
   } catch (error: any) {
@@ -89,6 +109,11 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const isAdmin = await isAdminSession()
+    if (!isAdmin) {
+      return NextResponse.json({ error: 'Unauthorized: Admin access required' }, { status: 403 })
+    }
+
     const data = await request.json()
     const id = crypto.randomUUID()
     const now = Date.now()
@@ -156,18 +181,6 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Auto-sync coupon into coupons table so checkout validates seamlessly
-    if (enableDiscountPopup && discountPopupCoupon) {
-      const cVal = discountPopupType === 'fixed' ? discountPopupAmount : discountPopupPercent
-      if (cVal > 0) {
-        await executeQuery(
-          `INSERT INTO coupons (code, type, value, isActive, createdAt, updatedAt)
-           VALUES (?, ?, ?, 1, ?, ?)
-           ON CONFLICT(code) DO UPDATE SET type=excluded.type, value=excluded.value, isActive=1, updatedAt=excluded.updatedAt`,
-          [discountPopupCoupon, discountPopupType, cVal, now, now]
-        ).catch(() => {})
-      }
-    }
     return NextResponse.json({ success: true, id, slug }, { status: 201 })
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 })

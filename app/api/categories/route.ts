@@ -2,6 +2,7 @@ export const runtime = 'edge'
 import { NextRequest, NextResponse } from 'next/server'
 import { executeQuery } from '@/lib/db'
 import { normalizeImageUrl } from '@/lib/image-url'
+import { isAdminSession } from '@/lib/admin-auth'
 
 export const dynamic = 'force-dynamic';
 
@@ -23,6 +24,9 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    if (!(await isAdminSession())) {
+      return NextResponse.json({ error: 'Unauthorized: Admin access required' }, { status: 403 })
+    }
     const data = await request.json()
     const id = crypto.randomUUID()
     const now = Date.now()

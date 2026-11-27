@@ -37,11 +37,14 @@ export async function getHomePageData(): Promise<{
   banners: HomeBanner[]
 }> {
   try {
-    const primaryProductsSql = 'SELECT * FROM products WHERE isActive = 1 ORDER BY displayOrder ASC, createdAt DESC'
-    const fallbackProductsSql = 'SELECT * FROM products WHERE isActive = 1 ORDER BY createdAt DESC'
+    // Lightweight catalog projection: omit heavy description/pageCode/proofImages and never expose downloadUrl publicly
+    const primaryProductsSql =
+      'SELECT id, title, price, originalPrice, category, tags, imageUrl, images, slug, isActive, salesCount, displayOrder, pageType, metaPixelId, createdAt, updatedAt FROM products WHERE isActive = 1 ORDER BY displayOrder ASC, createdAt DESC'
+    const fallbackProductsSql =
+      'SELECT id, title, price, originalPrice, category, tags, imageUrl, images, slug, isActive, salesCount, pageType, createdAt, updatedAt FROM products WHERE isActive = 1 ORDER BY createdAt DESC'
     const ratingsSql = 'SELECT productId, ROUND(AVG(rating),1) AS avgRating, COUNT(id) AS reviewCount FROM reviews GROUP BY productId'
-    const categoriesSql = 'SELECT * FROM categories WHERE isActive = 1 ORDER BY name ASC'
-    const bannersSql = 'SELECT * FROM banners WHERE isActive = 1 ORDER BY sortOrder ASC, createdAt DESC'
+    const categoriesSql = 'SELECT id, name, slug, description, imageUrl, isActive FROM categories WHERE isActive = 1 ORDER BY name ASC'
+    const bannersSql = 'SELECT id, title, subtitle, imageUrl, linkUrl, buttonText, bgColor, isActive, sortOrder FROM banners WHERE isActive = 1 ORDER BY sortOrder ASC, createdAt DESC'
 
     const [productRowsRaw, ratingRowsRaw, categoryRowsRaw, bannerRowsRaw] = await Promise.all([
       executeQuery(primaryProductsSql).catch(() =>
@@ -64,16 +67,33 @@ export async function getHomePageData(): Promise<{
     }
 
     const productRows = Array.isArray(productRowsRaw) ? productRowsRaw : []
-    const products: Product[] = productRows.map((p: any) => normalizeProductData({
-      ...p,
-      tags: p.tags ? tryParse(p.tags) : [],
-      images: p.images ? tryParse(p.images) : (p.imageUrl ? [p.imageUrl] : []),
-      isActive: Boolean(p.isActive),
-      price: Number(p.price),
-      originalPrice: p.originalPrice ? Number(p.originalPrice) : null,
-      avgRating: ratingsMap[p.id]?.avgRating || null,
-      reviewCount: ratingsMap[p.id]?.reviewCount || 0,
-    }))
+    const products: Product[] = productRows.map((p: any) => {
+      const normalized = normalizeProductData({
+        id: p.id,
+        title: p.title,
+        description: '',
+        price: Number(p.price),
+        originalPrice: p.originalPrice ? Number(p.originalPrice) : null,
+        category: p.category,
+        tags: p.tags ? tryParse(p.tags) : [],
+        imageUrl: p.imageUrl || '',
+        images: p.images ? tryParse(p.images) : (p.imageUrl ? [p.imageUrl] : []),
+        slug: p.slug,
+        isActive: Boolean(p.isActive),
+        downloadUrl: '',
+        createdBy: 'admin',
+        salesCount: Number(p.salesCount || 0),
+        displayOrder: Number(p.displayOrder || 0),
+        pageType: p.pageType || 'shop',
+        metaPixelId: p.metaPixelId || null,
+        avgRating: ratingsMap[p.id]?.avgRating || null,
+        reviewCount: ratingsMap[p.id]?.reviewCount || 0,
+        createdAt: p.createdAt,
+        updatedAt: p.updatedAt,
+      })
+      delete (normalized as any).downloadUrl
+      return normalized
+    })
 
     const categoryRows = Array.isArray(categoryRowsRaw) ? categoryRowsRaw : []
     const categories: HomeCategory[] = categoryRows.filter((c: any) => c.isActive !== 0).map((c: any) => ({

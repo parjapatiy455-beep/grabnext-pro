@@ -1,11 +1,17 @@
 export const runtime = 'edge'
 import { NextRequest, NextResponse } from 'next/server'
 import { put } from '@vercel/blob'
+import { isAdminSession } from '@/lib/admin-auth'
 
 export const dynamic = 'force-dynamic'
 
 export async function POST(request: NextRequest) {
     try {
+        const isAdmin = await isAdminSession()
+        if (!isAdmin) {
+            return NextResponse.json({ error: 'Unauthorized: Admin access required' }, { status: 403 })
+        }
+
         const formData = await request.formData()
         const file = formData.get('file') as File
 

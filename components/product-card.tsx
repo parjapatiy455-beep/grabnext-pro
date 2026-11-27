@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { ShoppingCart, Star } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -16,6 +17,7 @@ interface ProductCardProps {
 }
 
 export function ProductCard({ product, priority = false }: ProductCardProps) {
+  const router = useRouter()
   const { addToCart } = useCart()
   const [added, setAdded] = useState(false)
   const [imgIdx, setImgIdx] = useState(0)
@@ -58,6 +60,7 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
   }
 
   const handleMouseEnter = () => {
+    router.prefetch(href)
     if (images.length < 2) return
     let i = 0
     timerRef.current = setInterval(() => {
@@ -95,7 +98,13 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
   const href = `/products/${p.slug || product.id}`
 
   return (
-    <Link href={href} className="block h-full select-none" onClick={handleCardClick}>
+    <Link
+      href={href}
+      prefetch={true}
+      className="block h-full select-none"
+      onClick={handleCardClick}
+      onTouchStart={() => router.prefetch(href)}
+    >
       <Card
         className="group relative bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-2xl hover:border-violet-400 dark:hover:border-violet-500 shadow-xs hover:shadow-xl hover:shadow-violet-500/10 hover:-translate-y-1 transition-all duration-300 overflow-hidden h-full flex flex-col cursor-pointer"
         onMouseEnter={handleMouseEnter}

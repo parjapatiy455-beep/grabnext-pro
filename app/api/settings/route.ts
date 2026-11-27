@@ -1,10 +1,9 @@
 export const runtime = 'edge'
 import { NextRequest, NextResponse } from 'next/server'
 import { executeQuery } from '@/lib/db'
-
 import { getRequestContext } from '@cloudflare/next-on-pages'
-
 import { DEFAULT_PENDING_TEMPLATE, DEFAULT_PAID_TEMPLATE } from '@/lib/whatsapp'
+import { isAdminSession } from '@/lib/admin-auth'
 
 export const dynamic = 'force-dynamic'
 
@@ -31,6 +30,26 @@ async function ensureTable() {
 export async function GET() {
     try {
         await ensureTable()
+        const isAdmin = await isAdminSession()
+
+        // Non-admin callers (checkout / dashboard) only need public payment gateway config
+        if (!isAdmin) {
+            const rows = await executeQuery(
+                "SELECT key, value FROM settings WHERE key IN ('payment_gateway', 'xpay_api_key')"
+            )
+            const publicSettings: Record<string, string> = {}
+            if (Array.isArray(rows)) {
+                for (const r of rows) publicSettings[r.key] = r.value
+            }
+            if (!publicSettings.payment_gateway) publicSettings.payment_gateway = 'xpay'
+            if (!publicSettings.xpay_api_key) {
+                publicSettings.xpay_api_key = getEnv('XPAY_API_KEY') || getEnv('NEXT_PUBLIC_XPAY_API_KEY') || 'xp_live_wtm5vj64kseuylg9cfmsl9'
+            }
+            return NextResponse.json(publicSettings, {
+                headers: { 'Cache-Control': 'no-store' }
+            })
+        }
+
         const rows = await executeQuery('SELECT key, value FROM settings')
         const settings: Record<string, string> = {}
         if (Array.isArray(rows)) {
@@ -51,7 +70,7 @@ export async function GET() {
             settings.whatsapp_recovery_discount_percent = '10'
         }
         return NextResponse.json(settings, {
-            headers: { 'Cache-Control': 'no-store' }
+            headers: { 'Cache-Control': 'private, no-store' }
         })
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 500 })
@@ -60,6 +79,11 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
     try {
+        const isAdmin = await isAdminSession()
+        if (!isAdmin) {
+            return NextResponse.json({ error: 'Unauthorized: Admin access required' }, { status: 403 })
+        }
+
         await ensureTable()
         const data = await request.json()
         const now = Date.now()

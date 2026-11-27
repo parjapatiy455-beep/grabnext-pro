@@ -709,16 +709,10 @@ export function ProductDetailView({ product: initialProduct, id }: { product: Pr
                     </div>
 
                     <div className="p-4 sm:p-6 lg:p-8">
-                        {/* Description */}
+                        {/* Description (renders immediately from SSR initialProduct) */}
                         {activeTab === "description" && (
                             <div className="space-y-8">
-                                {pageLoading ? (
-                                    <div className="animate-pulse space-y-3">
-                                        {[...Array(5)].map((_, i) => (
-                                            <div key={i} className="h-4 bg-gray-100 dark:bg-slate-800 rounded" style={{ width: `${70 + (i % 3) * 10}%` }} />
-                                        ))}
-                                    </div>
-                                ) : product.description ? (
+                                {product.description ? (
                                     descIsHtml ? (
                                         <div
                                             className="product-description max-w-none prose prose-blue dark:prose-invert prose-img:rounded-xl prose-img:shadow-md prose-img:cursor-zoom-in"

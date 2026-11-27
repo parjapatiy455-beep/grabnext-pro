@@ -19,7 +19,7 @@ async function getSettings() {
 async function getProducts() {
     try {
         const rows = await executeQuery(
-            'SELECT id, title, description, price, originalPrice, category, tags, imageUrl, slug, downloadUrl, isActive, salesCount, createdAt, updatedAt, createdBy FROM products WHERE isActive = 1 ORDER BY createdAt DESC LIMIT 60'
+            'SELECT id, title, description, price, originalPrice, category, tags, imageUrl, slug, isActive, salesCount, createdAt, updatedAt, createdBy FROM products WHERE isActive = 1 ORDER BY createdAt DESC LIMIT 60'
         )
         return Array.isArray(rows) ? rows : []
     } catch { return [] }
@@ -74,7 +74,7 @@ function parseReply(rawReply: string, products: any[]) {
                 category: p.category,
                 imageUrl: p.imageUrl || '',
                 slug: p.slug || '',
-                downloadUrl: p.downloadUrl || '',
+                downloadUrl: '',
                 isActive: true,
                 salesCount: Number(p.salesCount || 0),
                 tags: [],
