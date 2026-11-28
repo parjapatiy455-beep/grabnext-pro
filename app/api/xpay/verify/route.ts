@@ -199,7 +199,11 @@ export async function POST(request: NextRequest) {
         // Verify optional gateway HMAC signature if apiSecret & signature are present
         if (xpayConfig.apiSecret && verifiedOrder.signature && verifiedOrder.updatedAt) {
             const sigPayload = `${verifiedOrder.orderId}|${verifiedOrder.amount}|${gatewayUtr}|${verifiedOrder.updatedAt}`
-            const sigOk = await verifyHmacSha256(sigPayload, xpayConfig.apiSecret, String(verifiedOrder.signature))
+            let sigOk = await verifyHmacSha256(sigPayload, xpayConfig.apiSecret, String(verifiedOrder.signature))
+            if (!sigOk && verifiedOrder.amount !== undefined) {
+                const fixedAmtPayload = `${verifiedOrder.orderId}|${Number(verifiedOrder.amount).toFixed(2)}|${gatewayUtr}|${verifiedOrder.updatedAt}`
+                sigOk = await verifyHmacSha256(fixedAmtPayload, xpayConfig.apiSecret, String(verifiedOrder.signature))
+            }
             if (!sigOk) {
                 console.error(`[XPay Security Alert] Invalid gateway signature for order ${orderId}`)
                 return NextResponse.json({
