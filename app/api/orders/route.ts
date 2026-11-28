@@ -310,33 +310,10 @@ export async function PATCH(request: NextRequest) {
     const admin = await isAdminSession()
     if (newStatus === 'paid' || newStatus === 'completed') {
       if (!admin) {
-        const cleanPaymentId = paymentId ? String(paymentId).trim() : ''
-        if (!cleanPaymentId || cleanPaymentId.length < 4 || cleanPaymentId.toLowerCase() === 'null') {
-          console.warn(`[Security Alert] Unauthorized attempt to mark order ${id} as paid without payment ID.`)
-          return NextResponse.json({
-            error: 'Unauthorized: Orders cannot be marked as paid directly without verified payment.'
-          }, { status: 403 })
-        }
-
-        const orders: any[] = await executeQuery(
-          'SELECT id, totalAmount, status FROM orders WHERE id = ? LIMIT 1',
-          [id]
-        )
-        if (!orders || orders.length === 0) {
-          return NextResponse.json({ error: 'Order not found' }, { status: 404 })
-        }
-
-        try {
-          const reused: any[] = await executeQuery(
-            "SELECT id FROM orders WHERE paymentId = ? AND id != ? AND (status = 'paid' OR status = 'completed') LIMIT 1",
-            [cleanPaymentId, id]
-          )
-          if (reused?.length > 0) {
-            return NextResponse.json({
-              error: 'Security alert: Payment reference already claimed by another order.'
-            }, { status: 400 })
-          }
-        } catch {}
+        console.warn(`[Security Alert] Unauthorized attempt to mark order ${id} as ${newStatus} via PATCH /api/orders.`)
+        return NextResponse.json({
+          error: 'Unauthorized: Orders cannot be marked as paid directly without verified payment.'
+        }, { status: 403 })
       }
     }
 

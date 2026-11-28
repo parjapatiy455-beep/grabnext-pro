@@ -7,11 +7,13 @@ import { sendGuestAccountEmail } from '@/lib/brevo'
 
 export const dynamic = 'force-dynamic'
 
-function generatePassword(length = 10): string {
+function generatePassword(length = 12): string {
     const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789'
+    const bytes = new Uint8Array(length)
+    crypto.getRandomValues(bytes)
     let password = ''
     for (let i = 0; i < length; i++) {
-        password += chars.charAt(Math.floor(Math.random() * chars.length))
+        password += chars.charAt(bytes[i] % chars.length)
     }
     return password
 }
@@ -25,105 +27,82 @@ async function hashPassword(password: string): Promise<string> {
 }
 
 // POST /api/auth/guest-register
-// Creates a guest account and auto-logs-in the user via session cookie
+// Creates a new guest account for first-time checkout emails; never auto-logs into existing accounts
 export async function POST(request: NextRequest) {
     try {
         const { email, displayName, phone } = await request.json()
+        const cleanEmail = typeof email === 'string' ? email.trim().toLowerCase() : ''
 
-        if (!email) {
-            return NextResponse.json({ error: 'Email is required' }, { status: 400 })
+        if (!cleanEmail || !cleanEmail.includes('@')) {
+            return NextResponse.json({ error: 'Valid email is required' }, { status: 400 })
         }
 
-        // Check if user already exists
+        // Check if any account (registered or guest) already exists for this email (case-insensitive)
         const existing = await executeQuery(
-            'SELECT uid, email, displayName, isGuest FROM users WHERE email = ? LIMIT 1',
-            [email]
+            'SELECT uid, email, displayName, isGuest FROM users WHERE LOWER(email) = ? LIMIT 1',
+            [cleanEmail]
         )
 
         if (existing && existing.length > 0) {
-            const existingUser = existing[0] as any
-
-            // SECURITY CHECK: If it's a real user (not a guest), we MUST NOT auto-login without a password.
-            // They must use the regular login page.
-            if (existingUser.isGuest !== 1 && existingUser.isGuest !== true) {
-                return NextResponse.json({
-                    error: 'An account with this email already exists and is not a guest account. Please log in to continue.'
-                }, { status: 403 })
-            }
-
-            // If it IS a guest account, auto-login them safely and return info
-            const expires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-            const session = await encrypt({
-                uid: existingUser.uid,
-                email: existingUser.email,
-                role: 'user',
-                expires
-            })
-            cookies().set('session', session, { expires, httpOnly: true })
-
             return NextResponse.json({
-                user: {
-                    uid: existingUser.uid,
-                    email: existingUser.email,
-                    displayName: existingUser.displayName,
-                    isGuest: true
-                },
-                isExisting: true,
-                temporaryPassword: null,
-                message: 'Welcome back! We found your guest account and logged you in.'
-            })
+                error: 'An account with this email already exists. Please sign in or reset your password to access previous orders.'
+            }, { status: 403 })
         }
 
         // Create new guest account
         const uid = crypto.randomUUID()
-        const temporaryPassword = generatePassword(10)
-        // Switch to plain text to match existing login/register logic
-        const passwordHash = temporaryPassword
+        const temporaryPassword = generatePassword(12)
+        const passwordHash = await hashPassword(temporaryPassword)
         const now = Date.now()
-        const name = displayName || email.split('@')[0]
+        const name = (typeof displayName === 'string' && displayName.trim()) ? displayName.trim() : cleanEmail.split('@')[0]
 
         try {
             await executeQuery(
                 `INSERT INTO users (uid, email, passwordHash, displayName, role, phone, isGuest, createdAt, updatedAt)
            VALUES (?, ?, ?, ?, 'user', ?, 1, ?, ?)`,
-                [uid, email, passwordHash, name, phone || '', now, now]
+                [uid, cleanEmail, passwordHash, name, phone || '', now, now]
             )
         } catch (dbError: any) {
             console.error('[Guest DB Error]', dbError)
             return NextResponse.json({ error: `Database Save Failed: ${dbError.message}` }, { status: 500 })
         }
 
-        // Auto-login: set session cookie
+        // Auto-login ONLY for this brand-new guest account
         const expires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
         const session = await encrypt({
             uid,
-            email,
+            email: cleanEmail,
             role: 'user',
             expires
         })
-        cookies().set('session', session, { expires, httpOnly: true })
+        cookies().set('session', session, {
+            expires,
+            httpOnly: true,
+            sameSite: 'lax',
+            secure: process.env.NODE_ENV === 'production',
+            path: '/',
+        })
 
         // Send Account Confirmation & Password Email via Brevo
         const emailRes = await sendGuestAccountEmail({
-            toEmail: email,
+            toEmail: cleanEmail,
             toName: name,
             temporaryPassword,
         })
 
         if (!emailRes.success) {
-            console.error(`[Guest Account Email Failure] to ${email}:`, emailRes.error)
+            console.error(`[Guest Account Email Failure] to ${cleanEmail}:`, emailRes.error)
         } else {
-            console.log(`[Guest Account Email Sent] Message ID: ${emailRes.messageId} to ${email}`)
+            console.log(`[Guest Account Email Sent] Message ID: ${emailRes.messageId} to ${cleanEmail}`)
         }
 
         const emailNotice = emailRes.success
-            ? `Account login details have been emailed to ${email}.`
-            : `(Note: Email delivery failed: ${emailRes.error || 'Check Brevo settings'}). Please save your password.`
+            ? `Account login details have been emailed to ${cleanEmail}.`
+            : `Please set a permanent password from your dashboard to secure your account.`
 
         return NextResponse.json({
-            user: { uid, email, displayName: name, isGuest: true },
+            user: { uid, email: cleanEmail, displayName: name, isGuest: true },
             isExisting: false,
-            temporaryPassword,
             emailSent: emailRes.success,
             emailError: emailRes.success ? null : emailRes.error,
             message: `Welcome to Grabnext! A guest account has been created for you. ${emailNotice}`

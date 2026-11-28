@@ -74,6 +74,11 @@ export default function CheckoutPage() {
     email: "",
     phone: "",
   })
+  const [fieldErrors, setFieldErrors] = useState<{
+    name?: string
+    phone?: string
+    email?: string
+  }>({})
 
   // ─── Order Recovery Fetcher ───
   useEffect(() => {
@@ -413,8 +418,18 @@ export default function CheckoutPage() {
 
   const finalAmount = effectiveFinalAmount
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) =>
-    setFormData({ ...formData, [e.target.name]: e.target.value })
+  const normalizePhoneDigits = (raw: string): string => {
+    const digits = raw.replace(/\D/g, "")
+    if (digits.length === 12 && digits.startsWith("91")) return digits.slice(2)
+    if (digits.length === 11 && digits.startsWith("0")) return digits.slice(1)
+    return digits
+  }
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target
+    setFormData((prev) => ({ ...prev, [name]: value }))
+    setFieldErrors((prev) => (prev[name as keyof typeof prev] ? { ...prev, [name]: undefined } : prev))
+  }
 
   const updateOrder = useCallback(
     async (orderId: string, status: string = "failed", paymentId?: string, reason?: string) => {
@@ -697,9 +712,30 @@ export default function CheckoutPage() {
   const handleFastCheckoutSubmit = async (e?: React.SyntheticEvent) => {
     e?.preventDefault()
     if (activeItems.length === 0) return toast({ title: "Your cart is empty", variant: "destructive" })
-    if (!formData.name.trim()) return toast({ title: "Please enter your name", variant: "destructive" })
-    if (!formData.email.trim()) return toast({ title: "Please enter your email", variant: "destructive" })
-    if (!formData.phone.trim()) return toast({ title: "Please enter your phone number", variant: "destructive" })
+
+    const errors: { name?: string; phone?: string; email?: string } = {}
+    const cleanName = formData.name.trim()
+    const cleanPhone = normalizePhoneDigits(formData.phone)
+    const cleanEmail = formData.email.trim()
+
+    if (cleanName.length < 2) {
+      errors.name = "Please enter your full name"
+    }
+    if (!/^[6-9]\d{9}$/.test(cleanPhone)) {
+      errors.phone = "Please enter a valid 10-digit Indian mobile number"
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+      errors.email = "Please enter a valid email address for instant delivery"
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors)
+      const firstInvalid = errors.name ? "name" : errors.phone ? "phone" : "email"
+      const el = document.querySelector<HTMLInputElement>(`input[name="${firstInvalid}"]`)
+      el?.focus()
+      return
+    }
+    setFieldErrors({})
 
     if (effectiveFinalAmount > 0 && !hasFiredCheckout.current) {
       hasFiredCheckout.current = true
@@ -1046,65 +1082,108 @@ export default function CheckoutPage() {
               </div>
 
               {/* Form */}
-              <form onSubmit={handleFastCheckoutSubmit} className="space-y-4">
+              <form onSubmit={handleFastCheckoutSubmit} noValidate className="space-y-4">
                 {/* 1. Full Name */}
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 uppercase tracking-wider flex items-center gap-1">
+                  <label htmlFor="checkout-name" className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 uppercase tracking-wider flex items-center gap-1">
                     <UserIcon className="w-3.5 h-3.5 text-slate-400" />
                     <span>Full Name</span>
                     <span className="text-red-500">*</span>
                   </label>
                   <input
+                    id="checkout-name"
                     name="name"
                     type="text"
+                    autoComplete="name"
                     placeholder="Enter your name"
                     value={formData.name}
                     onChange={handleInputChange}
                     required
-                    className="w-full px-3.5 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-base sm:text-sm focus:outline-none focus:bg-white dark:focus:bg-slate-900 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 transition-all placeholder:text-slate-400 font-medium"
+                    aria-invalid={Boolean(fieldErrors.name)}
+                    aria-describedby={fieldErrors.name ? "checkout-name-error" : undefined}
+                    className={`w-full px-3.5 py-3 bg-slate-50 dark:bg-slate-950 border rounded-xl text-slate-900 dark:text-white text-base sm:text-sm focus:outline-none focus:bg-white dark:focus:bg-slate-900 focus:ring-2 transition-all placeholder:text-slate-400 font-medium ${
+                      fieldErrors.name
+                        ? "border-red-500 focus:border-red-500 focus:ring-red-500/20"
+                        : "border-slate-300 dark:border-slate-700 focus:border-amber-500 focus:ring-amber-500/20"
+                    }`}
                   />
+                  {fieldErrors.name && (
+                    <p id="checkout-name-error" role="alert" className="text-xs text-red-600 dark:text-red-400 font-medium mt-1">
+                      {fieldErrors.name}
+                    </p>
+                  )}
                 </div>
 
                 {/* 2. WhatsApp / Phone */}
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 uppercase tracking-wider flex items-center gap-1">
+                  <label htmlFor="checkout-phone" className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 uppercase tracking-wider flex items-center gap-1">
                     <Phone className="w-3.5 h-3.5 text-slate-400" />
                     <span>WhatsApp / Mobile Number</span>
                     <span className="text-red-500">*</span>
                   </label>
                   <div className="relative">
                     <input
+                      id="checkout-phone"
                       name="phone"
                       type="tel"
                       inputMode="numeric"
+                      autoComplete="tel"
+                      maxLength={14}
+                      pattern="(\+?91[\-\s]?)?[6-9][0-9]{9}"
                       placeholder="10-digit mobile number"
                       value={formData.phone}
                       onChange={handleInputChange}
                       required
-                      className="w-full px-3.5 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-base sm:text-sm focus:outline-none focus:bg-white dark:focus:bg-slate-900 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 transition-all placeholder:text-slate-400 font-mono font-medium"
+                      aria-invalid={Boolean(fieldErrors.phone)}
+                      aria-describedby={fieldErrors.phone ? "checkout-phone-error" : undefined}
+                      className={`w-full px-3.5 py-3 bg-slate-50 dark:bg-slate-950 border rounded-xl text-slate-900 dark:text-white text-base sm:text-sm focus:outline-none focus:bg-white dark:focus:bg-slate-900 focus:ring-2 transition-all placeholder:text-slate-400 font-mono font-medium ${
+                        fieldErrors.phone
+                          ? "border-red-500 focus:border-red-500 focus:ring-red-500/20"
+                          : "border-slate-300 dark:border-slate-700 focus:border-amber-500 focus:ring-amber-500/20"
+                      }`}
                     />
                   </div>
-                  <p className="text-[10px] text-slate-400 mt-1">Instant order status & download link will be shared via WhatsApp.</p>
+                  {fieldErrors.phone ? (
+                    <p id="checkout-phone-error" role="alert" className="text-xs text-red-600 dark:text-red-400 font-medium mt-1">
+                      {fieldErrors.phone}
+                    </p>
+                  ) : (
+                    <p className="text-[10px] text-slate-400 mt-1">Instant order status & download link will be shared via WhatsApp.</p>
+                  )}
                 </div>
 
                 {/* 3. Email Address */}
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 uppercase tracking-wider flex items-center gap-1">
+                  <label htmlFor="checkout-email" className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 uppercase tracking-wider flex items-center gap-1">
                     <Mail className="w-3.5 h-3.5 text-slate-400" />
                     <span>Email Address (Instant Delivery)</span>
                     <span className="text-red-500">*</span>
                   </label>
                   <input
+                    id="checkout-email"
                     name="email"
                     type="email"
+                    autoComplete="email"
                     placeholder="name@example.com"
                     value={formData.email}
                     onChange={handleInputChange}
                     required
                     disabled={!!user?.email}
-                    className="w-full px-3.5 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-base sm:text-sm focus:outline-none focus:bg-white dark:focus:bg-slate-900 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 transition-all placeholder:text-slate-400 font-medium disabled:opacity-60"
+                    aria-invalid={Boolean(fieldErrors.email)}
+                    aria-describedby={fieldErrors.email ? "checkout-email-error" : undefined}
+                    className={`w-full px-3.5 py-3 bg-slate-50 dark:bg-slate-950 border rounded-xl text-slate-900 dark:text-white text-base sm:text-sm focus:outline-none focus:bg-white dark:focus:bg-slate-900 focus:ring-2 transition-all placeholder:text-slate-400 font-medium disabled:opacity-60 ${
+                      fieldErrors.email
+                        ? "border-red-500 focus:border-red-500 focus:ring-red-500/20"
+                        : "border-slate-300 dark:border-slate-700 focus:border-amber-500 focus:ring-amber-500/20"
+                    }`}
                   />
-                  <p className="text-[10px] text-slate-400 mt-1">Direct Google Drive / download access links sent directly to this email.</p>
+                  {fieldErrors.email ? (
+                    <p id="checkout-email-error" role="alert" className="text-xs text-red-600 dark:text-red-400 font-medium mt-1">
+                      {fieldErrors.email}
+                    </p>
+                  ) : (
+                    <p className="text-[10px] text-slate-400 mt-1">Direct Google Drive / download access links sent directly to this email.</p>
+                  )}
                 </div>
 
                 {/* 4. Promo / Coupon Code Section */}
@@ -1349,6 +1428,23 @@ export default function CheckoutPage() {
           </div>
         </div>
       </main>
+
+      {/* Subtle Bottom Policy Footer — kept out of main payment flow */}
+      <footer className="max-w-4xl mx-auto px-4 pt-8 pb-4 text-center">
+        <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-[11px] text-slate-400 dark:text-slate-500">
+          <Link href="/refund" target="_blank" rel="noopener noreferrer" className="hover:text-slate-600 dark:hover:text-slate-300 transition-colors">
+            Refund Policy
+          </Link>
+          <span aria-hidden="true">•</span>
+          <Link href="/terms" target="_blank" rel="noopener noreferrer" className="hover:text-slate-600 dark:hover:text-slate-300 transition-colors">
+            Terms of Service
+          </Link>
+          <span aria-hidden="true">•</span>
+          <Link href="/privacy" target="_blank" rel="noopener noreferrer" className="hover:text-slate-600 dark:hover:text-slate-300 transition-colors">
+            Privacy Policy
+          </Link>
+        </div>
+      </footer>
     </div>
   )
 }
