@@ -491,7 +491,7 @@ export default function CheckoutPage() {
       customer_email: formData.email,
       customer_name: formData.name,
       customer_phone: formData.phone,
-      onSuccess: async (data: { utr: string; amount?: number }) => {
+      onSuccess: async (data: { orderId?: string; utr?: string; amount?: number; signature?: string }) => {
         paymentSucceeded = true
         setLoading(true)
 
@@ -516,8 +516,10 @@ export default function CheckoutPage() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               orderId,
-              utr: data.utr,
+              xpayOrderId: data.orderId || "",
+              utr: data.utr || "",
               amount: data.amount !== undefined ? data.amount : verifiedAmount,
+              signature: data.signature || "",
             }),
           })
           const verifyData = await res.json()

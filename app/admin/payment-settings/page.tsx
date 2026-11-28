@@ -39,9 +39,12 @@ export default function PaymentSettingsPage() {
 
     // XPay Gateway Settings States
     const [xpayApiKey, setXpayApiKey] = useState("")
+    const [xpayApiSecret, setXpayApiSecret] = useState("")
     const [savingXPay, setSavingXPay] = useState(false)
     const [showXPayKey, setShowXPayKey] = useState(false)
+    const [showXPaySecret, setShowXPaySecret] = useState(false)
     const [copiedXPay, setCopiedXPay] = useState(false)
+    const [copiedWebhook, setCopiedWebhook] = useState(false)
 
     // Brevo Email Settings States
     const [brevoApiKey, setBrevoApiKey] = useState("")
@@ -55,6 +58,7 @@ export default function PaymentSettingsPage() {
             .then((data) => {
                 setActiveGateway(data.payment_gateway || "xpay")
                 if (data.xpay_api_key) setXpayApiKey(data.xpay_api_key)
+                if (data.xpay_api_secret) setXpayApiSecret(data.xpay_api_secret)
                 if (data.brevo_api_key) setBrevoApiKey(data.brevo_api_key)
                 if (data.brevo_sender_email) setBrevoSenderEmail(data.brevo_sender_email)
                 if (data.brevo_sender_name) setBrevoSenderName(data.brevo_sender_name)
@@ -87,27 +91,43 @@ export default function PaymentSettingsPage() {
         e.preventDefault()
         setSavingXPay(true)
         try {
+            const payload: Record<string, string> = {
+                xpay_api_key: xpayApiKey.trim(),
+            }
+            if (xpayApiSecret.trim()) {
+                payload.xpay_api_secret = xpayApiSecret.trim()
+            }
             const res = await fetch("/api/settings", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    xpay_api_key: xpayApiKey.trim(),
-                }),
+                body: JSON.stringify(payload),
             })
-            if (!res.ok) throw new Error("Failed to save XPay API key")
+            if (!res.ok) throw new Error("Failed to save XPay credentials")
             toast({
-                title: "🎉 XPay API Key Saved!",
-                description: "Payment gateway API key updated successfully in database settings.",
+                title: "🎉 XPay Credentials Saved!",
+                description: "Payment gateway API key and secret updated in database settings.",
             })
         } catch (err: any) {
             toast({
-                title: "Failed to save XPay API key",
+                title: "Failed to save XPay credentials",
                 description: err.message,
                 variant: "destructive",
             })
         } finally {
             setSavingXPay(false)
         }
+    }
+
+    const webhookEndpointUrl =
+        typeof window !== "undefined"
+            ? `${window.location.origin}/api/xpay/webhook`
+            : "https://grabnext.pages.dev/api/xpay/webhook"
+
+    const handleCopyWebhook = () => {
+        navigator.clipboard.writeText(webhookEndpointUrl)
+        setCopiedWebhook(true)
+        setTimeout(() => setCopiedWebhook(false), 2000)
+        toast({ title: "Webhook URL copied!" })
     }
 
     const handleCopyKey = () => {
@@ -313,10 +333,60 @@ export default function PaymentSettingsPage() {
                                 </div>
                             </div>
 
+                            <div className="space-y-1.5">
+                                <div className="flex items-center justify-between">
+                                    <Label htmlFor="xpaySecret" className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+                                        <ShieldCheck className="h-3.5 w-3.5 text-cyan-600" />
+                                        XPay Merchant API Secret (Server Verification & Webhook HMAC)
+                                    </Label>
+                                    <span className="text-xs text-slate-500 font-mono">
+                                        e.g. sk_...
+                                    </span>
+                                </div>
+                                <div className="relative flex items-center">
+                                    <Input
+                                        id="xpaySecret"
+                                        type={showXPaySecret ? "text" : "password"}
+                                        placeholder="sk_xxxxxxxxxxxxxxxxxxxxxxxx (optional but recommended)"
+                                        value={xpayApiSecret}
+                                        onChange={(e) => setXpayApiSecret(e.target.value)}
+                                        className="pr-12 font-mono text-sm border-slate-300 focus-visible:ring-cyan-500"
+                                    />
+                                    <div className="absolute right-2 flex items-center gap-1 text-slate-400">
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="sm"
+                                            className="h-7 w-7 p-0 hover:text-slate-700"
+                                            onClick={() => setShowXPaySecret(!showXPaySecret)}
+                                            title={showXPaySecret ? "Hide API secret" : "Show API secret"}
+                                        >
+                                            {showXPaySecret ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                                        </Button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="space-y-1.5 bg-slate-50 border border-slate-200 rounded-xl p-3">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-xs font-semibold text-slate-700">Webhook Notification URL (Paste in X-Pay Dashboard)</span>
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-6 px-2 text-xs text-cyan-700 hover:text-cyan-900"
+                                        onClick={handleCopyWebhook}
+                                    >
+                                        {copiedWebhook ? <><Check className="h-3 w-3 mr-1 text-green-600" />Copied</> : <><Copy className="h-3 w-3 mr-1" />Copy URL</>}
+                                    </Button>
+                                </div>
+                                <p className="font-mono text-xs text-slate-600 break-all">{webhookEndpointUrl}</p>
+                            </div>
+
                             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pt-2">
                                 <span className="text-xs text-slate-500 flex items-center gap-1.5">
                                     <ShieldCheck className="h-4 w-4 text-green-600 shrink-0" />
-                                    Database mein save hote hi website checkout par bina redeploy kiye nayi key lag jayegi.
+                                    Database mein save hote hi website checkout aur webhook verification turant active ho jayega.
                                 </span>
                                 <Button
                                     type="submit"
@@ -325,7 +395,7 @@ export default function PaymentSettingsPage() {
                                     className="gap-2 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white shadow-sm"
                                 >
                                     {savingXPay && <Loader2 className="h-4 w-4 animate-spin" />}
-                                    Save XPay API Key
+                                    Save XPay Credentials
                                 </Button>
                             </div>
                         </form>
