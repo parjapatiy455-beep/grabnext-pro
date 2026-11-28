@@ -60,6 +60,7 @@ export interface LandingSection {
 
 export interface Product {
   id: string
+  slug?: string
   title: string
   description: string
   price: number

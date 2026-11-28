@@ -28,6 +28,16 @@ const getProduct = cache(async (id: string): Promise<Product | null> => {
             results = await executeQuery('SELECT * FROM products WHERE id = ? LIMIT 1', [id])
         }
 
+        // 2b. Try by historical slug redirect (preserves old ad/shared links when slug is edited)
+        if (!results || results.length === 0) {
+            try {
+                results = await executeQuery(
+                    'SELECT p.* FROM products p INNER JOIN product_slug_redirects r ON r.productId = p.id WHERE r.oldSlug = ? LIMIT 1',
+                    [id]
+                )
+            } catch {}
+        }
+
         // 3. Fallback: extract 6-character hex suffix from slug (e.g. video-editing-assets-bundle-68ab54 -> 68ab54)
         if (!results || results.length === 0) {
             const parts = id.split('-')
@@ -98,9 +108,14 @@ export async function generateMetadata(
 
     const cleanTitle = product.title.replace(/\s+/g, ' ').trim()
 
-    // Strip HTML tags and normalize description to 140-160 characters
+    // Strip HTML tags (and embedded style/script blocks) and normalize description to 140-160 characters
     let cleanDescription = product.description
-        ? product.description.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
+        ? product.description
+            .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, ' ')
+            .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, ' ')
+            .replace(/<[^>]*>/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim()
         : ''
 
     if (cleanDescription.length < 80) {
@@ -238,7 +253,12 @@ export default async function Page({ params }: Props) {
 
     // Strip HTML for clean structured data description
     const cleanDesc = product.description
-        ? product.description.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
+        ? product.description
+            .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, ' ')
+            .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, ' ')
+            .replace(/<[^>]*>/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim()
         : ''
 
     const productImages: string[] =

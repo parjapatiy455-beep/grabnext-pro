@@ -114,6 +114,14 @@ export async function runMigrations() {
   await safeAddColumn('products', 'discountPopupHeadline', 'TEXT')
   await safeAddColumn('products', 'metaPixelId', 'TEXT')
 
+  await executeQuery(`
+    CREATE TABLE IF NOT EXISTS product_slug_redirects (
+      oldSlug TEXT PRIMARY KEY,
+      productId TEXT NOT NULL,
+      createdAt INTEGER
+    );
+  `).catch(() => {})
+
   await safeAddColumn('orders', 'userEmail', 'TEXT')
   await safeAddColumn('orders', 'userName', 'TEXT')
   await safeAddColumn('orders', 'userPhone', 'TEXT')

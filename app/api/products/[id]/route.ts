@@ -9,9 +9,12 @@ export const dynamic = 'force-dynamic'
 function makeSlug(title: string): string {
   return title.toLowerCase().replace(/[^a-z0-9\s-]/g, '').trim().replace(/\s+/g, '-').replace(/-+/g, '-').slice(0, 80)
 }
+function sanitizeSlug(raw: string): string {
+  return raw.toLowerCase().trim().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').replace(/^-+|-+$/g, '').slice(0, 120)
+}
 function tryParse(str: string) { try { return JSON.parse(str) } catch { return [] } }
 
-// GET /api/products/[id]  — supports both ID and slug lookup
+// GET /api/products/[id]  — supports both ID and slug lookup (including old slugs)
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     const p = params.id
@@ -19,6 +22,14 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     let results = await executeQuery('SELECT * FROM products WHERE slug = ? LIMIT 1', [p])
     if (!results || results.length === 0) {
       results = await executeQuery('SELECT * FROM products WHERE id = ? LIMIT 1', [p])
+    }
+    if (!results || results.length === 0) {
+      try {
+        results = await executeQuery(
+          'SELECT prod.* FROM products prod INNER JOIN product_slug_redirects r ON r.productId = prod.id WHERE r.oldSlug = ? LIMIT 1',
+          [p]
+        )
+      } catch {}
     }
     if (!results || results.length === 0) {
       const parts = p.split('-')
@@ -86,11 +97,38 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     const data = await request.json()
     const now = Date.now()
     
-    // Fetch the existing product's slug to ensure it doesn't change
+    // Fetch the existing product's slug; allow admin to update it while preserving old slug redirects
     const existing = await executeQuery('SELECT slug FROM products WHERE id = ? LIMIT 1', [params.id])
-    let slug = existing && existing[0]?.slug
+    const existingSlug = existing && existing[0]?.slug ? String(existing[0].slug) : ''
+    const requestedSlug = data.slug !== undefined && data.slug !== null ? sanitizeSlug(String(data.slug)) : ''
+    let slug = requestedSlug || existingSlug
     if (!slug) {
       slug = makeSlug(data.title || 'product') + '-' + params.id.slice(0, 6)
+    }
+
+    if (slug !== existingSlug) {
+      const duplicate = await executeQuery('SELECT id FROM products WHERE slug = ? AND id != ? LIMIT 1', [slug, params.id]).catch(() => [])
+      if (Array.isArray(duplicate) && duplicate.length > 0) {
+        return NextResponse.json({ error: 'This product slug is already in use by another product. Please choose a different slug.' }, { status: 409 })
+      }
+      // Preserve old slug in redirect table so running ads / old links never break
+      if (existingSlug) {
+        try {
+          await executeQuery(
+            `CREATE TABLE IF NOT EXISTS product_slug_redirects (oldSlug TEXT PRIMARY KEY, productId TEXT NOT NULL, createdAt INTEGER)`
+          )
+          await executeQuery(
+            'INSERT OR REPLACE INTO product_slug_redirects (oldSlug, productId, createdAt) VALUES (?, ?, ?)',
+            [existingSlug, params.id, now]
+          )
+          await executeQuery(
+            'DELETE FROM product_slug_redirects WHERE oldSlug = ? AND productId = ?',
+            [slug, params.id]
+          ).catch(() => {})
+        } catch (err) {
+          console.warn('[Products PUT] Failed to record old slug redirect:', err)
+        }
+      }
     }
 
     const images = data.images && data.images.length > 0 ? data.images : (data.imageUrl ? [data.imageUrl] : [])

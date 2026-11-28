@@ -15,7 +15,7 @@ import {
     FileText, Video, Link as LinkIcon, File, Play, 
     ShieldCheck, CheckCircle2, ExternalLink
 } from "lucide-react"
-import { fetchCategories } from "@/lib/d1-client"
+import { fetchCategories, clearProductsCache } from "@/lib/d1-client"
 import { DigitalAsset } from "@/lib/types"
 import { convertToWebP } from "@/lib/image-optimizer"
 import { getVideoInfo, isValidVideoUrl } from "@/lib/video-utils"
@@ -25,8 +25,16 @@ interface ProductFormProps {
     productId?: string
 }
 
+const sanitizeSlugInput = (raw: string) =>
+    raw
+        .toLowerCase()
+        .replace(/\s+/g, "-")
+        .replace(/[^a-z0-9-]/g, "")
+        .replace(/-+/g, "-")
+
 const EMPTY = {
     title: "", 
+    slug: "",
     description: "", 
     price: "", 
     originalPrice: "", 
@@ -65,6 +73,7 @@ export function AdminProductForm({ mode, productId }: ProductFormProps) {
     const [digitalUploading, setDigitalUploading] = useState(false)
     const [digitalAssets, setDigitalAssets] = useState<DigitalAsset[]>([])
     const [loading, setLoading] = useState(mode === "edit")
+    const [originalSlug, setOriginalSlug] = useState("")
     const [proofUrlInput, setProofUrlInput] = useState("")
     const [availablePixels, setAvailablePixels] = useState<Array<{ id: string; name: string; pixelId: string }>>([])
     const digitalFileRef = useRef<HTMLInputElement>(null)
@@ -101,6 +110,7 @@ export function AdminProductForm({ mode, productId }: ProductFormProps) {
 
                 setForm({
                     title: p.title || "",
+                    slug: p.slug || "",
                     description: p.description || "",
                     price: p.price?.toString() || "",
                     originalPrice: p.originalPrice?.toString() || "",
@@ -122,6 +132,7 @@ export function AdminProductForm({ mode, productId }: ProductFormProps) {
                     discountPopupHeadline: p.discountPopupHeadline || "",
                     metaPixelId: p.metaPixelId || "",
                 })
+                setOriginalSlug(p.slug || "")
                 setDigitalAssets(parsedAssets)
                 setLoading(false)
             })
@@ -256,8 +267,10 @@ export function AdminProductForm({ mode, productId }: ProductFormProps) {
 
         setSubmitting(true)
         try {
-            const body = {
+            const cleanSlug = sanitizeSlugInput(form.slug || "").replace(/^-+|-+$/g, "")
+            const body: Record<string, any> = {
                 title: form.title.trim(),
+                ...(cleanSlug ? { slug: cleanSlug } : {}),
                 description: form.description,
                 price: Number(form.price),
                 originalPrice: form.originalPrice ? Number(form.originalPrice) : null,
@@ -286,6 +299,7 @@ export function AdminProductForm({ mode, productId }: ProductFormProps) {
             const res = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
             const data = await res.json()
             if (!res.ok) throw new Error(data.error)
+            clearProductsCache()
             toast({ title: mode === "edit" ? "✅ Product updated!" : "✅ Product created!" })
             router.push("/admin/products")
         } catch (err: any) {
@@ -344,9 +358,56 @@ export function AdminProductForm({ mode, productId }: ProductFormProps) {
                                             className="mt-1.5 text-base min-h-[80px] border-gray-200 focus:ring-primary/20 transition-all"
                                             required
                                         />
-                                        {form.title && (
-                                            <p className="text-[10px] text-gray-400 mt-1.5 flex items-center gap-1">
-                                                <LinkIcon className="h-2.5 w-2.5" /> URL: <span className="text-primary font-medium">/products/{form.title.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim().replace(/\s+/g, '-')}-xxxxxx</span>
+                                    </div>
+                                    <div>
+                                        <div className="flex items-center justify-between gap-2">
+                                            <Label>Product Slug (URL)</Label>
+                                            <div className="flex items-center gap-2">
+                                                {mode === "edit" && originalSlug && form.slug !== originalSlug && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setForm(f => ({ ...f, slug: originalSlug }))}
+                                                        className="text-[11px] font-medium text-slate-500 hover:text-slate-800 underline"
+                                                    >
+                                                        Reset to original
+                                                    </button>
+                                                )}
+                                                {form.title && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            const generated = sanitizeSlugInput(form.title).replace(/^-+|-+$/g, "")
+                                                            if (generated) setForm(f => ({ ...f, slug: generated }))
+                                                        }}
+                                                        className="text-[11px] font-semibold text-blue-600 hover:text-blue-700"
+                                                    >
+                                                        Generate from Title
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <div className="mt-1.5 flex items-center rounded-md border border-gray-200 bg-white overflow-hidden focus-within:ring-2 focus-within:ring-primary/20">
+                                            <span className="px-3 py-2.5 text-xs font-mono text-gray-500 bg-slate-50 border-r border-gray-200 shrink-0 select-none">
+                                                /products/
+                                            </span>
+                                            <Input
+                                                value={form.slug}
+                                                onChange={e => setForm(f => ({ ...f, slug: sanitizeSlugInput(e.target.value) }))}
+                                                onBlur={() => setForm(f => ({ ...f, slug: sanitizeSlugInput(f.slug).replace(/^-+|-+$/g, "") }))}
+                                                placeholder={mode === "create" ? "auto-generated-from-title (optional custom slug)" : "product-url-slug"}
+                                                className="border-0 focus-visible:ring-0 h-10 text-sm font-mono"
+                                            />
+                                        </div>
+                                        <p className="text-[11px] text-gray-400 mt-1.5 flex items-center gap-1 flex-wrap">
+                                            <LinkIcon className="h-3 w-3 shrink-0" />
+                                            <span>Live URL:</span>
+                                            <span className="text-primary font-mono font-medium break-all">
+                                                /products/{form.slug || (form.title ? `${sanitizeSlugInput(form.title).replace(/^-+|-+$/g, "")}-xxxxxx` : "your-product-slug")}
+                                            </span>
+                                        </p>
+                                        {mode === "edit" && originalSlug && form.slug && form.slug !== originalSlug && (
+                                            <p className="text-[11px] text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-2.5 py-1.5 mt-1.5">
+                                                Old link <span className="font-mono font-semibold">/products/{originalSlug}</span> will keep working automatically so running ads won&apos;t break.
                                             </p>
                                         )}
                                     </div>
@@ -996,7 +1057,7 @@ export function AdminProductForm({ mode, productId }: ProductFormProps) {
                                 <div>
                                     <h2 className="font-bold text-xl text-gray-900 tracking-tight">Full Product Description</h2>
                                     <p className="text-sm text-gray-400 mt-0.5">
-                                        Write detailed information and embed proof screenshots or comparison images directly into the text.
+                                        Write manually in Visual Editor or switch to HTML Code mode to paste &amp; use custom HTML directly.
                                     </p>
                                 </div>
                             </div>

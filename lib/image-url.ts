@@ -36,10 +36,34 @@ export function normalizeImageArray(images: any): string[] {
 
 export function normalizeHtmlContent(html: string | null | undefined): string {
   if (!html || typeof html !== 'string') return ''
-  return html.replace(
+  let out = html.replace(
     /https?:\/\/[a-zA-Z0-9_\-\.]+\.public\.blob\.vercel-storage\.com\/products\//g,
     '/products/'
   )
+
+  // If admin pasted a complete HTML document (<!DOCTYPE html> / <html> / <body>),
+  // extract <style> tags + <body> contents and scope global html/body selectors so store layout stays intact.
+  if (/<body[\s>]/i.test(out) || /<!doctype/i.test(out) || /<html[\s>]/i.test(out)) {
+    const styles: string[] = []
+    out.replace(/<style\b[^>]*>([\s\S]*?)<\/style>/gi, (match, css) => {
+      const scopedCss = css
+        .replace(/(^|[},\n\r])\s*(html|body)\b/gi, '$1 .product-description')
+      styles.push(`<style>${scopedCss}</style>`)
+      return ''
+    })
+    const bodyMatch = out.match(/<body\b[^>]*>([\s\S]*?)<\/body>/i)
+    const bodyHtml = bodyMatch
+      ? bodyMatch[1]
+      : out
+          .replace(/<!doctype[^>]*>/gi, '')
+          .replace(/<\/?(html|head|body)[^>]*>/gi, '')
+          .replace(/<title[^>]*>[\s\S]*?<\/title>/gi, '')
+          .replace(/<meta[^>]*>/gi, '')
+          .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, '')
+    out = `${styles.join('\n')}\n${bodyHtml}`.trim()
+  }
+
+  return out
 }
 
 export function normalizeProductData<T extends Record<string, any>>(p: T): T {

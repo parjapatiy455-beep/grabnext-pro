@@ -557,7 +557,7 @@ export function ProductDetailView({ product: initialProduct, id }: { product: Pr
     const originalPrice = (product as any).originalPrice || product.price * 1.25
     const discount = Math.round(((originalPrice - product.price) / originalPrice) * 100)
     const avgRating = parseFloat(reviewStats.avgRating)
-    const descIsHtml = product.description?.includes("<") && product.description?.includes(">")
+    const descIsHtml = /<[a-z][\s\S]*>/i.test(product.description || "")
 
     const handleDescriptionImageClick = useCallback((src: string) => {
         setZoomModalData({ images: [src], startIdx: 0 })

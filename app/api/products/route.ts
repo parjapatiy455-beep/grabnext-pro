@@ -9,6 +9,9 @@ export const dynamic = 'force-dynamic'
 function makeSlug(title: string): string {
   return title.toLowerCase().replace(/[^a-z0-9\s-]/g, '').trim().replace(/\s+/g, '-').replace(/-+/g, '-').slice(0, 80)
 }
+function sanitizeSlug(raw: string): string {
+  return raw.toLowerCase().trim().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').replace(/^-+|-+$/g, '').slice(0, 120)
+}
 function tryParse(str: string) { try { return JSON.parse(str) } catch { return [] } }
 
 export async function GET(request: NextRequest) {
@@ -117,7 +120,14 @@ export async function POST(request: NextRequest) {
     const data = await request.json()
     const id = crypto.randomUUID()
     const now = Date.now()
-    const slug = makeSlug(data.title || 'product') + '-' + id.slice(0, 6)
+    const customSlug = data.slug ? sanitizeSlug(String(data.slug)) : ''
+    const slug = customSlug || (makeSlug(data.title || 'product') + '-' + id.slice(0, 6))
+
+    // Ensure slug is unique if provided or generated
+    const existingSlugRows = await executeQuery('SELECT id FROM products WHERE slug = ? LIMIT 1', [slug]).catch(() => [])
+    if (Array.isArray(existingSlugRows) && existingSlugRows.length > 0) {
+      return NextResponse.json({ error: 'This product slug is already in use. Please choose a different slug.' }, { status: 409 })
+    }
     const images = data.images && data.images.length > 0 ? data.images : (data.imageUrl ? [data.imageUrl] : [])
     const imageUrl = images[0] || data.imageUrl || ''
     const displayOrder = typeof data.displayOrder === 'number' ? data.displayOrder : (parseInt(data.displayOrder, 10) || 0)

@@ -5,7 +5,8 @@ import {
     Bold, Italic, Underline, List, ListOrdered, Highlighter, Type, 
     AlignLeft, AlignCenter, AlignRight, AlignJustify, 
     Link as LinkIcon, Undo, Redo, Minus, Heading1, Heading2, Heading3, 
-    Eraser, ChevronDown, ImageIcon, Upload, Loader2, X, Plus
+    Eraser, ChevronDown, ImageIcon, Upload, Loader2, X, Plus,
+    Code2, Eye, PenLine, ClipboardPaste
 } from "lucide-react"
 import { 
     DropdownMenu, 
@@ -14,6 +15,7 @@ import {
     DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu"
 import { convertToWebP } from "@/lib/image-optimizer"
+import { normalizeHtmlContent } from "@/lib/image-url"
 import { toast } from "@/hooks/use-toast"
 
 interface RichTextEditorProps {
@@ -21,6 +23,13 @@ interface RichTextEditorProps {
     onChange: (html: string) => void
     placeholder?: string
     minHeight?: number
+}
+
+type EditorMode = "visual" | "html" | "preview"
+
+function hasComplexHtml(html: string): boolean {
+    if (!html) return false
+    return /<(style|section|article|header|footer|main|aside|table|svg|iframe|!doctype|html|head|body)\b/i.test(html)
 }
 
 const COLORS = ["#000000", "#3b82f6", "#ef4444", "#10b981", "#f59e0b", "#8b5cf6", "#ec4899"]
@@ -39,18 +48,32 @@ export function RichTextEditor({ value, onChange, placeholder = "Write descripti
     const editorRef = useRef<HTMLDivElement>(null)
     const fileInputRef = useRef<HTMLInputElement>(null)
     const [isMounted, setIsMounted] = useState(false)
+    const [editorMode, setEditorMode] = useState<EditorMode>(() => (hasComplexHtml(value) ? "html" : "visual"))
     const [imageModalOpen, setImageModalOpen] = useState(false)
     const [imageUrlInput, setImageUrlInput] = useState("")
     const [imageAltInput, setImageAltInput] = useState("")
     const [uploadingImage, setUploadingImage] = useState(false)
     const savedSelectionRef = useRef<Range | null>(null)
+    const initializedComplexCheckRef = useRef(false)
 
     useEffect(() => {
         setIsMounted(true)
-        if (editorRef.current && editorRef.current.innerHTML !== value) {
+    }, [])
+
+    useEffect(() => {
+        if (!initializedComplexCheckRef.current && value) {
+            initializedComplexCheckRef.current = true
+            if (hasComplexHtml(value)) {
+                setEditorMode("html")
+            }
+        }
+    }, [value])
+
+    useEffect(() => {
+        if (editorMode === "visual" && editorRef.current && editorRef.current.innerHTML !== (value || "")) {
             editorRef.current.innerHTML = value || ""
         }
-    }, [])
+    }, [value, editorMode, isMounted])
 
     const saveSelection = () => {
         if (typeof window !== "undefined") {
@@ -168,9 +191,93 @@ export function RichTextEditor({ value, onChange, placeholder = "Write descripti
 
     const handleInput = () => onChange(editorRef.current?.innerHTML || "")
 
+    const handlePasteHtmlClipboard = async () => {
+        try {
+            const text = await navigator.clipboard.readText()
+            if (!text) {
+                toast({ title: "Clipboard is empty", variant: "destructive" })
+                return
+            }
+            onChange(text)
+            toast({ title: "✅ HTML pasted from clipboard!" })
+        } catch {
+            toast({ title: "Use Ctrl+V inside the HTML editor box to paste", description: "Browser clipboard permission was not granted." })
+        }
+    }
+
     return (
         <div className="border border-gray-200 rounded-xl overflow-hidden ring-offset-0 focus-within:ring-2 focus-within:ring-primary/20 transition-all bg-white shadow-sm">
-            {/* Toolbar */}
+            {/* Mode Switcher Bar */}
+            <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 bg-slate-100/80 border-b border-gray-200">
+                <div className="inline-flex items-center bg-white border border-gray-200 rounded-lg p-0.5 shadow-xs">
+                    <button
+                        type="button"
+                        onClick={() => setEditorMode("visual")}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+                            editorMode === "visual"
+                                ? "bg-blue-600 text-white shadow-xs"
+                                : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                        }`}
+                    >
+                        <PenLine className="h-3.5 w-3.5" />
+                        <span>Write Manually (Visual)</span>
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setEditorMode("html")}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+                            editorMode === "html"
+                                ? "bg-slate-900 text-white shadow-xs"
+                                : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                        }`}
+                    >
+                        <Code2 className="h-3.5 w-3.5" />
+                        <span>Paste / Edit HTML</span>
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setEditorMode("preview")}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+                            editorMode === "preview"
+                                ? "bg-emerald-600 text-white shadow-xs"
+                                : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                        }`}
+                    >
+                        <Eye className="h-3.5 w-3.5" />
+                        <span>Live Preview</span>
+                    </button>
+                </div>
+
+                <div className="flex items-center gap-2 text-[11px] text-gray-500">
+                    {editorMode === "html" && (
+                        <>
+                            <button
+                                type="button"
+                                onClick={handlePasteHtmlClipboard}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 font-semibold transition-colors"
+                            >
+                                <ClipboardPaste className="h-3 w-3 text-blue-600" />
+                                Paste HTML
+                            </button>
+                            {value && (
+                                <button
+                                    type="button"
+                                    onClick={() => onChange("")}
+                                    className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-white border border-red-200 text-red-600 hover:bg-red-50 font-semibold transition-colors"
+                                >
+                                    Clear
+                                </button>
+                            )}
+                        </>
+                    )}
+                    <span className="hidden sm:inline font-mono text-[10px] text-gray-400">
+                        {value ? `${value.length.toLocaleString()} chars` : "Empty"}
+                    </span>
+                </div>
+            </div>
+
+            {/* Visual Toolbar (shown only in Visual mode) */}
+            {editorMode === "visual" && (
             <div className="flex flex-wrap items-center gap-1 p-2 bg-gray-50/50 border-b border-gray-200">
                 <div className="flex bg-white border border-gray-200 rounded-lg p-0.5 shadow-sm">
                     <ToolBtn onClick={() => exec("undo")} title="Undo"><Undo className="h-3.5 w-3.5" /></ToolBtn>
@@ -281,18 +388,69 @@ export function RichTextEditor({ value, onChange, placeholder = "Write descripti
 
                 <ToolBtn onClick={() => exec("removeFormat")} title="Clear Formatting"><Eraser className="h-3.5 w-3.5" /></ToolBtn>
             </div>
+            )}
 
-            {/* Editable area */}
-            <div
-                ref={editorRef}
-                contentEditable
-                suppressContentEditableWarning
-                onInput={handleInput}
-                onPaste={handlePaste}
-                data-placeholder={placeholder}
-                className="p-6 focus:outline-none text-base leading-relaxed min-h-[var(--editor-min-h)] prose max-w-none prose-sm sm:prose-base prose-blue prose-img:rounded-xl prose-img:shadow-md"
-                style={{ minHeight: `${minHeight}px`, "--editor-min-h": `${minHeight}px` } as any}
-            />
+            {/* Mode Content */}
+            {editorMode === "visual" && (
+                <>
+                    {hasComplexHtml(value) && (
+                        <div className="px-4 py-2 bg-amber-50 border-b border-amber-200 text-[11px] text-amber-800 flex items-center justify-between gap-2">
+                            <span>This description contains custom HTML/styles. Use <strong>Paste / Edit HTML</strong> to edit raw HTML safely without losing styles.</span>
+                            <button type="button" onClick={() => setEditorMode("html")} className="font-bold underline shrink-0">
+                                Switch to HTML
+                            </button>
+                        </div>
+                    )}
+                    <div
+                        ref={editorRef}
+                        contentEditable
+                        suppressContentEditableWarning
+                        onInput={handleInput}
+                        onPaste={handlePaste}
+                        data-placeholder={placeholder}
+                        className="p-6 focus:outline-none text-base leading-relaxed min-h-[var(--editor-min-h)] prose max-w-none prose-sm sm:prose-base prose-blue prose-img:rounded-xl prose-img:shadow-md"
+                        style={{ minHeight: `${minHeight}px`, "--editor-min-h": `${minHeight}px` } as any}
+                    />
+                </>
+            )}
+
+            {editorMode === "html" && (
+                <div className="bg-slate-950">
+                    <div className="px-4 py-2 bg-slate-900 border-b border-slate-800 text-[11px] text-slate-300 flex items-center justify-between gap-2">
+                        <span>Paste your HTML code below (supports <code className="text-amber-300">&lt;div&gt;</code>, <code className="text-amber-300">&lt;style&gt;</code>, tables, lists, images &amp; custom layouts).</span>
+                        <button type="button" onClick={() => setEditorMode("preview")} className="text-emerald-400 hover:text-emerald-300 font-semibold shrink-0">
+                            Preview Result →
+                        </button>
+                    </div>
+                    <textarea
+                        value={value || ""}
+                        onChange={(e) => onChange(e.target.value)}
+                        placeholder={"Paste your HTML here, e.g.\n<div class=\"space-y-4\">\n  <h2>What's Included</h2>\n  <ul>\n    <li>Feature 1</li>\n  </ul>\n</div>"}
+                        spellCheck={false}
+                        className="w-full p-4 bg-slate-950 text-slate-100 font-mono text-xs sm:text-sm leading-relaxed focus:outline-none resize-y"
+                        style={{ minHeight: `${minHeight}px` }}
+                    />
+                </div>
+            )}
+
+            {editorMode === "preview" && (
+                <div className="p-6 bg-white" style={{ minHeight: `${minHeight}px` }}>
+                    {value && value.trim() ? (
+                        /<[a-z][\s\S]*>/i.test(value) ? (
+                            <div
+                                className="product-description max-w-none prose prose-blue prose-img:rounded-xl prose-img:shadow-md"
+                                dangerouslySetInnerHTML={{ __html: normalizeHtmlContent(value) }}
+                            />
+                        ) : (
+                            <div className="whitespace-pre-wrap text-sm sm:text-base text-gray-700 leading-relaxed">
+                                {value}
+                            </div>
+                        )
+                    ) : (
+                        <p className="text-sm text-gray-400 text-center py-12">Nothing to preview yet. Write manually or paste HTML to preview.</p>
+                    )}
+                </div>
+            )}
 
             {/* Insert Screenshot Modal */}
             {imageModalOpen && (
